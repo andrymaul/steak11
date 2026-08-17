@@ -503,6 +503,26 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
   };
 };
 
+const mergeArrayById = (localArray: any[], remoteArray: any[]): any[] => {
+  if (!Array.isArray(localArray)) return Array.isArray(remoteArray) ? remoteArray : [];
+  if (!Array.isArray(remoteArray)) return Array.isArray(localArray) ? localArray : [];
+
+  const map = new Map<string, any>();
+  remoteArray.forEach((item) => {
+    if (item && item.id) {
+      map.set(String(item.id), item);
+    }
+  });
+  localArray.forEach((item) => {
+    if (item && item.id) {
+      if (!map.has(String(item.id))) {
+        map.set(String(item.id), item);
+      }
+    }
+  });
+  return Array.from(map.values());
+};
+
 /**
  * Start Real-time Per-User Firestore Sync
  */
@@ -530,29 +550,44 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
       const unsub = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const remoteData = docSnap.data().payload;
-          const remoteJson = JSON.stringify(remoteData);
           const currentLocal = localStorage.getItem('steak11_' + key);
           const lastSaveTimeStr = localStorage.getItem('steak11_' + key + '_save_time');
           const lastSaveTime = lastSaveTimeStr ? parseInt(lastSaveTimeStr, 10) : 0;
           const isRecentlySavedLocally = (Date.now() - lastSaveTime) < 15000;
 
-          if (remoteJson !== currentLocal && remoteJson !== lastRemoteJson) {
-            if (isRecentlySavedLocally && currentLocal) {
-              try {
-                const localParsed = JSON.parse(currentLocal);
-                if (Array.isArray(localParsed) && Array.isArray(remoteData) && localParsed.length >= remoteData.length) {
-                  setDoc(docRef, { payload: localParsed, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-                  return;
-                }
-              } catch {}
-            }
+          let localData: any = null;
+          if (currentLocal) {
+            try {
+              localData = JSON.parse(currentLocal);
+            } catch {}
+          }
 
-            lastRemoteJson = remoteJson;
-            localStorage.setItem('steak11_' + key, remoteJson);
+          let finalData = remoteData;
+          let needsRemotePush = false;
+
+          if (Array.isArray(remoteData) && Array.isArray(localData)) {
+            const merged = mergeArrayById(localData, remoteData);
+            if (merged.length > remoteData.length) {
+              needsRemotePush = true;
+            }
+            finalData = merged;
+          } else if (isRecentlySavedLocally && localData) {
+            finalData = localData;
+            needsRemotePush = true;
+          }
+
+          const finalJson = JSON.stringify(finalData);
+          if (finalJson !== currentLocal || finalJson !== lastRemoteJson) {
+            lastRemoteJson = finalJson;
+            localStorage.setItem('steak11_' + key, finalJson);
             window.dispatchEvent(new Event(key + '_updated'));
             if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
               window.dispatchEvent(new Event('racik_options_updated'));
             }
+          }
+
+          if (needsRemotePush) {
+            setDoc(docRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
           }
         } else {
           const rawLocal = localStorage.getItem('steak11_' + key);
