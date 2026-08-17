@@ -22,7 +22,7 @@ import {
   FirebaseConfig,
   PROVISIONED_CONFIG
 } from '../lib/firebase';
-import { initializeFirestoreDatabase, testFirestoreConnection } from '../lib/firebaseServices';
+import { initializeFirestoreDatabase, testFirestoreConnection, pushAllLocalDataToFirestore } from '../lib/firebaseServices';
 import { syncAllLocalMenuToFirebase } from '../utils';
 
 interface FirebaseSettingsPanelProps {
@@ -125,10 +125,11 @@ export const FirebaseSettingsPanel: React.FC<FirebaseSettingsPanelProps> = ({ on
   };
 
   const handleSyncFirestore = async () => {
-    setSaveMessage('Menyinkronkan seluruh Data Menu, Racikan & Kategori ke Firebase Firestore...');
+    setSaveMessage('Menyinkronkan seluruh 27 Data Operasional ke Firebase Firestore...');
+    await pushAllLocalDataToFirestore();
     await syncAllLocalMenuToFirebase();
     await initializeFirestoreDatabase();
-    setSaveMessage('Semua Data Menu berhasil disinkronkan ke Firebase Firestore!');
+    setSaveMessage('✅ Semua 27 Data Operasional & Menu berhasil disinkronkan ke Firebase Firestore!');
     setTimeout(() => setSaveMessage(null), 3500);
   };
 
