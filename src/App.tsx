@@ -33,7 +33,7 @@ export default function App() {
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string; allowedTabs?: string[] } | null>(() => getStoredCurrentUser());
-  const [adminDashboardOpen, setAdminDashboardOpen] = useState<boolean>(() => Boolean(getStoredCurrentUser()));
+  const [adminDashboardOpen, setAdminDashboardOpen] = useState<boolean>(false);
   const [employeeAttendanceOpen, setEmployeeAttendanceOpen] = useState(false);
   const [gasModalOpen, setGasModalOpen] = useState(false);
 
@@ -101,7 +101,6 @@ export default function App() {
           console.warn('Error syncing auth user to admins list:', e);
         }
 
-        setAdminDashboardOpen(true);
         setTimeout(() => {
           pushAllLocalDataToFirestore().catch(() => {});
         }, 100);
@@ -113,11 +112,9 @@ export default function App() {
         const storedUser = getStoredCurrentUser();
         if (storedUser) {
           setCurrentUser(storedUser);
-          setAdminDashboardOpen(true);
         } else {
           setCurrentUser(null);
           clearStoredCurrentUser();
-          setAdminDashboardOpen(false);
         }
       }
     });
@@ -230,6 +227,14 @@ export default function App() {
 
   const handleClearCart = () => setCart([]);
 
+  const handleOpenAdminClick = () => {
+    if (currentUser) {
+      setAdminDashboardOpen(true);
+    } else {
+      setAdminLoginOpen(true);
+    }
+  };
+
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -239,7 +244,7 @@ export default function App() {
         isDark={isDark}
         onToggleTheme={toggleTheme}
         onOpenCart={() => setCartModalOpen(true)}
-        onOpenAdminLogin={() => setAdminLoginOpen(true)}
+        onOpenAdminLogin={handleOpenAdminClick}
         cartCount={totalCartCount}
       />
 
@@ -255,7 +260,7 @@ export default function App() {
 
       {/* Footer */}
       <Footer 
-        onOpenAdminLogin={() => setAdminLoginOpen(true)} 
+        onOpenAdminLogin={handleOpenAdminClick} 
       />
 
       {/* Cart Modal */}
