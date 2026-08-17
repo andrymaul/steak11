@@ -5734,7 +5734,13 @@ function doPost(e) {
                     </div>
                     
                     {(() => {
-                      const posPaymentConfig = getStoredPaymentSettings();
+                      const rawCfg = getStoredPaymentSettings();
+                      const posPaymentConfig = {
+                        cash: rawCfg?.cash || { enabled: true, quickCashPresets: [20000, 50000, 100000] },
+                        qris: rawCfg?.qris || { enabled: true, merchantName: 'QRIS STEAK 11', nmid: 'ID10200300405011', instructions: 'Scan QRIS via GoPay, OVO, ShopeePay, DANA, BCA', qrisImageUrl: '' },
+                        transfer: rawCfg?.transfer || { enabled: true, bankName: 'BCA', accountNumber: '8830-1122-33', accountHolder: 'PT STEAK SEBELAS NUSANTARA' },
+                        debit: rawCfg?.debit || { enabled: true, bankName: 'BCA / Mandiri', terminalId: 'TID-88192301', instructions: 'Gesek / Dip kartu pada Mesin EDC Outlet.' }
+                      };
                       return (
                         <div className="space-y-2">
                           <div className="grid grid-cols-4 gap-1.5">
@@ -5777,11 +5783,23 @@ function doPost(e) {
                                     key={preset}
                                     type="button"
                                     onClick={() => setPosCashPaid(preset)}
-                                    className="flex-1 py-1 rounded bg-white dark:bg-purple-900 border text-[10px] font-bold cursor-pointer hover:bg-slate-50"
+                                    className="flex-1 py-1 rounded bg-white dark:bg-purple-900 border text-[10px] font-bold cursor-pointer hover:bg-slate-50 text-slate-800 dark:text-slate-200"
                                   >
                                     {preset >= 1000 ? `${preset / 1000}k` : preset}
                                   </button>
                                 ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const subtotalCalc = posCart.reduce((a, b) => a + b.subtotal, 0);
+                                    const taxCalc = Math.round(subtotalCalc * 0.1);
+                                    const grandTotal = Math.max(0, subtotalCalc - posDiscountAmount + taxCalc);
+                                    setPosCashPaid(grandTotal);
+                                  }}
+                                  className="py-1 px-2 rounded bg-amber-400 text-purple-950 font-black text-[10px] cursor-pointer hover:bg-amber-300"
+                                >
+                                  Pas
+                                </button>
                               </div>
                               <div className="flex justify-between text-xs font-black text-purple-900 dark:text-amber-400 pt-1 border-t border-amber-200 dark:border-purple-800">
                                 <span>Kembalian:</span>
@@ -5789,7 +5807,7 @@ function doPost(e) {
                                   {formatRupiah(
                                     Math.max(
                                       0,
-                                      posCashPaid -
+                                      (posCashPaid || 0) -
                                         (posCart.reduce((a, b) => a + b.subtotal, 0) -
                                           posDiscountAmount +
                                           Math.round(posCart.reduce((a, b) => a + b.subtotal, 0) * 0.1))
