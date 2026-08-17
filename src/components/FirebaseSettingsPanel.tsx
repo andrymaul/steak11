@@ -68,6 +68,7 @@ export const FirebaseSettingsPanel: React.FC<FirebaseSettingsPanelProps> = ({ on
     setMessagingSenderId(cfg.messagingSenderId || '');
     setAppId(cfg.appId || '');
     setConnectedEmail(cfg.connectedEmail || 'andrymaul.am@gmail.com');
+    handleTestConnection();
   }, []);
 
   const handleSaveConfig = (e: React.FormEvent) => {
