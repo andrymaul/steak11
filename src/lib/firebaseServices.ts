@@ -119,6 +119,9 @@ export const testFirestoreConnection = async (): Promise<{ success: boolean; men
   try {
     const pingDocRef = doc(db, 'users', 'shared_app_store', 'data', 'healthcheck');
     await setDoc(pingDocRef, { ping: 'ok', timestamp: new Date().toISOString() }, { merge: true });
+
+    const sharedPingRef = doc(db, 'shared_data', 'healthcheck');
+    await setDoc(sharedPingRef, { ping: 'ok', timestamp: new Date().toISOString() }, { merge: true });
     
     return {
       success: true,
@@ -129,11 +132,17 @@ export const testFirestoreConnection = async (): Promise<{ success: boolean; men
   } catch (err: any) {
     const errMsg = err?.message || String(err);
     console.error('Firestore connection test error:', err);
+    let friendlyReason = errMsg;
+    if (errMsg.includes('permission-denied') || errMsg.includes('Missing or insufficient permissions')) {
+      friendlyReason = 'Aturan Keamanan (Rules) di Firebase Console masih mengunci akses. Silakan pastikan Rules pada Cloud Firestore di-set "allow read, write: if true;" dan tombol Publish sudah diklik.';
+    } else if (errMsg.includes('not-found') || errMsg.includes('API has not been used')) {
+      friendlyReason = 'Database Cloud Firestore belum dibuat di Firebase Console. Buka menu Firestore Database di console.firebase.google.com lalu klik "Create Database".';
+    }
     return {
       success: false,
       menuCount: 0,
       orderCount: 0,
-      message: `🔴 Status Firestore: ${errMsg}`
+      message: `🔴 Firestore Terkendala: ${friendlyReason}`
     };
   }
 };
@@ -223,11 +232,24 @@ export const saveOrderToFirebase = async (order: OrderItem) => {
   const db = getDb();
   if (!isFirebaseConfigured() || !db) return;
   try {
-    const ref = doc(db, ORDERS_COL, order.id);
-    await setDoc(ref, order, { merge: true });
-    console.log('Order saved to Firebase Firestore:', order.id);
+    const docRef = doc(db, ORDERS_COL, order.id);
+    await setDoc(docRef, order, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `${ORDERS_COL}/${order.id}`);
+  }
+};
+
+/**
+ * Delete an Order from Firestore
+ */
+export const deleteOrderFromFirebase = async (orderId: string) => {
+  const db = getDb();
+  if (!isFirebaseConfigured() || !db) return;
+  try {
+    const docRef = doc(db, ORDERS_COL, orderId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${ORDERS_COL}/${orderId}`);
   }
 };
 
@@ -295,10 +317,9 @@ export const deleteDocumentInFirebase = async (collectionName: string, docId: st
 };
 
 /**
- * Sync Collection with Deletions to Firestore
- * Updates new/modified items AND deletes documents from Firestore if they are no longer present in local array.
+ * Sync entire collection with local deletion to Firestore
  */
-export const syncCollectionWithDeletionsToFirebase = async (colName: string, items: any[]) => {
+export const syncCollectionWithDeletionToFirestore = async (colName: string, items: any[]) => {
   const db = getDb();
   if (!isFirebaseConfigured() || !db) return;
   try {
@@ -343,6 +364,9 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
   try {
     const userDocRef = doc(db, 'users', targetUid, 'data', dataKey);
     await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
+
+    const sharedDocRef = doc(db, 'shared_data', dataKey);
+    await setDoc(sharedDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
@@ -423,6 +447,9 @@ export const pushAllLocalDataToFirestore = async () => {
       }
       const userDocRef = doc(db, 'users', targetUid, 'data', key);
       await setDoc(userDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true });
+
+      const sharedDocRef = doc(db, 'shared_data', key);
+      await setDoc(sharedDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
     } catch (e) {
       console.warn(`Error pushing ${key} to Firestore:`, e);
     }
@@ -451,7 +478,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
   keys.forEach((key) => {
     try {
       const docRef = doc(db, 'users', targetUid, 'data', key);
-      const unsub = onSnapshot(docRef, (docSnap) => {
+      const unsub1 = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const remoteData = docSnap.data().payload;
           localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
@@ -460,7 +487,6 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
             window.dispatchEvent(new Event('racik_options_updated'));
           }
         } else {
-          // If document does not exist yet in Firestore, seed it automatically with local or default data!
           const rawLocal = localStorage.getItem('steak11_' + key);
           let initialData: any;
           if (rawLocal !== null) {
@@ -474,10 +500,21 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
           setDoc(docRef, { payload: initialData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
-      }, (err) => {
-        handleFirestoreError(err, OperationType.GET, `users/${targetUid}/data/${key}`);
-      });
-      unsubscribes.push(unsub);
+      }, () => {});
+      unsubscribes.push(unsub1);
+
+      const sharedDocRef = doc(db, 'shared_data', key);
+      const unsub2 = onSnapshot(sharedDocRef, (docSnap) => {
+        if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
+          const remoteData = docSnap.data().payload;
+          localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
+          window.dispatchEvent(new Event(key + '_updated'));
+          if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
+            window.dispatchEvent(new Event('racik_options_updated'));
+          }
+        }
+      }, () => {});
+      unsubscribes.push(unsub2);
     } catch (err) {
       console.warn(`Error setting listener for ${key}:`, err);
     }
