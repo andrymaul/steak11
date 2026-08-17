@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "MenuItem": {
+      "title": "Menu Item",
+      "description": "Steak 11 food and beverage menu item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "koreanName": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "cogs": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "isPopular": { "type": "boolean" },
+        "isSpicy": { "type": "boolean" },
+        "tags": { "type": "string" }
+      },
+      "required": ["id", "name", "price"]
+    },
+    "Order": {
+      "title": "Order Item",
+      "description": "Customer order transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "outlet": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "addressOrTime": { "type": "string" },
+        "itemsSummary": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "customerName", "phone", "total"]
+    }
+  },
+  "firestore": {
+    "/menu_items/{itemId}": {
+      "schema": "MenuItem",
+      "description": "Collection of menu items"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of customer orders"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Steak 11 App",
+  "description": "Website Steak 11 Mythic Chicken Taste dengan menu interactive flavor builder, pemesanan WhatsApp, dan dashboard admin.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
