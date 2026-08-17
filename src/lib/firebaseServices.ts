@@ -157,26 +157,29 @@ export const initializeFirestoreDatabase = async () => {
     return;
   }
 
+  const targetUid = 'shared_app_store';
   try {
-    const menuSnap = await getDocs(collection(db, MENU_COL));
-    if (menuSnap.empty && MENU_ITEMS && MENU_ITEMS.length > 0) {
-      console.log('Seeding initial Menu Items to Firestore...');
-      const batch = writeBatch(db);
-      MENU_ITEMS.forEach((item) => {
-        const ref = doc(db, MENU_COL, item.id);
-        batch.set(ref, item);
-      });
-      await batch.commit();
-      console.log('Successfully seeded initial Menu Items to Firestore!');
-    }
+    const keysToSeed = [
+      { key: 'employees', defaultData: DEFAULT_EMPLOYEES },
+      { key: 'admins', defaultData: DEFAULT_ADMINS },
+      { key: 'menu_categories', defaultData: DEFAULT_MENU_CATEGORIES },
+      { key: 'chicken_options', defaultData: CHICKEN_OPTIONS },
+      { key: 'sauce_options', defaultData: SAUCE_OPTIONS },
+      { key: 'addon_options', defaultData: ADDON_OPTIONS },
+      { key: 'menu_items', defaultData: MENU_ITEMS },
+      { key: 'locations', defaultData: LOCATIONS },
+      { key: 'orders', defaultData: DEFAULT_ORDERS }
+    ];
 
-    // Seed Racik Options, Categories, Employees, & Admins if missing
-    await syncAllRacikOptionsToFirebase(CHICKEN_OPTIONS, SAUCE_OPTIONS, ADDON_OPTIONS);
-    await syncAllCategoriesToFirebase(DEFAULT_MENU_CATEGORIES);
-    await syncAllEmployeesToFirebase(DEFAULT_EMPLOYEES);
-    await syncAllAdminsToFirebase(DEFAULT_ADMINS);
+    for (const item of keysToSeed) {
+      const docRef = doc(db, 'users', targetUid, 'data', item.key);
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        await syncUserDataToFirestore(item.key, item.defaultData);
+      }
+    }
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, MENU_COL);
+    console.warn('Error in initializeFirestoreDatabase:', err);
   }
 };
 
