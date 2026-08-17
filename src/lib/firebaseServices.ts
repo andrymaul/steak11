@@ -2,6 +2,7 @@ import {
   collection, 
   doc, 
   setDoc, 
+  getDoc,
   updateDoc, 
   deleteDoc, 
   onSnapshot, 
@@ -448,6 +449,51 @@ export const pushAllLocalDataToFirestore = async () => {
       console.warn(`Error pushing ${key} to Firestore:`, e);
     }
   }
+};
+
+/**
+ * Force pull all remote datasets from Cloud Firestore into LocalStorage & trigger update events
+ */
+export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean; pulledKeys: number; message: string }> => {
+  const db = getDb();
+  const targetUid = 'shared_app_store';
+  if (!db || !isFirebaseConfigured()) {
+    return { success: false, pulledKeys: 0, message: 'Firebase belum terkonfigurasi.' };
+  }
+
+  const keys = [
+    'menu_items', 'chicken_options', 'sauce_options', 'addon_options', 'locations',
+    'orders', 'employees', 'attendance', 'payroll', 'menu_categories', 'admins',
+    'role_settings', 'wa_settings', 'branding', 'inventory', 'promos', 'cashier_shifts',
+    'reviews', 'suppliers', 'purchase_orders', 'expenses', 'recipes', 'stock_opnames',
+    'stock_transfers', 'audit_logs', 'stock_mutations', 'customers', 'wa_gateway_config',
+    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url'
+  ];
+
+  let count = 0;
+  for (const key of keys) {
+    try {
+      const docRef = doc(db, 'users', targetUid, 'data', key);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
+        const remoteData = docSnap.data().payload;
+        localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
+        window.dispatchEvent(new Event(key + '_updated'));
+        if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
+          window.dispatchEvent(new Event('racik_options_updated'));
+        }
+        count++;
+      }
+    } catch (e) {
+      console.warn(`Error pulling ${key} from Firestore:`, e);
+    }
+  }
+
+  return {
+    success: true,
+    pulledKeys: count,
+    message: `✅ Berhasil menarik ${count} dataset dari Firebase Firestore ke aplikasi local!`
+  };
 };
 
 /**

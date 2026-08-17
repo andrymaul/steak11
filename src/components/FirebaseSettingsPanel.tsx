@@ -22,7 +22,7 @@ import {
   FirebaseConfig,
   PROVISIONED_CONFIG
 } from '../lib/firebase';
-import { initializeFirestoreDatabase, testFirestoreConnection, pushAllLocalDataToFirestore } from '../lib/firebaseServices';
+import { initializeFirestoreDatabase, testFirestoreConnection, pushAllLocalDataToFirestore, pullAllFirestoreDataToLocal } from '../lib/firebaseServices';
 import { syncAllLocalMenuToFirebase } from '../utils';
 
 interface FirebaseSettingsPanelProps {
@@ -130,8 +130,15 @@ export const FirebaseSettingsPanel: React.FC<FirebaseSettingsPanelProps> = ({ on
     await pushAllLocalDataToFirestore();
     await syncAllLocalMenuToFirebase();
     await initializeFirestoreDatabase();
-    setSaveMessage('✅ Semua 27 Data Operasional & Menu berhasil disinkronkan ke Firebase Firestore!');
+    setSaveMessage('✅ Semua 27 Data Operasional & Menu berhasil di-push ke Firebase Firestore!');
     setTimeout(() => setSaveMessage(null), 3500);
+  };
+
+  const handlePullFromFirestore = async () => {
+    setSaveMessage('Menarik & menyinkronkan seluruh data dari Firebase Firestore ke aplikasi...');
+    const result = await pullAllFirestoreDataToLocal();
+    setSaveMessage(result.message);
+    setTimeout(() => setSaveMessage(null), 4000);
   };
 
   const envText = `VITE_FIREBASE_API_KEY=${apiKey || currentConfig.apiKey}
@@ -261,24 +268,33 @@ VITE_FIREBASE_CONNECTED_EMAIL=${connectedEmail || currentConfig.connectedEmail}`
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={handleTestConnection}
                 disabled={testingConnection}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#3D1259] hover:bg-[#521B75] text-amber-400 font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-[#3D1259] hover:bg-[#521B75] text-amber-400 font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
               >
                 <Activity className="w-4 h-4" />
-                <span>{testingConnection ? 'Menguji Jaringan...' : 'Uji Koneksi Firestore'}</span>
+                <span>{testingConnection ? 'Menguji...' : 'Uji Koneksi'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePullFromFirestore}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                <span>📥 Tarik Data dari Firebase</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleSyncFirestore}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
-                <RefreshCcw className="w-4 h-4" />
-                <span>Sinkronkan Data</span>
+                <Database className="w-4 h-4" />
+                <span>📤 Push Data ke Firebase</span>
               </button>
             </div>
           </div>
