@@ -363,6 +363,10 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
   const targetUid = 'shared_app_store';
 
   try {
+    localStorage.setItem('steak11_' + dataKey + '_save_time', Date.now().toString());
+  } catch {}
+
+  try {
     const userDocRef = doc(db, 'users', targetUid, 'data', dataKey);
     await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
   } catch (err) {
@@ -525,8 +529,21 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           const remoteData = docSnap.data().payload;
           const remoteJson = JSON.stringify(remoteData);
           const currentLocal = localStorage.getItem('steak11_' + key);
+          const lastSaveTimeStr = localStorage.getItem('steak11_' + key + '_save_time');
+          const lastSaveTime = lastSaveTimeStr ? parseInt(lastSaveTimeStr, 10) : 0;
+          const isRecentlySavedLocally = (Date.now() - lastSaveTime) < 15000;
 
           if (remoteJson !== currentLocal && remoteJson !== lastRemoteJson) {
+            if (isRecentlySavedLocally && currentLocal) {
+              try {
+                const localParsed = JSON.parse(currentLocal);
+                if (Array.isArray(localParsed) && Array.isArray(remoteData) && localParsed.length >= remoteData.length) {
+                  setDoc(docRef, { payload: localParsed, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+                  return;
+                }
+              } catch {}
+            }
+
             lastRemoteJson = remoteJson;
             localStorage.setItem('steak11_' + key, remoteJson);
             window.dispatchEvent(new Event(key + '_updated'));
