@@ -944,6 +944,11 @@ function doPost(e) {
     }, 3000);
   };
 
+  const posCategories = [
+    { id: 'signature', name: 'Signature Steak' },
+    { id: 'addon', name: 'Add On & Sides' }
+  ];
+
   const loadAllData = () => {
     setOrders(getStoredOrders());
     setMenuItems(getStoredMenuItems());
@@ -5503,7 +5508,7 @@ function doPost(e) {
                     >
                       Semua Menu
                     </button>
-                    {menuCategories.map((cat) => (
+                    {posCategories.map((cat) => (
                       <button
                         key={cat.id}
                         onClick={() => setCashierCategory(cat.id)}
@@ -5520,7 +5525,7 @@ function doPost(e) {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {menuItems
+                  {(menuItems || [])
                     .filter((item) => {
                       const matchSearch =
                         item.name.toLowerCase().includes(cashierSearch.toLowerCase()) ||
@@ -5530,7 +5535,7 @@ function doPost(e) {
                       if (cashierCategory === 'signature') return item.isSignature || item.category === 'signature';
                       if (cashierCategory === 'addon') return !item.isSignature || item.category === 'addon';
 
-                      const targetCat = menuCategories.find((c) => c.id === cashierCategory);
+                      const targetCat = posCategories.find((c) => c.id === cashierCategory);
                       if (targetCat) {
                         return (
                           item.category === targetCat.name ||
