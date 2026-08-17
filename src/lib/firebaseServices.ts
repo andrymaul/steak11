@@ -364,14 +364,20 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
   const db = getDb();
   if (!db) return;
   const targetUid = 'shared_app_store';
+  const userUid = getAuthInstance()?.currentUser?.uid || 'd2d8IJ0cRwMCNs71Y1L7vk5ZpEw2';
 
   try {
     localStorage.setItem('steak11_' + dataKey + '_save_time', Date.now().toString());
   } catch {}
 
   try {
-    const userDocRef = doc(db, 'users', targetUid, 'data', dataKey);
-    await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
+    const sharedDocRef = doc(db, 'users', targetUid, 'data', dataKey);
+    await setDoc(sharedDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
+
+    if (userUid && userUid !== targetUid) {
+      const userDocRef = doc(db, 'users', userUid, 'data', dataKey);
+      await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
@@ -426,6 +432,7 @@ export const getInitialDataForKey = (key: string): any => {
 export const pushAllLocalDataToFirestore = async () => {
   const db = getDb();
   const targetUid = 'shared_app_store';
+  const userUid = getAuthInstance()?.currentUser?.uid || 'd2d8IJ0cRwMCNs71Y1L7vk5ZpEw2';
   if (!db) return;
 
   const keys = [
@@ -450,8 +457,13 @@ export const pushAllLocalDataToFirestore = async () => {
       } else {
         data = getInitialDataForKey(key);
       }
-      const userDocRef = doc(db, 'users', targetUid, 'data', key);
-      await setDoc(userDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true });
+      const sharedDocRef = doc(db, 'users', targetUid, 'data', key);
+      await setDoc(sharedDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true });
+
+      if (userUid && userUid !== targetUid) {
+        const userDocRef = doc(db, 'users', userUid, 'data', key);
+        await setDoc(userDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+      }
     } catch (e) {
       console.warn(`Error pushing ${key} to Firestore:`, e);
     }
@@ -464,6 +476,7 @@ export const pushAllLocalDataToFirestore = async () => {
 export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean; pulledKeys: number; message: string }> => {
   const db = getDb();
   const targetUid = 'shared_app_store';
+  const userUid = getAuthInstance()?.currentUser?.uid || 'd2d8IJ0cRwMCNs71Y1L7vk5ZpEw2';
   if (!db || !isFirebaseConfigured()) {
     return { success: false, pulledKeys: 0, message: 'Firebase belum terkonfigurasi.' };
   }
@@ -480,14 +493,37 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
   let count = 0;
   for (const key of keys) {
     try {
-      const docRef = doc(db, 'users', targetUid, 'data', key);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
-        const remoteData = docSnap.data().payload;
-        localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
+      const sharedDocRef = doc(db, 'users', targetUid, 'data', key);
+      const sharedSnap = await getDoc(sharedDocRef);
+      let sharedData = sharedSnap.exists() && sharedSnap.data()?.payload !== undefined ? sharedSnap.data().payload : null;
+
+      let userData = null;
+      if (userUid && userUid !== targetUid) {
+        const userDocRef = doc(db, 'users', userUid, 'data', key);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists() && userSnap.data()?.payload !== undefined) {
+          userData = userSnap.data().payload;
+        }
+      }
+
+      let finalData = sharedData;
+      if (Array.isArray(sharedData) && Array.isArray(userData)) {
+        finalData = mergeArrayById(sharedData, userData);
+      } else if (userData && !sharedData) {
+        finalData = userData;
+      }
+
+      if (finalData !== null) {
+        localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
         window.dispatchEvent(new Event(key + '_updated'));
         if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
           window.dispatchEvent(new Event('racik_options_updated'));
+        }
+
+        await setDoc(sharedDocRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        if (userUid && userUid !== targetUid) {
+          const userDocRef = doc(db, 'users', userUid, 'data', key);
+          await setDoc(userDocRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
         count++;
       }
@@ -499,7 +535,7 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
   return {
     success: true,
     pulledKeys: count,
-    message: `✅ Berhasil menarik ${count} dataset dari Firebase Firestore ke aplikasi local!`
+    message: `✅ Berhasil menyinkronkan & menggabungkan ${count} dokumen antara ${userUid} dan ${targetUid}!`
   };
 };
 
@@ -529,6 +565,7 @@ const mergeArrayById = (localArray: any[], remoteArray: any[]): any[] => {
 export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
   const db = getDb();
   const targetUid = 'shared_app_store';
+  const userUid = getAuthInstance()?.currentUser?.uid || 'd2d8IJ0cRwMCNs71Y1L7vk5ZpEw2';
   if (!isFirebaseConfigured() || !db) return () => {};
 
   const keys = [
@@ -544,10 +581,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
 
   keys.forEach((key) => {
     try {
-      const docRef = doc(db, 'users', targetUid, 'data', key);
-      let lastRemoteJson = '';
-
-      const unsub = onSnapshot(docRef, (docSnap) => {
+      const handleSnapshot = (docSnap: any) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const remoteData = docSnap.data().payload;
           const currentLocal = localStorage.getItem('steak11_' + key);
@@ -577,8 +611,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
 
           const finalJson = JSON.stringify(finalData);
-          if (finalJson !== currentLocal || finalJson !== lastRemoteJson) {
-            lastRemoteJson = finalJson;
+          if (finalJson !== currentLocal) {
             localStorage.setItem('steak11_' + key, finalJson);
             window.dispatchEvent(new Event(key + '_updated'));
             if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
@@ -587,24 +620,27 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
 
           if (needsRemotePush) {
-            setDoc(docRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-          }
-        } else {
-          const rawLocal = localStorage.getItem('steak11_' + key);
-          let initialData: any;
-          if (rawLocal !== null) {
-            try {
-              initialData = JSON.parse(rawLocal);
-            } catch {
-              initialData = getInitialDataForKey(key);
+            const sharedRef = doc(db, 'users', targetUid, 'data', key);
+            setDoc(sharedRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+            if (userUid && userUid !== targetUid) {
+              const userRef = doc(db, 'users', userUid, 'data', key);
+              setDoc(userRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
             }
-          } else {
-            initialData = getInitialDataForKey(key);
           }
-          setDoc(docRef, { payload: initialData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
-      }, () => {});
-      unsubscribes.push(unsub);
+      };
+
+      // 1. Listen to shared_app_store
+      const sharedDocRef = doc(db, 'users', targetUid, 'data', key);
+      const unsub1 = onSnapshot(sharedDocRef, handleSnapshot, () => {});
+      unsubscribes.push(unsub1);
+
+      // 2. Dual-listen to user doc (d2d8IJ0cRwMCNs71Y1L7vk5ZpEw2)
+      if (userUid && userUid !== targetUid) {
+        const userDocRef = doc(db, 'users', userUid, 'data', key);
+        const unsub2 = onSnapshot(userDocRef, handleSnapshot, () => {});
+        unsubscribes.push(unsub2);
+      }
     } catch (err) {
       console.warn(`Error setting listener for ${key}:`, err);
     }
