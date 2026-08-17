@@ -4408,35 +4408,27 @@ function doPost(e) {
   // --- POS Kasir Handlers ---
   const handleAddPosToCart = (item: MenuItem) => {
     if (checkReadOnlyPermission()) return;
-    if (item.category.toLowerCase().includes('steak') || item.isSignature) {
-      setCustomizingItem(item);
-      setPosSelectedChicken(chickenOptions[0]?.name || 'Paha Ayam Boneless 90g (Standard)');
-      setPosSelectedSauce(sauceOptions[0]?.name || 'Creamy Garlic Herb');
-      setPosSelectedAddons([]);
-      setPosItemQty(1);
+    const existingIdx = posCart.findIndex((c) => c.item.id === item.id);
+    const cogs = item.cogs || Math.round(item.price * 0.45);
+    if (existingIdx >= 0) {
+      const updatedCart = [...posCart];
+      updatedCart[existingIdx].quantity += 1;
+      updatedCart[existingIdx].subtotal = updatedCart[existingIdx].quantity * updatedCart[existingIdx].itemPrice;
+      setPosCart(updatedCart);
     } else {
-      const existingIdx = posCart.findIndex((c) => c.item.id === item.id);
-      const cogs = item.cogs || Math.round(item.price * 0.45);
-      if (existingIdx >= 0) {
-        const updatedCart = [...posCart];
-        updatedCart[existingIdx].quantity += 1;
-        updatedCart[existingIdx].subtotal = updatedCart[existingIdx].quantity * updatedCart[existingIdx].itemPrice;
-        setPosCart(updatedCart);
-      } else {
-        setPosCart([
-          ...posCart,
-          {
-            id: 'CART-' + Date.now().toString().slice(-4),
-            item,
-            quantity: 1,
-            itemPrice: item.price,
-            cogsPrice: cogs,
-            subtotal: item.price,
-          },
-        ]);
-      }
-      showToast(`${item.name} ditambahkan ke keranjang kasir!`);
+      setPosCart([
+        ...posCart,
+        {
+          id: 'CART-' + Date.now().toString().slice(-4),
+          item,
+          quantity: 1,
+          itemPrice: item.price,
+          cogsPrice: cogs,
+          subtotal: item.price,
+        },
+      ]);
     }
+    showToast(`+ ${item.name} ditambahkan ke keranjang kasir!`);
   };
 
   const handleConfirmCustomizePosItem = () => {

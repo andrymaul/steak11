@@ -364,9 +364,6 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
   try {
     const userDocRef = doc(db, 'users', targetUid, 'data', dataKey);
     await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
-
-    const sharedDocRef = doc(db, 'shared_data', dataKey);
-    await setDoc(sharedDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
@@ -447,9 +444,6 @@ export const pushAllLocalDataToFirestore = async () => {
       }
       const userDocRef = doc(db, 'users', targetUid, 'data', key);
       await setDoc(userDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true });
-
-      const sharedDocRef = doc(db, 'shared_data', key);
-      await setDoc(sharedDocRef, { payload: data, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
     } catch (e) {
       console.warn(`Error pushing ${key} to Firestore:`, e);
     }
@@ -478,13 +472,21 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
   keys.forEach((key) => {
     try {
       const docRef = doc(db, 'users', targetUid, 'data', key);
-      const unsub1 = onSnapshot(docRef, (docSnap) => {
+      let lastRemoteJson = '';
+
+      const unsub = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const remoteData = docSnap.data().payload;
-          localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
-          window.dispatchEvent(new Event(key + '_updated'));
-          if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
-            window.dispatchEvent(new Event('racik_options_updated'));
+          const remoteJson = JSON.stringify(remoteData);
+          const currentLocal = localStorage.getItem('steak11_' + key);
+
+          if (remoteJson !== currentLocal && remoteJson !== lastRemoteJson) {
+            lastRemoteJson = remoteJson;
+            localStorage.setItem('steak11_' + key, remoteJson);
+            window.dispatchEvent(new Event(key + '_updated'));
+            if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
+              window.dispatchEvent(new Event('racik_options_updated'));
+            }
           }
         } else {
           const rawLocal = localStorage.getItem('steak11_' + key);
@@ -501,20 +503,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           setDoc(docRef, { payload: initialData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
       }, () => {});
-      unsubscribes.push(unsub1);
-
-      const sharedDocRef = doc(db, 'shared_data', key);
-      const unsub2 = onSnapshot(sharedDocRef, (docSnap) => {
-        if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
-          const remoteData = docSnap.data().payload;
-          localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
-          window.dispatchEvent(new Event(key + '_updated'));
-          if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
-            window.dispatchEvent(new Event('racik_options_updated'));
-          }
-        }
-      }, () => {});
-      unsubscribes.push(unsub2);
+      unsubscribes.push(unsub);
     } catch (err) {
       console.warn(`Error setting listener for ${key}:`, err);
     }
