@@ -4489,9 +4489,14 @@ function doPost(e) {
     const tax = Math.round(subtotal * 0.1);
     const grandTotal = subtotal - posDiscountAmount + tax;
 
-    if (posPaymentMethod === 'Cash' && posCashPaid < grandTotal) {
-      showToast(`Uang tunai kurang! Minimal bayar ${formatRupiah(grandTotal)}.`);
-      return;
+    let effectiveCashPaid = posCashPaid;
+    if (posPaymentMethod === 'Cash') {
+      if (effectiveCashPaid === 0) {
+        effectiveCashPaid = grandTotal;
+      } else if (effectiveCashPaid < grandTotal) {
+        showToast(`❌ Uang tunai kurang! Total bayar: ${formatRupiah(grandTotal)}, Uang diterima: ${formatRupiah(effectiveCashPaid)}.`);
+        return;
+      }
     }
 
     const totalCogs = posCart.reduce(
@@ -4523,8 +4528,8 @@ function doPost(e) {
       addressOrNotes: cashierServiceType === 'Dine In' ? `Nomor Meja: ${cashierTableNum}` : 'Pemesanan Kasir Direct',
       addressOrTime: cashierServiceType === 'Dine In' ? `Makan di Tempat - Meja ${cashierTableNum}` : 'Kasir Direct',
       paymentMethod: posPaymentMethod,
-      cashPaid: posPaymentMethod === 'Cash' ? posCashPaid : grandTotal,
-      changeAmount: posPaymentMethod === 'Cash' ? Math.max(0, posCashPaid - grandTotal) : 0,
+      cashPaid: posPaymentMethod === 'Cash' ? effectiveCashPaid : grandTotal,
+      changeAmount: posPaymentMethod === 'Cash' ? Math.max(0, effectiveCashPaid - grandTotal) : 0,
       cashierName: currentCashierName,
       cogsTotal: totalCogs,
       netProfit: netProfit,
