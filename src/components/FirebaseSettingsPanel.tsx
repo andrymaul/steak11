@@ -12,7 +12,8 @@ import {
   Database,
   Layers,
   Info,
-  Mail
+  Mail,
+  Trash2
 } from 'lucide-react';
 import { 
   isFirebaseConfigured, 
@@ -22,7 +23,7 @@ import {
   FirebaseConfig,
   PROVISIONED_CONFIG
 } from '../lib/firebase';
-import { initializeFirestoreDatabase, testFirestoreConnection, pushAllLocalDataToFirestore, pullAllFirestoreDataToLocal } from '../lib/firebaseServices';
+import { initializeFirestoreDatabase, testFirestoreConnection, pushAllLocalDataToFirestore, pullAllFirestoreDataToLocal, cleanUpLegacyUserDocs } from '../lib/firebaseServices';
 import { syncAllLocalMenuToFirebase } from '../utils';
 
 interface FirebaseSettingsPanelProps {
@@ -137,6 +138,13 @@ export const FirebaseSettingsPanel: React.FC<FirebaseSettingsPanelProps> = ({ on
   const handlePullFromFirestore = async () => {
     setSaveMessage('Menarik & menyinkronkan seluruh data dari Firebase Firestore ke aplikasi...');
     const result = await pullAllFirestoreDataToLocal();
+    setSaveMessage(result.message);
+    setTimeout(() => setSaveMessage(null), 4000);
+  };
+
+  const handleCleanUpLegacyDocs = async () => {
+    setSaveMessage('Menghapus dokumen ganda users/d2d8IJ0cRwMCNs71Y1L7vk5ZpEw2 dari Cloud Firestore...');
+    const result = await cleanUpLegacyUserDocs();
     setSaveMessage(result.message);
     setTimeout(() => setSaveMessage(null), 4000);
   };
@@ -268,7 +276,7 @@ VITE_FIREBASE_CONNECTED_EMAIL=${connectedEmail || currentConfig.connectedEmail}`
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={handleTestConnection}
@@ -285,7 +293,7 @@ VITE_FIREBASE_CONNECTED_EMAIL=${connectedEmail || currentConfig.connectedEmail}`
                 className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 <RefreshCcw className="w-4 h-4" />
-                <span>📥 Tarik Data dari Firebase</span>
+                <span>📥 Tarik Data</span>
               </button>
 
               <button
@@ -294,7 +302,17 @@ VITE_FIREBASE_CONNECTED_EMAIL=${connectedEmail || currentConfig.connectedEmail}`
                 className="flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
               >
                 <Database className="w-4 h-4" />
-                <span>📤 Push Data ke Firebase</span>
+                <span>📤 Push Data</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCleanUpLegacyDocs}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                title="Hapus dokumen ganda users/d2d8IJ0cRwMCNs71Y1L7vk5ZpEw2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>🧹 Hapus Dokumen Ganda</span>
               </button>
             </div>
           </div>
