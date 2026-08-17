@@ -334,17 +334,15 @@ export const syncCollectionWithDeletionsToFirebase = async (colName: string, ite
  * Sync user-scoped data to Firestore under users/{uid}/data/{dataKey}
  */
 export const syncUserDataToFirestore = async (dataKey: string, payload: any) => {
-  const auth = getAuthInstance();
   const db = getDb();
-  const currentUser = auth?.currentUser;
-  const effectiveUid = currentUser?.uid || 'shared_app_store';
   if (!db) return;
+  const targetUid = 'shared_app_store';
 
   try {
-    const userDocRef = doc(db, 'users', effectiveUid, 'data', dataKey);
+    const userDocRef = doc(db, 'users', targetUid, 'data', dataKey);
     await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `users/${effectiveUid}/data/${dataKey}`);
+    handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
 };
 
@@ -394,10 +392,9 @@ export const getInitialDataForKey = (key: string): any => {
 /**
  * Force push all local datasets (employees, attendance, payroll, etc) to Firestore
  */
-export const pushAllLocalDataToFirestore = async (uid?: string) => {
-  const auth = getAuthInstance();
+export const pushAllLocalDataToFirestore = async () => {
   const db = getDb();
-  const targetUid = uid || auth?.currentUser?.uid || 'shared_app_store';
+  const targetUid = 'shared_app_store';
   if (!db) return;
 
   const keys = [
@@ -433,10 +430,9 @@ export const pushAllLocalDataToFirestore = async (uid?: string) => {
 /**
  * Start Real-time Per-User Firestore Sync
  */
-export const startPerUserFirestoreSync = (uid?: string): (() => void) => {
+export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
   const db = getDb();
-  const auth = getAuthInstance();
-  const targetUid = uid || auth?.currentUser?.uid || 'shared_app_store';
+  const targetUid = 'shared_app_store';
   if (!isFirebaseConfigured() || !db) return () => {};
 
   const keys = [
@@ -458,6 +454,9 @@ export const startPerUserFirestoreSync = (uid?: string): (() => void) => {
           const remoteData = docSnap.data().payload;
           localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
           window.dispatchEvent(new Event(key + '_updated'));
+          if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
+            window.dispatchEvent(new Event('racik_options_updated'));
+          }
         } else {
           // If document does not exist yet in Firestore, seed it automatically with local or default data!
           const rawLocal = localStorage.getItem('steak11_' + key);

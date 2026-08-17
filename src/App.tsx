@@ -103,17 +103,11 @@ export default function App() {
 
         setAdminDashboardOpen(true);
         setTimeout(() => {
-          pushAllLocalDataToFirestore(user.uid).catch(() => {});
-          if (unsubFirestore) unsubFirestore();
-          unsubFirestore = startPerUserFirestoreSync(user.uid);
+          pushAllLocalDataToFirestore().catch(() => {});
         }, 100);
       } else {
         if (user && !user.emailVerified) {
           signOut(auth).catch(() => {});
-        }
-        if (unsubFirestore) {
-          unsubFirestore();
-          unsubFirestore = null;
         }
 
         const storedUser = getStoredCurrentUser();
@@ -125,10 +119,11 @@ export default function App() {
           clearStoredCurrentUser();
           setAdminDashboardOpen(false);
         }
-
-        unsubFirestore = startPerUserFirestoreSync('shared_app_store');
       }
     });
+
+    unsubFirestore = startPerUserFirestoreSync();
+
     return () => {
       unsubscribe();
       if (unsubFirestore) unsubFirestore();
