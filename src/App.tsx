@@ -125,6 +125,8 @@ export default function App() {
           clearStoredCurrentUser();
           setAdminDashboardOpen(false);
         }
+
+        unsubFirestore = startPerUserFirestoreSync('shared_app_store');
       }
     });
     return () => {

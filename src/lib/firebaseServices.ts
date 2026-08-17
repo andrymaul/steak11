@@ -337,13 +337,14 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
   const auth = getAuthInstance();
   const db = getDb();
   const currentUser = auth?.currentUser;
-  if (!db || !currentUser) return;
+  const effectiveUid = currentUser?.uid || 'shared_app_store';
+  if (!db) return;
 
   try {
-    const userDocRef = doc(db, 'users', currentUser.uid, 'data', dataKey);
+    const userDocRef = doc(db, 'users', effectiveUid, 'data', dataKey);
     await setDoc(userDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `users/${currentUser?.uid}/data/${dataKey}`);
+    handleFirestoreError(err, OperationType.WRITE, `users/${effectiveUid}/data/${dataKey}`);
   }
 };
 
@@ -396,8 +397,8 @@ export const getInitialDataForKey = (key: string): any => {
 export const pushAllLocalDataToFirestore = async (uid?: string) => {
   const auth = getAuthInstance();
   const db = getDb();
-  const targetUid = uid || auth?.currentUser?.uid;
-  if (!db || !targetUid) return;
+  const targetUid = uid || auth?.currentUser?.uid || 'shared_app_store';
+  if (!db) return;
 
   const keys = [
     'menu_items', 'chicken_options', 'sauce_options', 'addon_options', 'locations',
@@ -432,9 +433,11 @@ export const pushAllLocalDataToFirestore = async (uid?: string) => {
 /**
  * Start Real-time Per-User Firestore Sync
  */
-export const startPerUserFirestoreSync = (uid: string): (() => void) => {
+export const startPerUserFirestoreSync = (uid?: string): (() => void) => {
   const db = getDb();
-  if (!isFirebaseConfigured() || !db || !uid) return () => {};
+  const auth = getAuthInstance();
+  const targetUid = uid || auth?.currentUser?.uid || 'shared_app_store';
+  if (!isFirebaseConfigured() || !db) return () => {};
 
   const keys = [
     'menu_items', 'chicken_options', 'sauce_options', 'addon_options', 'locations',
@@ -449,7 +452,7 @@ export const startPerUserFirestoreSync = (uid: string): (() => void) => {
 
   keys.forEach((key) => {
     try {
-      const docRef = doc(db, 'users', uid, 'data', key);
+      const docRef = doc(db, 'users', targetUid, 'data', key);
       const unsub = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const remoteData = docSnap.data().payload;
@@ -471,7 +474,7 @@ export const startPerUserFirestoreSync = (uid: string): (() => void) => {
           setDoc(docRef, { payload: initialData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
       }, (err) => {
-        handleFirestoreError(err, OperationType.GET, `users/${uid}/data/${key}`);
+        handleFirestoreError(err, OperationType.GET, `users/${targetUid}/data/${key}`);
       });
       unsubscribes.push(unsub);
     } catch (err) {
