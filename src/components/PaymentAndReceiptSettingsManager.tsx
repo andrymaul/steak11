@@ -51,8 +51,8 @@ export const PaymentAndReceiptSettingsManager: React.FC<PaymentAndReceiptSetting
   const [activeTab, setActiveTab] = useState<'payment' | 'receipt'>('payment');
   const [selectedOutlet, setSelectedOutlet] = useState<string>('ALL');
   const locations = getStoredLocations();
-  const [paymentSettings, setPaymentSettings] = useState<PaymentMethodSettings>(getStoredPaymentSettings());
-  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>(getStoredReceiptSettings());
+  const [paymentSettings, setPaymentSettings] = useState<PaymentMethodSettings>(() => getStoredPaymentSettings());
+  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>(() => getStoredReceiptSettings());
   const [isSaved, setIsSaved] = useState(false);
   const [localMessage, setLocalMessage] = useState<string | null>(null);
 
@@ -66,8 +66,10 @@ export const PaymentAndReceiptSettingsManager: React.FC<PaymentAndReceiptSetting
   };
 
   useEffect(() => {
-    setPaymentSettings(getStoredPaymentSettings());
-    setReceiptSettings(getStoredReceiptSettings(selectedOutlet === 'ALL' ? undefined : selectedOutlet));
+    const loadedPayment = getStoredPaymentSettings();
+    if (loadedPayment) setPaymentSettings(loadedPayment);
+    const loadedReceipt = getStoredReceiptSettings(selectedOutlet === 'ALL' ? undefined : selectedOutlet);
+    if (loadedReceipt) setReceiptSettings(loadedReceipt);
   }, [selectedOutlet]);
 
   const handleOutletChange = (outletName: string) => {

@@ -805,7 +805,15 @@ export function getStoredPaymentSettings(): PaymentMethodSettings {
   const stored = localStorage.getItem('steak11_payment_settings');
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          qris: { ...DEFAULT_PAYMENT_SETTINGS.qris, ...(parsed.qris || {}) },
+          transfer: { ...DEFAULT_PAYMENT_SETTINGS.transfer, ...(parsed.transfer || {}) },
+          debit: { ...DEFAULT_PAYMENT_SETTINGS.debit, ...(parsed.debit || {}) },
+          cash: { ...DEFAULT_PAYMENT_SETTINGS.cash, ...(parsed.cash || {}) },
+        };
+      }
     } catch {
       return DEFAULT_PAYMENT_SETTINGS;
     }
