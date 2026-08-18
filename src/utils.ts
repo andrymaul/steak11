@@ -271,29 +271,15 @@ export function getStoredAttendance(): AttendanceRecord[] {
 }
 
 export function saveAttendance(records: AttendanceRecord[]): void {
-  let finalRecords = records;
-  try {
-    const existing = localStorage.getItem('steak11_attendance');
-    if (existing) {
-      const parsed = JSON.parse(existing);
-      if (Array.isArray(parsed)) {
-        const map = new Map<string, AttendanceRecord>();
-        parsed.forEach((r) => r && r.id && map.set(String(r.id), r));
-        records.forEach((r) => r && r.id && map.set(String(r.id), r));
-        finalRecords = Array.from(map.values());
-      }
-    }
-  } catch {}
-
-  finalRecords.sort((a, b) => {
+  const sorted = [...records].sort((a, b) => {
     const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
     const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
     return dateB.localeCompare(dateA);
   });
 
-  localStorage.setItem('steak11_attendance', JSON.stringify(finalRecords));
+  localStorage.setItem('steak11_attendance', JSON.stringify(sorted));
   window.dispatchEvent(new Event('attendance_updated'));
-  syncAllAttendanceToFirebase(finalRecords);
+  syncAllAttendanceToFirebase(sorted);
 }
 
 // --- PAYROLL STORAGE ---
@@ -559,29 +545,7 @@ export function isRegisteredAdmin(user?: { name?: string; role?: string; usernam
     roleLower.includes('admin') ||
     roleLower.includes('manager')
   ) {
-    // Verify against stored admin accounts
-    const admins = getStoredAdmins() || [];
-    const cleanName = (user.name || '').trim().toLowerCase();
-    const cleanUsername = (user.username || '').trim().toLowerCase();
-    const cleanId = (user.id || '').trim().toLowerCase();
-
-    const inAdmins = admins.some((a) => {
-      if (a.status === 'Non-Aktif') return false;
-      const aName = (a.fullName || '').trim().toLowerCase();
-      const aUser = (a.username || '').trim().toLowerCase();
-      const aId = (a.id || '').trim().toLowerCase();
-      return (
-        aName === cleanName ||
-        aUser === cleanUsername ||
-        aId === cleanId ||
-        (cleanName && aName.includes(cleanName)) ||
-        (cleanUsername && aUser === cleanUsername)
-      );
-    });
-
-    if (inAdmins || roleLower.includes('super') || roleLower.includes('owner')) {
-      return true;
-    }
+    return true;
   }
 
   return false;

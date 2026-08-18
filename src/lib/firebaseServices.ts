@@ -655,13 +655,8 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // For array datasets, perform atomic merging so no item is ever lost across devices/tabs
-          if (Array.isArray(remoteData) && Array.isArray(localData)) {
-            finalData = mergeArrayById(localData, remoteData);
-            if (finalData.length > remoteData.length) {
-              needsRemotePush = true;
-            }
-          } else if (isRecentlySavedByThisTab && localData) {
+          // If this tab recently saved localData (e.g. edit/delete action), use localData as source of truth
+          if (isRecentlySavedByThisTab && localData) {
             finalData = localData;
             needsRemotePush = true;
           } else {
