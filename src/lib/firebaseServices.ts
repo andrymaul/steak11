@@ -571,8 +571,11 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
   const targetUid = 'shared_app_store';
   if (!isFirebaseConfigured() || !db) return () => {};
 
-  // Auto clean up legacy double docs
-  cleanUpLegacyUserDocs().catch(() => {});
+  // Auto clean up legacy double docs once per session
+  if (typeof window !== 'undefined' && !sessionStorage.getItem('steak11_legacy_cleaned')) {
+    sessionStorage.setItem('steak11_legacy_cleaned', 'true');
+    cleanUpLegacyUserDocs().catch(() => {});
+  }
 
   const keys = [
     'menu_items', 'chicken_options', 'sauce_options', 'addon_options', 'locations',
@@ -619,7 +622,14 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
             needsRemotePush = true;
           }
 
+          const remoteJson = JSON.stringify(remoteData);
           const finalJson = JSON.stringify(finalData);
+
+          // Prevent infinite snapshot write loops if remote data is already identical
+          if (finalJson === remoteJson) {
+            needsRemotePush = false;
+          }
+
           if (finalJson !== currentLocal || finalJson !== lastRemoteJson) {
             lastRemoteJson = finalJson;
             localStorage.setItem('steak11_' + key, finalJson);

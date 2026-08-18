@@ -990,8 +990,14 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
 
       {/* Modal Bukti Presensi & Konfirmasi WA (Scrollable, Structured Fields) */}
       {waConfirmData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#180C25] text-slate-800 dark:text-slate-100 rounded-2xl max-w-md w-full p-5 sm:p-6 border-2 border-amber-400/80 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm"
+          onClick={() => setWaConfirmData(null)}
+        >
+          <div 
+            className="bg-white dark:bg-[#180C25] text-slate-800 dark:text-slate-100 rounded-2xl max-w-md w-full p-5 sm:p-6 border-2 border-amber-400/80 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-purple-900/50 pb-3">
               <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
@@ -1103,8 +1109,14 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
 
       {/* Image Preview Modal */}
       {previewModalImg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/90 backdrop-blur-md">
-          <div className="relative max-w-2xl w-full bg-slate-900 rounded-2xl overflow-hidden p-2">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/90 backdrop-blur-md"
+          onClick={() => setPreviewModalImg(null)}
+        >
+          <div 
+            className="relative max-w-2xl w-full bg-slate-900 rounded-2xl overflow-hidden p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setPreviewModalImg(null)}
               className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-black font-bold cursor-pointer"
