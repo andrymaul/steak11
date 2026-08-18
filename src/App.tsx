@@ -383,7 +383,7 @@ export default function App() {
               isOpen={adminDashboardOpen}
               onClose={handleLogout}
               onOpenGasModal={() => setGasModalOpen(true)}
-              currentUser={currentUser}
+              currentUser={currentUser || getStoredCurrentUser()}
             />
           </Suspense>
         </ErrorBoundary>

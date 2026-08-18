@@ -4693,7 +4693,8 @@ function doPost(e) {
               <div className="space-y-1">
                 {canAccessTab('dashboard') && (
                   <button
-                    onClick={() => { setActiveTab('dashboard'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('dashboard'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'dashboard'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4709,7 +4710,8 @@ function doPost(e) {
 
                 {canAccessTab('kasir') && (
                   <button
-                    onClick={() => { setActiveTab('kasir'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('kasir'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'kasir'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4728,7 +4730,8 @@ function doPost(e) {
 
                 {canAccessTab('pesanan') && (
                   <button
-                    onClick={() => { setActiveTab('pesanan'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('pesanan'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'pesanan'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4747,7 +4750,8 @@ function doPost(e) {
 
                 {canAccessTab('analytics') && (
                   <button
-                    onClick={() => { setActiveTab('analytics'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('analytics'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'analytics'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4771,7 +4775,8 @@ function doPost(e) {
               <div className="space-y-1">
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('menu')) && (
                   <button
-                    onClick={() => { setActiveTab('menu'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('menu'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'menu'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4790,7 +4795,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('racik')) && (
                   <button
-                    onClick={() => { setActiveTab('racik'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('racik'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'racik'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4806,7 +4812,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('inventory')) && (
                   <button
-                    onClick={() => { setActiveTab('inventory'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('inventory'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'inventory'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4825,7 +4832,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('reviews')) && (
                   <button
-                    onClick={() => { setActiveTab('reviews'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('reviews'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'reviews'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4844,7 +4852,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('promos')) && (
                   <button
-                    onClick={() => { setActiveTab('promos'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('promos'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'promos'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4868,7 +4877,8 @@ function doPost(e) {
               <div className="space-y-1">
                 {canAccessTab('karyawan') && (
                   <button
-                    onClick={() => { setActiveTab('karyawan'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('karyawan'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'karyawan'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4887,7 +4897,8 @@ function doPost(e) {
 
                 {canAccessTab('absensi') && (
                   <button
-                    onClick={() => { setActiveTab('absensi'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('absensi'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'absensi'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4903,7 +4914,8 @@ function doPost(e) {
 
                 {canAccessTab('presensi_kamera') && (
                   <button
-                    onClick={() => { setActiveTab('presensi_kamera'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('presensi_kamera'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'presensi_kamera'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4922,7 +4934,8 @@ function doPost(e) {
 
                 {canAccessTab('jadwal') && (
                   <button
-                    onClick={() => { setActiveTab('jadwal'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('jadwal'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'jadwal'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4941,7 +4954,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('penggajian')) && (
                   <button
-                    onClick={() => { setActiveTab('penggajian'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('penggajian'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'penggajian'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4957,7 +4971,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('shifts') || currentUser.allowedTabs.includes('expenses')) && (
                   <button
-                    onClick={() => { setActiveTab('shifts'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('shifts'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'shifts' || activeTab === 'expenses'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4981,7 +4996,8 @@ function doPost(e) {
               <div className="space-y-1">
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('outlets')) && (
                   <button
-                    onClick={() => { setActiveTab('outlets'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('outlets'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'outlets'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -4997,7 +5013,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('admin')) && (
                   <button
-                    onClick={() => { setActiveTab('admin'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('admin'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'admin'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5013,7 +5030,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('wa')) && (
                   <button
-                    onClick={() => { setActiveTab('wa'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('wa'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'wa'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5029,7 +5047,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('branding')) && (
                   <button
-                    onClick={() => { setActiveTab('branding'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('branding'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'branding'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5045,7 +5064,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('system')) && (
                   <button
-                    onClick={() => { setActiveTab('system'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('system'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'system'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5061,7 +5081,8 @@ function doPost(e) {
 
                 {canAccessTab('firebase') && (
                   <button
-                    onClick={() => { setActiveTab('firebase'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('firebase'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'firebase'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5080,7 +5101,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('payment_receipt_settings')) && (
                   <button
-                    onClick={() => { setActiveTab('payment_receipt_settings'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('payment_receipt_settings'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'payment_receipt_settings'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5096,7 +5118,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('audit_logs')) && (
                   <button
-                    onClick={() => { setActiveTab('audit_logs'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('audit_logs'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'audit_logs'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5112,7 +5135,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('customers')) && (
                   <button
-                    onClick={() => { setActiveTab('customers'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('customers'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'customers'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5131,7 +5155,8 @@ function doPost(e) {
 
                 {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('pengunjung') || currentUser?.role === 'Super Admin' || currentUser?.role === 'Admin' || currentUser?.role === 'Pengunjung' || currentUser?.role === 'Owner') && (
                   <button
-                    onClick={() => { setActiveTab('pengunjung'); setIsMobileDrawerOpen(false); }}
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('pengunjung'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'pengunjung'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
@@ -5149,7 +5174,8 @@ function doPost(e) {
                 )}
 
                 <button
-                  onClick={() => { setActiveTab('user_guide' as any); setIsMobileDrawerOpen(false); }}
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('user_guide' as any); setIsMobileDrawerOpen(false); }}
                   className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                     (activeTab as string) === 'user_guide'
                       ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
