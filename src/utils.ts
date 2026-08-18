@@ -333,7 +333,24 @@ export function getStoredAdmins(): AdminUser[] {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        let changed = false;
+        DEFAULT_ADMINS.forEach((defAdm) => {
+          const exists = parsed.some(
+            (a: any) =>
+              a.id === defAdm.id ||
+              a.username.toLowerCase() === defAdm.username.toLowerCase()
+          );
+          if (!exists) {
+            parsed.push(defAdm);
+            changed = true;
+          }
+        });
+        if (changed) {
+          saveAdmins(parsed);
+        }
+        return parsed;
+      }
     } catch {
       return DEFAULT_ADMINS;
     }

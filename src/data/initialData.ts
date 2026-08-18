@@ -412,6 +412,36 @@ export const DEFAULT_EMPLOYEES: any[] = [
     status: 'Aktif',
     pin: '1104',
     allowedTabs: ['dashboard', 'kasir', 'pesanan', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets']
+  },
+  {
+    id: 'EMP-005',
+    name: 'Febri',
+    username: 'febri',
+    role: 'Kasir',
+    outlet: 'Steak 11, Kalisari',
+    phone: '08123456705',
+    joinDate: '2025-01-10',
+    dailyRate: 125000,
+    hourlyRate: 16000,
+    dailyAllowance: 25000,
+    status: 'Aktif',
+    pin: '1105',
+    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'EMP-006',
+    name: 'Andhira',
+    username: 'andhira',
+    role: 'Kasir',
+    outlet: 'Steak 11, Kalisari',
+    phone: '08123456706',
+    joinDate: '2025-01-12',
+    dailyRate: 125000,
+    hourlyRate: 16000,
+    dailyAllowance: 25000,
+    status: 'Aktif',
+    pin: '1106',
+    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
   }
 ];
 
@@ -588,6 +618,32 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     createdAt: '2026-03-01',
     lastLogin: '2026-08-09 21:15',
     allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets']
+  },
+  {
+    id: 'adm-005',
+    username: 'febri',
+    fullName: 'Febri (Kasir / Staf)',
+    role: 'Kasir',
+    phone: '08123456705',
+    email: 'febri@steak11.com',
+    status: 'Aktif',
+    passwordPin: '1105',
+    createdAt: '2026-01-01',
+    lastLogin: '2026-08-18 10:00',
+    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'adm-006',
+    username: 'andhira',
+    fullName: 'Andhira (Kasir / Staf)',
+    role: 'Kasir',
+    phone: '08123456706',
+    email: 'andhira@steak11.com',
+    status: 'Aktif',
+    passwordPin: '1106',
+    createdAt: '2026-01-01',
+    lastLogin: '2026-08-18 10:00',
+    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
   },
   {
     id: 'visitor-001',

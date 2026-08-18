@@ -104,12 +104,15 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       const empList = (getStoredEmployees() || []).filter((e) => e.status === 'Aktif');
       setEmployees(empList);
 
-      const matchedEmp = initialEmpId
+      const cleanInit = initialEmpId ? initialEmpId.trim().toLowerCase() : '';
+      const matchedEmp = cleanInit
         ? empList.find(
             (e) =>
-              e.id.toLowerCase() === initialEmpId.toLowerCase() ||
-              e.name.toLowerCase() === initialEmpId.toLowerCase() ||
-              (e.username && e.username.toLowerCase() === initialEmpId.toLowerCase())
+              e.id.toLowerCase() === cleanInit ||
+              e.name.toLowerCase() === cleanInit ||
+              (e.username && e.username.toLowerCase() === cleanInit) ||
+              cleanInit.includes(e.name.toLowerCase()) ||
+              e.name.toLowerCase().includes(cleanInit)
           )
         : null;
 
@@ -153,15 +156,21 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
   }, []);
 
   const getOutletAddress = (outletName: string) => {
-    const loc = locations.find((l) => l.name === outletName);
+    if (!outletName) return locations[0]?.address || 'Jl. Kalisari II, Kalisari, Pasar Rebo, Jakarta Timur';
+    const clean = outletName.trim().toLowerCase();
+    const loc = locations.find((l) =>
+      l.name.trim().toLowerCase() === clean ||
+      clean.includes(l.name.trim().toLowerCase()) ||
+      l.name.trim().toLowerCase().includes(clean)
+    );
     if (loc && loc.address) {
       return loc.address;
     }
-    return 'Jl. Kalisari II, Kalisari, Pasar Rebo, Jakarta Timur';
+    return locations[0]?.address || 'Jl. Kalisari II, Kalisari, Pasar Rebo, Jakarta Timur';
   };
 
   useEffect(() => {
-    if (selectedOutlet && locations.length > 0) {
+    if (selectedOutlet && locations.length > 0 && !coords) {
       const addr = getOutletAddress(selectedOutlet);
       setGpsLocationText(addr);
     }
@@ -169,25 +178,54 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
 
   const fetchGpsLocation = () => {
     setIsLocating(true);
-    const addr = getOutletAddress(selectedOutlet);
+    const defaultAddr = getOutletAddress(selectedOutlet);
+    setGpsLocationText('Mengambil alamat lokasi GPS saat presensi...');
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = +position.coords.latitude.toFixed(4);
-          const lng = +position.coords.longitude.toFixed(4);
+        async (position) => {
+          const lat = +position.coords.latitude.toFixed(5);
+          const lng = +position.coords.longitude.toFixed(5);
           setCoords({ lat, lng });
-          setGpsLocationText(addr);
+
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+              {
+                headers: { 'Accept-Language': 'id,en;q=0.9' },
+                signal: controller.signal
+              }
+            );
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.display_name) {
+                const road = data.address?.road || data.address?.suburb || data.address?.city_district || '';
+                const city = data.address?.city || data.address?.town || data.address?.county || '';
+                const shortAddr = road ? `${road}${city ? ', ' + city : ''}` : data.display_name.split(',').slice(0, 3).join(',');
+                setGpsLocationText(`${shortAddr} (${lat}, ${lng})`);
+                setIsLocating(false);
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn('Reverse geocoding fetch error/timeout:', err);
+          }
+
+          setGpsLocationText(`${defaultAddr} (GPS: ${lat}, ${lng})`);
           setIsLocating(false);
         },
         (err) => {
           console.warn('Geolocation error:', err);
-          setGpsLocationText(addr);
+          setGpsLocationText(defaultAddr);
           setIsLocating(false);
         },
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      setGpsLocationText(addr);
+      setGpsLocationText(defaultAddr);
       setIsLocating(false);
     }
   };
@@ -292,8 +330,8 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     ctx.font = '12px sans-serif';
     ctx.fillText(`${dateFormatted} | ${timeFormatted} WIB`, 18, panelY + 72);
 
-    // Address Only (No "Lokasi:" and No "GPS")
-    const cleanAddress = (gpsInfo || '').replace(/^Lokasi:\s*/i, '').replace(/\s*\([^)]*\)$/, '');
+    // Address Only (No "Lokasi:")
+    const cleanAddress = (gpsInfo || '').replace(/^Lokasi:\s*/i, '');
     ctx.fillStyle = '#ffa000'; // Warm Orange
     ctx.font = '11px sans-serif';
     ctx.fillText(cleanAddress, 18, panelY + 94);
@@ -356,7 +394,10 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
 
   // Check if today employee already clocked in
   const todayRecord = attendance.find(
-    (a) => a.employeeId === selectedEmpId && a.date === todayStr
+    (a) =>
+      a.date === todayStr &&
+      (a.employeeId === selectedEmpId ||
+        (currentEmp && (a.employeeName || '').toLowerCase() === currentEmp.name.toLowerCase()))
   );
 
   // Time Comparison Helper
@@ -489,7 +530,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       time: timeStr,
       statusText: evalResult.status,
       lateOrEarlyText: evalResult.badgeText,
-      address: getOutletAddress(selectedOutlet),
+      address: gpsLocationText,
       notes: notes || 'Presensi Masuk',
       selfieUrl: capturedSelfie,
       waMessage: waText
@@ -581,7 +622,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       time: timeStr,
       statusText: 'Hadir',
       lateOrEarlyText: evalResult.badgeText,
-      address: getOutletAddress(selectedOutlet),
+      address: gpsLocationText,
       hoursWorked: finalHours,
       notes: todayRecord.notes || 'Presensi Pulang',
       selfieUrl: capturedSelfie,

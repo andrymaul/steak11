@@ -2381,10 +2381,17 @@ function doPost(e) {
   };
 
   const filteredAttendance = (attendance || []).filter((a) => {
+    const searchLower = attSearchTerm.toLowerCase().trim();
     const matchSearch =
-      (a.employeeName || '').toLowerCase().includes(attSearchTerm.toLowerCase()) ||
-      (a.employeeId || '').toLowerCase().includes(attSearchTerm.toLowerCase());
-    const matchOutlet = attOutletFilter === 'ALL' || a.outlet === attOutletFilter;
+      !searchLower ||
+      (a.employeeName || '').toLowerCase().includes(searchLower) ||
+      (a.employeeId || '').toLowerCase().includes(searchLower) ||
+      (a.outlet || '').toLowerCase().includes(searchLower) ||
+      (a.notes || '').toLowerCase().includes(searchLower) ||
+      (a.status || '').toLowerCase().includes(searchLower);
+    const matchOutlet =
+      attOutletFilter === 'ALL' ||
+      (a.outlet || '').toLowerCase().trim() === attOutletFilter.toLowerCase().trim();
     const matchDate = !attDateFilter || a.date === attDateFilter;
     return matchSearch && matchOutlet && matchDate;
   });
@@ -2413,7 +2420,7 @@ function doPost(e) {
       .map((emp) => {
         // Find attendance for this employee in the selected YYYY-MM period
         const empAtt = (attendance || []).filter(
-          (a) => a.employeeId === emp.id && a.date.startsWith(payrollPeriod)
+          (a) => (a.employeeId === emp.id || (emp.name && (a.employeeName || '').toLowerCase() === emp.name.toLowerCase())) && a.date.startsWith(payrollPeriod)
         );
 
         const daysPresent = empAtt.filter((a) => a.status === 'Hadir' || a.status === 'Terlambat').length;
@@ -7739,8 +7746,15 @@ function doPost(e) {
                             </div>
                           </td>
                           <td className="p-4 align-top font-semibold text-slate-800 dark:text-slate-200">
-                            {rec.outlet}
-                            <span className="text-[10px] text-slate-400 block">{rec.locationName || 'GPS Verified'}</span>
+                            <span className="font-bold block text-purple-900 dark:text-amber-300">{rec.outlet}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block leading-tight mt-0.5">
+                              📍 {rec.locationName || 'GPS Verified'}
+                            </span>
+                            {rec.latitude && rec.longitude && (
+                              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono block mt-0.5">
+                                ({rec.latitude}, {rec.longitude})
+                              </span>
+                            )}
                           </td>
                           <td className="p-4 align-top">
                             <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">

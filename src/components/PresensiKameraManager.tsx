@@ -95,17 +95,61 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     const locList = getStoredLocations();
     setLocations(locList);
 
-    const empList = (getStoredEmployees() || []).filter((e) => e.status === 'Aktif');
+    let empList = (getStoredEmployees() || []).filter((e) => e.status === 'Aktif');
+
+    // Robust matching function
+    const findMatchedEmployee = (targetName?: string) => {
+      if (!targetName) return undefined;
+      const clean = targetName.trim().toLowerCase();
+      return empList.find((e) =>
+        e.name.toLowerCase() === clean ||
+        (e.username && e.username.toLowerCase() === clean) ||
+        e.id.toLowerCase() === clean ||
+        clean.includes(e.name.toLowerCase()) ||
+        e.name.toLowerCase().includes(clean)
+      );
+    };
+
+    let defaultEmp = findMatchedEmployee(currentUser?.name);
+
+    // If not found, check unified users or admins
+    if (!defaultEmp && currentUser?.name) {
+      const unified = getUnifiedUsers();
+      const clean = currentUser.name.trim().toLowerCase();
+      const matchedUser = unified.find((u) =>
+        u.name.toLowerCase() === clean ||
+        u.username.toLowerCase() === clean ||
+        u.id.toLowerCase() === clean
+      );
+
+      if (matchedUser) {
+        const newEmp: Employee = {
+          id: matchedUser.type === 'employee' ? matchedUser.id : `EMP-${Date.now().toString().slice(-4)}`,
+          name: matchedUser.name,
+          username: matchedUser.username,
+          role: matchedUser.role || 'Kasir',
+          outlet: matchedUser.outlet || (locList[0]?.name || 'Steak 11, Kalisari'),
+          phone: matchedUser.phone || '081200000000',
+          joinDate: new Date().toISOString().split('T')[0],
+          dailyRate: 125000,
+          hourlyRate: 16000,
+          dailyAllowance: 25000,
+          status: 'Aktif',
+          pin: matchedUser.pinOrPass || '1111',
+          allowedTabs: matchedUser.allowedTabs
+        };
+        const allEmps = getStoredEmployees();
+        if (!allEmps.some((e) => e.id === newEmp.id || e.name.toLowerCase() === newEmp.name.toLowerCase())) {
+          const updatedEmps = [...allEmps, newEmp];
+          saveEmployees(updatedEmps);
+          empList = updatedEmps.filter((e) => e.status === 'Aktif');
+          defaultEmp = newEmp;
+        }
+      }
+    }
+
     setEmployees(empList);
 
-    // Auto select employee if matching current user name, else pick first
-    let defaultEmp = empList.find(e =>
-      currentUser?.name && (
-        e.name.toLowerCase() === currentUser.name.toLowerCase() ||
-        currentUser.name.toLowerCase().includes(e.name.toLowerCase()) ||
-        e.name.toLowerCase().includes(currentUser.name.toLowerCase())
-      )
-    );
     if (!defaultEmp && empList.length > 0) {
       defaultEmp = empList[0];
     }
@@ -127,41 +171,75 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
   }, []);
 
   const getOutletAddress = (outletName: string) => {
-    const loc = locations.find((l) => l.name === outletName);
+    if (!outletName) return locations[0]?.address || 'Lokasi Outlet';
+    const clean = outletName.trim().toLowerCase();
+    const loc = locations.find((l) =>
+      l.name.trim().toLowerCase() === clean ||
+      clean.includes(l.name.trim().toLowerCase()) ||
+      l.name.trim().toLowerCase().includes(clean)
+    );
     if (loc && loc.address) {
       return loc.address;
     }
-    return 'Jl. Kalisari II, Kalisari, Pasar Rebo, Jakarta Timur';
+    return `${outletName}`;
   };
 
   useEffect(() => {
-    if (selectedOutlet && locations.length > 0) {
-      const addr = getOutletAddress(selectedOutlet);
-      setGpsLocationText(addr);
+    if (selectedOutlet) {
+      fetchGpsLocation();
     }
-  }, [selectedOutlet, locations]);
+  }, [selectedOutlet]);
 
   const fetchGpsLocation = () => {
     setIsLocating(true);
-    const addr = getOutletAddress(selectedOutlet);
+    const defaultAddr = getOutletAddress(selectedOutlet);
+    setGpsLocationText('Mengambil alamat lokasi GPS saat presensi...');
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = +position.coords.latitude.toFixed(4);
-          const lng = +position.coords.longitude.toFixed(4);
+        async (position) => {
+          const lat = +position.coords.latitude.toFixed(5);
+          const lng = +position.coords.longitude.toFixed(5);
           setCoords({ lat, lng });
-          setGpsLocationText(addr);
+
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+              {
+                headers: { 'Accept-Language': 'id,en;q=0.9' },
+                signal: controller.signal
+              }
+            );
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.display_name) {
+                const road = data.address?.road || data.address?.suburb || data.address?.city_district || '';
+                const city = data.address?.city || data.address?.town || data.address?.county || '';
+                const shortAddr = road ? `${road}${city ? ', ' + city : ''}` : data.display_name.split(',').slice(0, 3).join(',');
+                setGpsLocationText(`${shortAddr} (${lat}, ${lng})`);
+                setIsLocating(false);
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn('Reverse geocoding fetch error/timeout:', err);
+          }
+
+          setGpsLocationText(`${defaultAddr} (GPS: ${lat}, ${lng})`);
           setIsLocating(false);
         },
         (err) => {
           console.warn('Geolocation error:', err);
-          setGpsLocationText(addr);
+          setGpsLocationText(defaultAddr);
           setIsLocating(false);
         },
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      setGpsLocationText(addr);
+      setGpsLocationText(defaultAddr);
       setIsLocating(false);
     }
   };
@@ -321,7 +399,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     ctx.fillText(`🕒 ${dateFormatted} | ${timeFormatted} WIB`, textLeftMargin, cardY + 72);
 
     // Line 4: Clean GPS Location Address
-    const cleanAddress = (gpsInfo || '').replace(/^Lokasi:\s*/i, '').replace(/\s*\([^)]*\)$/, '');
+    const cleanAddress = (gpsInfo || '').replace(/^Lokasi:\s*/i, '');
     ctx.fillStyle = '#E9D5FF'; // Light Lavender
     ctx.font = '10px sans-serif';
     ctx.fillText(`📍 ${cleanAddress}`, textLeftMargin, cardY + 94);
@@ -391,7 +469,10 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
   const endWorkTime = currentOutletObj.endWorkTime || '22:00';
 
   const todayRecord = attendance.find(
-    (a) => a.employeeId === selectedEmpId && a.date === todayStr
+    (a) =>
+      a.date === todayStr &&
+      (a.employeeId === selectedEmpId ||
+        (currentEmp && (a.employeeName || '').toLowerCase() === currentEmp.name.toLowerCase()))
   );
 
   const getClockInEvaluation = () => {
@@ -525,7 +606,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       time: timeStr,
       statusText: evalResult.clockInStatus,
       lateOrEarlyText: evalResult.badgeText,
-      address: getOutletAddress(selectedOutlet),
+      address: gpsLocationText,
       notes: notes || '-',
       selfieUrl: capturedSelfie,
       waMessage: waMsg
@@ -618,7 +699,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       time: timeStr,
       statusText: evalResult.clockOutStatus,
       lateOrEarlyText: evalResult.badgeText,
-      address: getOutletAddress(selectedOutlet),
+      address: gpsLocationText,
       hoursWorked: hours,
       notes: notes || '-',
       selfieUrl: capturedSelfie,
@@ -708,8 +789,16 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
 
           {/* Employee Selection / Locked Display */}
           {(() => {
+            const cleanUser = (currentUser?.name || '').trim().toLowerCase();
             const loggedInEmp = employees.find(
-              (e) => e.name.toLowerCase() === currentUser?.name?.toLowerCase()
+              (e) =>
+                cleanUser && (
+                  e.name.toLowerCase() === cleanUser ||
+                  (e.username && e.username.toLowerCase() === cleanUser) ||
+                  e.id.toLowerCase() === cleanUser ||
+                  cleanUser.includes(e.name.toLowerCase()) ||
+                  e.name.toLowerCase().includes(cleanUser)
+                )
             );
             const isLockedEmp = Boolean(
               loggedInEmp &&
