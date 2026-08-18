@@ -965,6 +965,7 @@ function doPost(e) {
   const loadAllData = () => {
     setOrders(getStoredOrders());
     setMenuItems(getStoredMenuItems());
+    setMenuCategories(getStoredMenuCategories());
     setChickenOptions(getStoredChickenOptions());
     setSauceOptions(getStoredSauceOptions());
     setAddonOptions(getStoredAddonOptions());
@@ -999,7 +1000,7 @@ function doPost(e) {
       loadAllData();
     };
     const events = [
-      'orders_updated', 'menu_items_updated', 'employees_updated', 'attendance_updated',
+      'orders_updated', 'menu_items_updated', 'menu_categories_updated', 'employees_updated', 'attendance_updated',
       'payroll_updated', 'locations_updated', 'admins_updated', 'inventory_updated',
       'promos_updated', 'cashier_shifts_updated', 'reviews_updated', 'suppliers_updated',
       'purchase_orders_updated', 'expenses_updated', 'employee_loans_updated', 'schedules_updated'
@@ -12332,10 +12333,27 @@ function doPost(e) {
                     </button>
                     {cat.id !== 'signature' && cat.id !== 'addon' && (
                       <button
-                        onClick={() => {
-                          const updated = menuCategories.filter((c) => c.id !== cat.id);
-                          setMenuCategories(updated);
-                          saveMenuCategories(updated);
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (checkReadOnlyPermission()) return;
+
+                          const updatedCats = menuCategories.filter((c) => c.id !== cat.id);
+                          setMenuCategories(updatedCats);
+                          saveMenuCategories(updatedCats);
+
+                          // Reassign any menu items belonging to the deleted category to signature category
+                          const currentItems = menuItems.length > 0 ? menuItems : getStoredMenuItems();
+                          const updatedMenuItems = currentItems.map((item) => {
+                            if (item.category === cat.id || item.category === cat.name) {
+                              return { ...item, category: 'signature' };
+                            }
+                            return item;
+                          });
+                          setMenuItems(updatedMenuItems);
+                          saveMenuItems(updatedMenuItems);
+
                           if (editingCatId === cat.id) {
                             setEditingCatId(null);
                             setCatName('');
