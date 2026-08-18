@@ -333,18 +333,7 @@ export function getStoredAdmins(): AdminUser[] {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        return parsed.map((admin) => {
-          if (
-            admin.allowedTabs &&
-            !admin.allowedTabs.includes('firebase') &&
-            (admin.role?.includes('Admin') || admin.role?.includes('Owner') || admin.role?.includes('Super'))
-          ) {
-            return { ...admin, allowedTabs: [...admin.allowedTabs, 'firebase'] };
-          }
-          return admin;
-        });
-      }
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     } catch {
       return DEFAULT_ADMINS;
     }
@@ -393,15 +382,13 @@ export function getStoredRoleSettings(): RoleSetting[] {
       seenIds.add(cleanId);
       seenNames.add(cleanName);
 
-      // Merge new default tabs if matching a default role definition
       const defaultMatch = DEFAULT_ROLE_SETTINGS.find(
         (d) => d.name.trim().toLowerCase() === cleanName
       );
-      let mergedTabs = role.allowedTabs || [];
-      if (defaultMatch && defaultMatch.allowedTabs) {
-        const combinedTabs = Array.from(new Set([...mergedTabs, ...defaultMatch.allowedTabs]));
-        mergedTabs = combinedTabs;
-      }
+      let mergedTabs = Array.isArray(role.allowedTabs)
+        ? role.allowedTabs
+        : (defaultMatch?.allowedTabs || []);
+
       if (cleanName === 'super admin') {
         mergedTabs = SYSTEM_ALL_TABS.map((t) => t.id);
       }
@@ -414,7 +401,6 @@ export function getStoredRoleSettings(): RoleSetting[] {
     }
   }
 
-  saveRoleSettings(uniqueRoles);
   return uniqueRoles;
 }
 
