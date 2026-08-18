@@ -645,15 +645,13 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          if (Array.isArray(remoteData) && Array.isArray(localData)) {
-            const merged = mergeArrayById(localData, remoteData);
-            if (merged.length > remoteData.length && isRecentlySavedByThisTab) {
-              needsRemotePush = true;
-            }
-            finalData = merged;
-          } else if (isRecentlySavedByThisTab && localData) {
+          // If this tab recently saved localData, use localData as source of truth; otherwise accept remote Firestore data
+          if (isRecentlySavedByThisTab && localData) {
             finalData = localData;
             needsRemotePush = true;
+          } else {
+            finalData = remoteData;
+            needsRemotePush = false;
           }
 
           const remoteJson = JSON.stringify(remoteData);
