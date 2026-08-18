@@ -366,7 +366,9 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
   const targetUid = 'shared_app_store';
 
   try {
-    localStorage.setItem('steak11_' + dataKey + '_save_time', Date.now().toString());
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('steak11_' + dataKey + '_save_time', Date.now().toString());
+    }
   } catch {}
 
   try {
@@ -548,15 +550,24 @@ const mergeArrayById = (localArray: any[], remoteArray: any[]): any[] => {
   if (!Array.isArray(remoteArray)) return Array.isArray(localArray) ? localArray : [];
 
   const map = new Map<string, any>();
+  // 1. Add all remote items
   remoteArray.forEach((item) => {
     if (item && item.id) {
       map.set(String(item.id), item);
     }
   });
+  // 2. Add local items if missing, or update if local has a newer timestamp
   localArray.forEach((item) => {
     if (item && item.id) {
-      if (!map.has(String(item.id))) {
+      const existing = map.get(String(item.id));
+      if (!existing) {
         map.set(String(item.id), item);
+      } else {
+        const localTime = new Date(item.updatedAt || item.date || 0).getTime();
+        const remoteTime = new Date(existing.updatedAt || existing.date || 0).getTime();
+        if (localTime > remoteTime) {
+          map.set(String(item.id), item);
+        }
       }
     }
   });
@@ -564,7 +575,7 @@ const mergeArrayById = (localArray: any[], remoteArray: any[]): any[] => {
 };
 
 /**
- * Start Real-time Per-User Firestore Sync
+ * Start Real-time Per-User Firestore Sync with Multi-Tab Collision Prevention
  */
 export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
   const db = getDb();
@@ -588,6 +599,21 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
 
   const unsubscribes: (() => void)[] = [];
 
+  // Cross-tab synchronization via native 'storage' events
+  if (typeof window !== 'undefined') {
+    const handleCrossTabStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith('steak11_') && !e.key.endsWith('_save_time')) {
+        const keyName = e.key.replace('steak11_', '');
+        window.dispatchEvent(new Event(keyName + '_updated'));
+        if (keyName === 'chicken_options' || keyName === 'sauce_options' || keyName === 'addon_options') {
+          window.dispatchEvent(new Event('racik_options_updated'));
+        }
+      }
+    };
+    window.addEventListener('storage', handleCrossTabStorage);
+    unsubscribes.push(() => window.removeEventListener('storage', handleCrossTabStorage));
+  }
+
   keys.forEach((key) => {
     try {
       const sharedDocRef = doc(db, 'users', targetUid, 'data', key);
@@ -597,9 +623,17 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const remoteData = docSnap.data().payload;
           const currentLocal = localStorage.getItem('steak11_' + key);
-          const lastSaveTimeStr = localStorage.getItem('steak11_' + key + '_save_time');
-          const lastSaveTime = lastSaveTimeStr ? parseInt(lastSaveTimeStr, 10) : 0;
-          const isRecentlySavedLocally = (Date.now() - lastSaveTime) < 15000;
+
+          // Read save_time from sessionStorage (isolated per tab)
+          let lastSaveTime = 0;
+          try {
+            if (typeof window !== 'undefined') {
+              const lastSaveTimeStr = sessionStorage.getItem('steak11_' + key + '_save_time');
+              lastSaveTime = lastSaveTimeStr ? parseInt(lastSaveTimeStr, 10) : 0;
+            }
+          } catch {}
+
+          const isRecentlySavedByThisTab = (Date.now() - lastSaveTime) < 15000;
 
           let localData: any = null;
           if (currentLocal) {
@@ -613,11 +647,11 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
 
           if (Array.isArray(remoteData) && Array.isArray(localData)) {
             const merged = mergeArrayById(localData, remoteData);
-            if (merged.length > remoteData.length) {
+            if (merged.length > remoteData.length && isRecentlySavedByThisTab) {
               needsRemotePush = true;
             }
             finalData = merged;
-          } else if (isRecentlySavedLocally && localData) {
+          } else if (isRecentlySavedByThisTab && localData) {
             finalData = localData;
             needsRemotePush = true;
           }
