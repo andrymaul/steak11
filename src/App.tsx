@@ -17,10 +17,9 @@ import { CartItem, AdminUser } from './types';
 import { getStoredMenuItems, getStoredCurrentUser, saveStoredCurrentUser, clearStoredCurrentUser, SYSTEM_ALL_TABS, getStoredAdmins, saveAdmins } from './utils';
 import { startPerUserFirestoreSync, pushAllLocalDataToFirestore } from './lib/firebaseServices';
 
-// Lazy loaded heavy portal components
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
-const GasScriptModal = lazy(() => import('./components/GasScriptModal').then(module => ({ default: module.GasScriptModal })));
-const EmployeeAttendanceModal = lazy(() => import('./components/EmployeeAttendanceModal').then(module => ({ default: module.EmployeeAttendanceModal })));
+import { AdminDashboard } from './components/AdminDashboard';
+import { GasScriptModal } from './components/GasScriptModal';
+import { EmployeeAttendanceModal } from './components/EmployeeAttendanceModal';
 
 const ComponentLoader = ({ label }: { label?: string }) => (
   <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-purple-950/80 backdrop-blur-sm text-white p-4">
@@ -275,15 +274,7 @@ export default function App() {
   const handleClearCart = () => setCart([]);
 
   const handleOpenAdminClick = () => {
-    const user = currentUser || getStoredCurrentUser();
-    if (user) {
-      if (typeof window !== 'undefined') sessionStorage.removeItem('steak11_dashboard_closed');
-      setCurrentUser(user);
-      setAdminDashboardOpen(true);
-      setAdminLoginOpen(false);
-    } else {
-      setAdminLoginOpen(true);
-    }
+    setAdminLoginOpen(true);
   };
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
