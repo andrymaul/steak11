@@ -451,6 +451,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Store Branding Settings State
   const [brandingSettings, setBrandingSettings] = useState<StoreBrandingSettings>(() => getStoredBranding());
 
+  useEffect(() => {
+    const handleBrandingUpdate = () => {
+      setBrandingSettings(getStoredBranding());
+    };
+    window.addEventListener('branding_updated', handleBrandingUpdate);
+    return () => window.removeEventListener('branding_updated', handleBrandingUpdate);
+  }, []);
+
   // System & Integration State
   const [gasUrlInput, setGasUrlInput] = useState<string>(() => getStoredGasUrl());
   const [gasCopyStatus, setGasCopyStatus] = useState<boolean>(false);
@@ -9704,7 +9712,7 @@ function doPost(e) {
             </div>
 
             {/* SEKSI 2: PENGATURAN KONTEN HEADER DAN FOOTER LANDING PAGE */}
-            <div className="bg-white dark:bg-[#180B24] p-6 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-xs space-y-5">
+            <form onSubmit={handleSaveBrandingSettings} className="bg-white dark:bg-[#180B24] p-6 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-purple-900/40 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-xl bg-amber-100 dark:bg-purple-950 text-amber-600 dark:text-amber-400">
@@ -9720,12 +9728,7 @@ function doPost(e) {
                   </div>
                 </div>
                 <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSaveBrandingSettings();
-                  }}
+                  type="submit"
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all cursor-pointer shadow-xs"
                 >
                   <Save className="w-4 h-4" /> Simpan Pengaturan Web
@@ -9823,7 +9826,16 @@ function doPost(e) {
                   </div>
                 </div>
               </div>
-            </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-purple-900/40">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <Save className="w-4 h-4" /> Simpan & Terapkan Pengaturan Header & Footer Web
+                </button>
+              </div>
+            </form>
 
             {/* SEKSI 3: BACKUP & RESTORE BASIS DATA APLIKASI */}
             <div className="bg-white dark:bg-[#180B24] p-6 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-xs space-y-5">

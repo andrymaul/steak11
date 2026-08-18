@@ -576,7 +576,10 @@ export function getStoredBranding(): StoreBrandingSettings {
   const stored = localStorage.getItem('steak11_branding');
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object') {
+        return { ...DEFAULT_BRANDING, ...parsed };
+      }
     } catch {
       return DEFAULT_BRANDING;
     }

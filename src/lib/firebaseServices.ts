@@ -488,11 +488,13 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
         const remoteData = sharedSnap.data().payload;
         let finalData = remoteData;
         const currentLocalRaw = localStorage.getItem('steak11_' + key);
-        if (currentLocalRaw && Array.isArray(remoteData)) {
+        if (currentLocalRaw) {
           try {
             const localData = JSON.parse(currentLocalRaw);
-            if (Array.isArray(localData)) {
+            if (Array.isArray(remoteData) && Array.isArray(localData)) {
               finalData = mergeArrayById(localData, remoteData);
+            } else if (remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData) && localData && typeof localData === 'object') {
+              finalData = { ...localData, ...remoteData };
             }
           } catch {}
         }
