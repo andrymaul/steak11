@@ -1614,6 +1614,7 @@ function doPost(e) {
 
   // --- Menu Management Actions ---
   const handleOpenAddMenu = () => {
+    if (checkReadOnlyPermission()) return;
     setEditingMenuItemId(null);
     setMenuName('');
     setMenuKoreanName('');
@@ -1631,6 +1632,7 @@ function doPost(e) {
   };
 
   const handleEditMenu = (item: MenuItem) => {
+    if (checkReadOnlyPermission()) return;
     setEditingMenuItemId(item.id);
     setMenuName(item.name);
     setMenuKoreanName(item.koreanName || '');
@@ -1890,6 +1892,7 @@ function doPost(e) {
   };
 
   const handleEditEmp = (emp: Employee) => {
+    if (checkReadOnlyPermission()) return;
     setEditingEmpId(emp.id);
     setEmpCustomId(emp.id);
     setEmpName(emp.name);

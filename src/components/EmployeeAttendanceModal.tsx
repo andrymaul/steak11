@@ -156,7 +156,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
   }, []);
 
   const getOutletAddress = (outletName: string) => {
-    if (!outletName) return locations[0]?.address || 'Jl. Kalisari II, Kalisari, Pasar Rebo, Jakarta Timur';
+    if (!outletName) return locations[0]?.address || 'Lokasi Outlet';
     const clean = outletName.trim().toLowerCase();
     const loc = locations.find((l) =>
       l.name.trim().toLowerCase() === clean ||
@@ -166,15 +166,14 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     if (loc && loc.address) {
       return loc.address;
     }
-    return locations[0]?.address || 'Jl. Kalisari II, Kalisari, Pasar Rebo, Jakarta Timur';
+    return `${outletName}`;
   };
 
   useEffect(() => {
-    if (selectedOutlet && locations.length > 0 && !coords) {
-      const addr = getOutletAddress(selectedOutlet);
-      setGpsLocationText(addr);
+    if (selectedOutlet) {
+      fetchGpsLocation();
     }
-  }, [selectedOutlet, locations]);
+  }, [selectedOutlet]);
 
   const fetchGpsLocation = () => {
     setIsLocating(true);
