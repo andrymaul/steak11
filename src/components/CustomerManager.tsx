@@ -42,7 +42,8 @@ import {
   syncCustomersFromOrders,
   getStoredWaGatewayConfig,
   saveWaGatewayConfig,
-  getStoredOrders
+  getStoredOrders,
+  isRegisteredAdmin
 } from '../utils';
 
 interface CustomerManagerProps {
@@ -51,10 +52,10 @@ interface CustomerManagerProps {
 }
 
 export const CustomerManager: React.FC<CustomerManagerProps> = ({ onShowToast, currentUser }) => {
-  const isReadOnlyVisitor = currentUser?.role === 'Pengunjung' || currentUser?.role?.toLowerCase().includes('pengunjung');
+  const isReadOnlyVisitor = !isRegisteredAdmin(currentUser);
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
-      onShowToast('🔒 Akses Read-Only: Mode Pengunjung hanya dapat melihat data (tindakan ubah/hapus dibatasi).');
+      onShowToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;

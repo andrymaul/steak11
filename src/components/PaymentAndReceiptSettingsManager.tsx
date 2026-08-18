@@ -28,7 +28,7 @@ import {
   getStoredReceiptSettings,
   saveReceiptSettings,
   getStoredLocations,
-  formatRupiah
+  isRegisteredAdmin
 } from '../utils';
 
 interface PaymentAndReceiptSettingsManagerProps {
@@ -40,10 +40,10 @@ export const PaymentAndReceiptSettingsManager: React.FC<PaymentAndReceiptSetting
   showToast,
   currentUser
 }) => {
-  const isReadOnlyVisitor = currentUser?.role === 'Pengunjung' || currentUser?.role?.toLowerCase().includes('pengunjung');
+  const isReadOnlyVisitor = !isRegisteredAdmin(currentUser);
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
-      if (showToast) showToast('🔒 Akses Read-Only: Mode Pengunjung hanya dapat melihat data (tindakan ubah/hapus dibatasi).');
+      if (showToast) showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;

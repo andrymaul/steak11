@@ -27,7 +27,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip } from '../types';
-import { formatRupiah } from '../utils';
+import { formatRupiah, isRegisteredAdmin } from '../utils';
 import * as XLSX from 'xlsx';
 
 interface FinanceControlManagerProps {
@@ -511,10 +511,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }, 250);
   };
 
-  const isReadOnlyVisitor = currentUser?.role === 'Pengunjung' || currentUser?.role?.toLowerCase().includes('pengunjung');
+  const isReadOnlyVisitor = !isRegisteredAdmin(currentUser);
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
-      showToast('🔒 Akses Read-Only: Mode Pengunjung hanya dapat melihat data (tindakan ubah/hapus dibatasi).');
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;

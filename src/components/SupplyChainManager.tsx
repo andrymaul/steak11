@@ -54,21 +54,22 @@ import {
   getStoredMenuItems,
   saveMenuItems,
   getStoredStockMutations,
-  saveStockMutations
+  saveStockMutations,
+  isRegisteredAdmin
 } from '../utils';
 
 interface SupplyChainManagerProps {
   suppliers: Supplier[];
-  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+  setSuppliers?: React.Dispatch<React.SetStateAction<Supplier[]>>;
   saveSuppliersData: (data: Supplier[]) => void;
   purchaseOrders: PurchaseOrder[];
-  setPurchaseOrders: React.Dispatch<React.SetStateAction<PurchaseOrder[]>>;
+  setPurchaseOrders?: React.Dispatch<React.SetStateAction<PurchaseOrder[]>>;
   savePurchaseOrdersData: (data: PurchaseOrder[]) => void;
   inventory: InventoryItem[];
-  setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
+  setInventory?: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   saveInventoryData: (data: InventoryItem[]) => void;
   showToast: (msg: string) => void;
-  outletsList: string[];
+  outletsList?: string[];
   initialSubTab?: 'inventory' | 'recipes' | 'stock_opname' | 'stock_transfers' | 'stock_card' | 'suppliers' | 'purchase_orders';
   currentUser?: { name: string; role: string } | null;
 }
@@ -88,10 +89,10 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
   initialSubTab = 'inventory',
   currentUser
 }) => {
-  const isReadOnlyVisitor = currentUser?.role === 'Pengunjung' || currentUser?.role?.toLowerCase().includes('pengunjung');
+  const isReadOnlyVisitor = !isRegisteredAdmin(currentUser);
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
-      showToast('🔒 Akses Read-Only: Mode Pengunjung hanya dapat melihat data (tindakan ubah/hapus dibatasi).');
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;

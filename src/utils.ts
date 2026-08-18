@@ -534,6 +534,59 @@ export function getUnifiedUsers(): UnifiedUser[] {
   return unifiedList;
 }
 
+export function isRegisteredAdmin(user?: { name?: string; role?: string; username?: string; id?: string } | null): boolean {
+  if (!user || !user.role) return false;
+  const roleLower = user.role.trim().toLowerCase();
+
+  // Explicitly deny non-admin roles
+  if (
+    roleLower === 'pengunjung' ||
+    roleLower.includes('pengunjung') ||
+    roleLower === 'kasir' ||
+    roleLower === 'waitress' ||
+    roleLower === 'barista' ||
+    roleLower === 'chef' ||
+    roleLower.includes('cook') ||
+    roleLower.includes('dapur')
+  ) {
+    return false;
+  }
+
+  // Admin roles allowed: Super Admin, Owner, Admin, Manager Outlet
+  if (
+    roleLower.includes('super') ||
+    roleLower.includes('owner') ||
+    roleLower.includes('admin') ||
+    roleLower.includes('manager')
+  ) {
+    // Verify against stored admin accounts
+    const admins = getStoredAdmins() || [];
+    const cleanName = (user.name || '').trim().toLowerCase();
+    const cleanUsername = (user.username || '').trim().toLowerCase();
+    const cleanId = (user.id || '').trim().toLowerCase();
+
+    const inAdmins = admins.some((a) => {
+      if (a.status === 'Non-Aktif') return false;
+      const aName = (a.fullName || '').trim().toLowerCase();
+      const aUser = (a.username || '').trim().toLowerCase();
+      const aId = (a.id || '').trim().toLowerCase();
+      return (
+        aName === cleanName ||
+        aUser === cleanUsername ||
+        aId === cleanId ||
+        (cleanName && aName.includes(cleanName)) ||
+        (cleanUsername && aUser === cleanUsername)
+      );
+    });
+
+    if (inAdmins || roleLower.includes('super') || roleLower.includes('owner')) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // --- WA NOTIFICATION SETTINGS STORAGE ---
 export function getStoredWaSettings(): WaNotificationSettings {
   const stored = localStorage.getItem('steak11_wa_settings');

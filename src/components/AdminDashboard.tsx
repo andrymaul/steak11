@@ -107,6 +107,7 @@ import {
   saveAddonOptions,
   getStoredAdmins,
   saveAdmins,
+  isRegisteredAdmin,
   getStoredRoleSettings,
   saveRoleSettings,
   getStoredWaSettings,
@@ -212,10 +213,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   if (!isOpen) return null;
 
-  const isReadOnlyVisitor = currentUser?.role === 'Pengunjung';
+  const isReadOnlyVisitor = !isRegisteredAdmin(currentUser);
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
-      showToast('🔒 Akses Read-Only: Mode Pengunjung hanya dapat melihat data (tindakan ubah/hapus dibatasi).');
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;
@@ -2336,6 +2337,7 @@ function doPost(e) {
   };
 
   const handleOpenEditAttendance = (rec: AttendanceRecord) => {
+    if (checkReadOnlyPermission()) return;
     setEditingAttId(rec.id);
     setAttEditEmpName(rec.employeeName);
     setAttEditDate(rec.date);
@@ -2353,6 +2355,7 @@ function doPost(e) {
   };
 
   const handleSaveEditAttendance = () => {
+    if (checkReadOnlyPermission()) return;
     if (!editingAttId) return;
 
     const updated = attendance.map((item) => {
@@ -2400,6 +2403,7 @@ function doPost(e) {
   });
 
   const handleDeleteAttendance = (id: string) => {
+    if (checkReadOnlyPermission()) return;
     const att = (attendance || []).find((a) => a.id === id);
     const name = att ? `${att.employeeName} (${att.date})` : 'Rekam absensi';
     setDeleteConfirmTarget({
