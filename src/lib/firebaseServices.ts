@@ -367,7 +367,7 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
 
   try {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('steak11_' + dataKey + '_save_time', Date.now().toString());
+      localStorage.setItem('steak11_' + dataKey + '_save_time', Date.now().toString());
     }
   } catch {}
 
@@ -636,16 +636,16 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           const remoteData = docSnap.data().payload;
           const currentLocal = localStorage.getItem('steak11_' + key);
 
-          // Read save_time from sessionStorage (isolated per tab)
+          // Read save_time from localStorage (persistent across reloads & tabs)
           let lastSaveTime = 0;
           try {
             if (typeof window !== 'undefined') {
-              const lastSaveTimeStr = sessionStorage.getItem('steak11_' + key + '_save_time');
+              const lastSaveTimeStr = localStorage.getItem('steak11_' + key + '_save_time');
               lastSaveTime = lastSaveTimeStr ? parseInt(lastSaveTimeStr, 10) : 0;
             }
           } catch {}
 
-          const isRecentlySavedByThisTab = (Date.now() - lastSaveTime) < 15000;
+          const isRecentlySaved = (Date.now() - lastSaveTime) < 300000; // 5 minute window
 
           let localData: any = null;
           if (currentLocal) {
@@ -657,10 +657,14 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // If this tab recently saved localData (e.g. edit/delete action), use localData as source of truth
-          if (isRecentlySavedByThisTab && localData) {
+          // If this tab or device recently saved localData, use localData as source of truth and push to Firestore
+          if (isRecentlySaved && localData) {
             finalData = localData;
             needsRemotePush = true;
+          } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
+            // For configuration objects like branding/settings, merge properties so local edits are preserved
+            finalData = { ...remoteData, ...localData };
+            needsRemotePush = false;
           } else {
             finalData = remoteData;
             needsRemotePush = false;

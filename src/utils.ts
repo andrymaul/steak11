@@ -590,6 +590,7 @@ export function getStoredBranding(): StoreBrandingSettings {
 
 export function saveBranding(branding: StoreBrandingSettings): void {
   localStorage.setItem('steak11_branding', JSON.stringify(branding));
+  localStorage.setItem('steak11_branding_save_time', Date.now().toString());
   window.dispatchEvent(new Event('branding_updated'));
   syncUserDataToFirestore('branding', branding);
 }
