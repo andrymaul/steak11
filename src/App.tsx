@@ -275,7 +275,15 @@ export default function App() {
   const handleClearCart = () => setCart([]);
 
   const handleOpenAdminClick = () => {
-    setAdminLoginOpen(true);
+    const user = currentUser || getStoredCurrentUser();
+    if (user) {
+      if (typeof window !== 'undefined') sessionStorage.removeItem('steak11_dashboard_closed');
+      setCurrentUser(user);
+      setAdminDashboardOpen(true);
+      setAdminLoginOpen(false);
+    } else {
+      setAdminLoginOpen(true);
+    }
   };
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -340,8 +348,11 @@ export default function App() {
           onClose={() => setAdminLoginOpen(false)}
           currentUser={currentUser}
           onOpenDashboard={() => {
+            const user = currentUser || getStoredCurrentUser();
+            if (user) setCurrentUser(user);
             if (typeof window !== 'undefined') sessionStorage.removeItem('steak11_dashboard_closed');
             setAdminDashboardOpen(true);
+            setAdminLoginOpen(false);
           }}
           onSuccessLogin={(userData) => {
             if (userData) {
