@@ -12,24 +12,17 @@ export default defineConfig(() => {
       },
     },
     build: {
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1200,
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
-              }
-              if (id.includes('lucide-react') || id.includes('motion')) {
-                return 'vendor-ui';
-              }
               if (id.includes('firebase')) {
                 return 'vendor-firebase';
               }
               if (id.includes('xlsx') || id.includes('jspdf') || id.includes('html2canvas')) {
                 return 'vendor-export';
               }
-              return 'vendor-utils';
             }
           }
         }
