@@ -1,3 +1,4 @@
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
