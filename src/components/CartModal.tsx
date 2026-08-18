@@ -26,7 +26,8 @@ export const CartModal: React.FC<CartModalProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [selectedOutlet, setSelectedOutlet] = useState('');
-  const [serviceType, setServiceType] = useState<'Takeaway' | 'Delivery'>('Takeaway');
+  const [serviceType, setServiceType] = useState<'Dine In' | 'Takeaway' | 'Delivery'>('Dine In');
+  const [tableNumber, setTableNumber] = useState('Meja 01');
   const [addressOrTime, setAddressOrTime] = useState('');
 
   // Voucher & Promo Code Generator State
@@ -147,6 +148,7 @@ export const CartModal: React.FC<CartModalProps> = ({
       phone: finalPhone,
       outlet: selectedOutlet,
       serviceType: serviceType,
+      tableNumber: serviceType === 'Dine In' ? tableNumber : undefined,
       addressOrTime: finalAddressOrTime,
       itemsSummary: itemsSummary,
       subtotal: subtotal,
@@ -386,34 +388,74 @@ export const CartModal: React.FC<CartModalProps> = ({
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
                     Tipe Layanan:
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setServiceType('Dine In')}
+                      className={`py-2.5 px-2 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
+                        serviceType === 'Dine In'
+                          ? 'border-amber-400 bg-amber-400/20 text-[#3D1259] dark:text-amber-300 shadow-sm'
+                          : 'border-slate-200 dark:border-purple-900/60 bg-slate-50 dark:bg-purple-950 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      🍽️ Dine In
+                    </button>
                     <button
                       type="button"
                       onClick={() => setServiceType('Takeaway')}
-                      className={`py-2.5 px-3 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
+                      className={`py-2.5 px-2 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
                         serviceType === 'Takeaway'
                           ? 'border-amber-400 bg-amber-400/20 text-[#3D1259] dark:text-amber-300 shadow-sm'
                           : 'border-slate-200 dark:border-purple-900/60 bg-slate-50 dark:bg-purple-950 text-slate-600 dark:text-slate-300'
                       }`}
                     >
-                      Takeaway
+                      🛍️ Takeaway
                     </button>
                     <button
                       type="button"
                       onClick={() => setServiceType('Delivery')}
-                      className={`py-2.5 px-3 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
+                      className={`py-2.5 px-2 rounded-xl border-2 text-xs font-bold transition-all cursor-pointer ${
                         serviceType === 'Delivery'
                           ? 'border-amber-400 bg-amber-400/20 text-[#3D1259] dark:text-amber-300 shadow-sm'
                           : 'border-slate-200 dark:border-purple-900/60 bg-slate-50 dark:bg-purple-950 text-slate-600 dark:text-slate-300'
                       }`}
                     >
-                      Delivery
+                      🛵 Delivery
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  {serviceType === 'Delivery' ? (
+                  {serviceType === 'Dine In' ? (
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                        Nomor Meja Pelanggan:
+                      </label>
+                      <input
+                        type="text"
+                        value={tableNumber}
+                        onChange={(e) => setTableNumber(e.target.value)}
+                        placeholder="Contoh: Meja 05"
+                        className="w-full px-3 py-2 text-xs font-extrabold rounded-xl border border-amber-400/50 bg-amber-500/10 text-purple-950 dark:text-amber-300 mb-2"
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Meja 01', 'Meja 02', 'Meja 03', 'Meja 04', 'Meja 05', 'Meja 06', 'Meja 07', 'Meja 08', 'Meja 09', 'Meja 10'].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setTableNumber(m)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer transition-all ${
+                              tableNumber === m
+                                ? 'bg-amber-400 text-purple-950 shadow-xs'
+                                : 'bg-slate-200 dark:bg-purple-900/60 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : serviceType === 'Delivery' ? (
                     <div>
                       <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                         Alamat Pengiriman:

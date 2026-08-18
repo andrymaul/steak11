@@ -458,7 +458,13 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
                 {(receiptConfig.showTableNumber ?? true) && (
                   <div className="flex justify-between">
                     <span>Layanan:</span>
-                    <span className="font-bold">{order.serviceType} {order.tableNumber ? `(${order.tableNumber})` : ''}</span>
+                    <span className="font-bold">{order.serviceType || 'Dine In'} {order.tableNumber ? `(${order.tableNumber})` : ''}</span>
+                  </div>
+                )}
+                {order.tableNumber && (
+                  <div className="flex justify-between items-center my-1.5 p-1.5 bg-amber-400/20 border border-amber-400/60 rounded text-amber-900 dark:text-amber-300 font-extrabold text-xs">
+                    <span>NOMOR MEJA:</span>
+                    <span className="font-black text-sm tracking-wider uppercase">{order.tableNumber}</span>
                   </div>
                 )}
               </div>
