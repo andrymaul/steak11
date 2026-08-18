@@ -2182,10 +2182,13 @@ function doPost(e) {
   };
 
   // --- Attendance Actions ---
-  const handleRefreshAttendance = () => {
+  const handleRefreshAttendance = async () => {
+    if (typeof window !== 'undefined' && navigator.onLine) {
+      await pullAllFirestoreDataToLocal().catch(() => {});
+    }
     const refreshed = getStoredAttendance();
     setAttendance(refreshed);
-    showToast('Data absensi berhasil diperbarui!');
+    showToast('Data absensi berhasil diperbarui & disinkronkan!');
   };
 
   const handleDownloadAttendanceXlsx = () => {

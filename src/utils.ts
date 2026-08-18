@@ -271,9 +271,29 @@ export function getStoredAttendance(): AttendanceRecord[] {
 }
 
 export function saveAttendance(records: AttendanceRecord[]): void {
-  localStorage.setItem('steak11_attendance', JSON.stringify(records));
+  let finalRecords = records;
+  try {
+    const existing = localStorage.getItem('steak11_attendance');
+    if (existing) {
+      const parsed = JSON.parse(existing);
+      if (Array.isArray(parsed)) {
+        const map = new Map<string, AttendanceRecord>();
+        parsed.forEach((r) => r && r.id && map.set(String(r.id), r));
+        records.forEach((r) => r && r.id && map.set(String(r.id), r));
+        finalRecords = Array.from(map.values());
+      }
+    }
+  } catch {}
+
+  finalRecords.sort((a, b) => {
+    const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+    const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+    return dateB.localeCompare(dateA);
+  });
+
+  localStorage.setItem('steak11_attendance', JSON.stringify(finalRecords));
   window.dispatchEvent(new Event('attendance_updated'));
-  syncAllAttendanceToFirebase(records);
+  syncAllAttendanceToFirebase(finalRecords);
 }
 
 // --- PAYROLL STORAGE ---

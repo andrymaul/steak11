@@ -486,7 +486,17 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
       const sharedSnap = await getDoc(sharedDocRef);
       if (sharedSnap.exists() && sharedSnap.data()?.payload !== undefined) {
         const remoteData = sharedSnap.data().payload;
-        localStorage.setItem('steak11_' + key, JSON.stringify(remoteData));
+        let finalData = remoteData;
+        const currentLocalRaw = localStorage.getItem('steak11_' + key);
+        if (currentLocalRaw && Array.isArray(remoteData)) {
+          try {
+            const localData = JSON.parse(currentLocalRaw);
+            if (Array.isArray(localData)) {
+              finalData = mergeArrayById(localData, remoteData);
+            }
+          } catch {}
+        }
+        localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
         window.dispatchEvent(new Event(key + '_updated'));
         if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
           window.dispatchEvent(new Event('racik_options_updated'));
@@ -645,8 +655,13 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // If this tab recently saved localData, use localData as source of truth; otherwise accept remote Firestore data
-          if (isRecentlySavedByThisTab && localData) {
+          // For array datasets, perform atomic merging so no item is ever lost across devices/tabs
+          if (Array.isArray(remoteData) && Array.isArray(localData)) {
+            finalData = mergeArrayById(localData, remoteData);
+            if (finalData.length > remoteData.length) {
+              needsRemotePush = true;
+            }
+          } else if (isRecentlySavedByThisTab && localData) {
             finalData = localData;
             needsRemotePush = true;
           } else {
