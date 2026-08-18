@@ -1,8 +1,51 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isValidPayload() {
+      return request.resource.data.payload != null;
+    }
+
+    // Public catalog collections (Menu, Outlets, Promos, Reviews, Branding)
+    match /users/shared_app_store/data/{dataKey} {
+      // Publicly readable datasets for Landing Page & POS
+      allow read: if dataKey in [
+        'menu_items', 'menu_categories', 'chicken_options', 'sauce_options', 
+        'addon_options', 'locations', 'branding', 'promos', 'reviews', 'orders',
+        'healthcheck'
+      ] || isAuthenticated();
+
+      // Write allowed for valid app store payloads
+      allow write: if isValidPayload() || isAuthenticated();
+    }
+
+    // Direct orders collection (Public Customer Checkout & Admin POS)
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create: if request.resource.data.customerName != null;
+      allow update, delete: if isAuthenticated();
+    }
+
+    // Direct menu collection (Public catalog)
+    match /menu_items/{itemId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Healthcheck & Shared System Ping
+    match /shared_data/{docId} {
       allow read, write: if true;
+    }
+
+    // User-scoped data fallback rules
+    match /users/{userId}/data/{dataKey} {
+      allow read: if request.auth.uid == userId || userId == 'shared_app_store';
+      allow write: if (request.auth.uid == userId || userId == 'shared_app_store') && isValidPayload();
     }
   }
 }
