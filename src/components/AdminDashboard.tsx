@@ -222,15 +222,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const canAccessTab = (tabId: string): boolean => {
-    if (!currentUser || !currentUser.allowedTabs || currentUser.allowedTabs.length === 0) return true;
+    if (!currentUser) return false;
+    if (currentUser.allowedTabs && Array.isArray(currentUser.allowedTabs)) {
+      return currentUser.allowedTabs.includes(tabId);
+    }
     const roleLower = (currentUser.role || '').toLowerCase();
-    if (roleLower.includes('admin') || roleLower.includes('owner') || roleLower.includes('super')) {
+    if (roleLower.includes('super') || roleLower.includes('owner') || roleLower.includes('admin')) {
       return true;
     }
-    if (roleLower.includes('pengunjung')) {
-      return tabId !== 'admin';
-    }
-    return currentUser.allowedTabs.includes(tabId);
+    return false;
   };
 
   // Supply Chain & Finance State
@@ -4776,7 +4776,7 @@ function doPost(e) {
                 Produk & Persediaan
               </div>
               <div className="space-y-1">
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('menu')) && (
+                {canAccessTab('menu') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('menu'); setIsMobileDrawerOpen(false); }}
@@ -4796,7 +4796,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('racik')) && (
+                {canAccessTab('racik') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('racik'); setIsMobileDrawerOpen(false); }}
@@ -4813,7 +4813,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('inventory')) && (
+                {canAccessTab('inventory') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('inventory'); setIsMobileDrawerOpen(false); }}
@@ -4833,7 +4833,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('reviews')) && (
+                {canAccessTab('reviews') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('reviews'); setIsMobileDrawerOpen(false); }}
@@ -4853,7 +4853,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('promos')) && (
+                {canAccessTab('promos') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('promos'); setIsMobileDrawerOpen(false); }}
@@ -4955,7 +4955,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('penggajian')) && (
+                {canAccessTab('penggajian') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('penggajian'); setIsMobileDrawerOpen(false); }}
@@ -4972,7 +4972,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('shifts') || currentUser.allowedTabs.includes('expenses')) && (
+                {(canAccessTab('shifts') || canAccessTab('expenses')) && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('shifts'); setIsMobileDrawerOpen(false); }}
@@ -4997,7 +4997,7 @@ function doPost(e) {
                 Sistem & Pengaturan
               </div>
               <div className="space-y-1">
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('outlets')) && (
+                {canAccessTab('outlets') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('outlets'); setIsMobileDrawerOpen(false); }}
@@ -5014,7 +5014,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('admin')) && (
+                {canAccessTab('admin') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('admin'); setIsMobileDrawerOpen(false); }}
@@ -5031,7 +5031,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('wa')) && (
+                {canAccessTab('wa') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('wa'); setIsMobileDrawerOpen(false); }}
@@ -5048,7 +5048,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('branding')) && (
+                {canAccessTab('branding') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('branding'); setIsMobileDrawerOpen(false); }}
@@ -5065,7 +5065,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('system')) && (
+                {canAccessTab('system') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('system'); setIsMobileDrawerOpen(false); }}
@@ -5102,7 +5102,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('payment_receipt_settings')) && (
+                {canAccessTab('payment_receipt_settings') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('payment_receipt_settings'); setIsMobileDrawerOpen(false); }}
@@ -5119,7 +5119,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('audit_logs')) && (
+                {canAccessTab('audit_logs') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('audit_logs'); setIsMobileDrawerOpen(false); }}
@@ -5136,7 +5136,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('customers')) && (
+                {canAccessTab('customers') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('customers'); setIsMobileDrawerOpen(false); }}
@@ -5156,7 +5156,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(!currentUser?.allowedTabs || currentUser.allowedTabs.includes('pengunjung') || currentUser?.role === 'Super Admin' || currentUser?.role === 'Admin' || currentUser?.role === 'Pengunjung' || currentUser?.role === 'Owner') && (
+                {canAccessTab('pengunjung') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('pengunjung'); setIsMobileDrawerOpen(false); }}

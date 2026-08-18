@@ -1157,26 +1157,9 @@ export function getStoredCurrentUser(): { name: string; role: string; allowedTab
     try {
       const user = JSON.parse(stored);
       if (user && user.allowedTabs) {
-        let changed = false;
         const isPengunjungOnly = user.role === 'Pengunjung';
         if (isPengunjungOnly) {
           user.allowedTabs = SYSTEM_ALL_TABS.map((t) => t.id).filter((id) => id !== 'admin');
-          changed = true;
-        } else {
-          if (!user.allowedTabs.includes('pengunjung')) {
-            user.allowedTabs.push('pengunjung');
-            changed = true;
-          }
-          if (!user.allowedTabs.includes('jadwal')) {
-            user.allowedTabs.push('jadwal');
-            changed = true;
-          }
-          if (!user.allowedTabs.includes('firebase')) {
-            user.allowedTabs.push('firebase');
-            changed = true;
-          }
-        }
-        if (changed) {
           localStorage.setItem('steak11_current_user', JSON.stringify(user));
         }
       }
