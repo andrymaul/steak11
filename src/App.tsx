@@ -228,11 +228,7 @@ export default function App() {
   const handleClearCart = () => setCart([]);
 
   const handleOpenAdminClick = () => {
-    if (currentUser) {
-      setAdminDashboardOpen(true);
-    } else {
-      setAdminLoginOpen(true);
-    }
+    setAdminLoginOpen(true);
   };
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -279,6 +275,8 @@ export default function App() {
         <AdminLoginModal
           isOpen={adminLoginOpen}
           onClose={() => setAdminLoginOpen(false)}
+          currentUser={currentUser}
+          onOpenDashboard={() => setAdminDashboardOpen(true)}
           onSuccessLogin={(userData) => {
             if (userData) {
               setCurrentUser(userData);

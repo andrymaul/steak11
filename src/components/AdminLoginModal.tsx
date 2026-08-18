@@ -10,12 +10,16 @@ interface AdminLoginModalProps {
   onClose: () => void;
   onSuccessLogin: (userData?: { name: string; role: string; allowedTabs?: string[] }) => void;
   onSuccessStaffLogin?: (employeeId: string, pin: string) => void;
+  currentUser?: { name: string; role: string; allowedTabs?: string[] } | null;
+  onOpenDashboard?: () => void;
 }
 
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   isOpen,
   onClose,
   onSuccessLogin,
+  currentUser,
+  onOpenDashboard,
 }) => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'verification'>('signin');
   const [fullName, setFullName] = useState('');
@@ -277,8 +281,14 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-white dark:bg-[#1a0c28] text-slate-800 dark:text-slate-100 rounded-2xl overflow-hidden shadow-2xl border border-purple-900/50 p-6 space-y-5">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-md bg-white dark:bg-[#1a0c28] text-slate-800 dark:text-slate-100 rounded-2xl overflow-hidden shadow-2xl border border-purple-900/50 p-6 space-y-5"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-purple-900/50 pb-3">
           <div className="flex items-center gap-2.5">
@@ -305,6 +315,26 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Active Session Banner */}
+        {currentUser && (
+          <div className="p-3.5 rounded-xl bg-amber-400/15 border border-amber-400/40 text-xs flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Sesi Login Aktif:</div>
+              <div className="font-extrabold text-[#3D1259] dark:text-amber-300">{currentUser.name} ({currentUser.role})</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (onOpenDashboard) onOpenDashboard();
+              }}
+              className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-[11px] shrink-0 transition-colors shadow-sm cursor-pointer"
+            >
+              Masuk Dashboard &rarr;
+            </button>
+          </div>
+        )}
 
         {authMode === 'verification' ? (
           /* Verification Screen */
