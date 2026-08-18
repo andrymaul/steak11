@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Wifi, WifiOff } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Navbar } from './components/Navbar';
@@ -48,6 +48,30 @@ export default function App() {
   const [adminDashboardOpen, setAdminDashboardOpen] = useState<boolean>(false);
   const [employeeAttendanceOpen, setEmployeeAttendanceOpen] = useState(false);
   const [gasModalOpen, setGasModalOpen] = useState(false);
+
+  // Network Online/Offline state
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof window !== 'undefined' ? navigator.onLine : true);
+  const [showRestoredBanner, setShowRestoredBanner] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setShowRestoredBanner(true);
+      setTimeout(() => setShowRestoredBanner(false), 4000);
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowRestoredBanner(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const [authStaffId, setAuthStaffId] = useState('');
   const [authStaffPin, setAuthStaffPin] = useState('');
@@ -247,6 +271,22 @@ export default function App() {
 
   return (
     <div className="bg-[#FAF9F6] text-slate-800 dark:bg-[#12071B] dark:text-slate-100 min-h-screen antialiased selection:bg-amber-400 selection:text-purple-950 transition-colors duration-300">
+      {/* Network Offline Banner */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-100 bg-rose-600 text-white font-extrabold text-xs px-4 py-2 text-center shadow-lg border-b border-rose-700 flex items-center justify-center gap-2">
+          <WifiOff className="w-4 h-4 shrink-0 text-amber-300 animate-pulse" />
+          <span>🔴 Mode Offline (Internet Terputus): Data transaksi & presensi tersimpan di memori lokal dan akan di-sync otomatis saat online.</span>
+        </div>
+      )}
+
+      {/* Network Restored Banner */}
+      {isOnline && showRestoredBanner && (
+        <div className="fixed top-0 left-0 right-0 z-100 bg-emerald-600 text-white font-extrabold text-xs px-4 py-2 text-center shadow-lg border-b border-emerald-700 flex items-center justify-center gap-2">
+          <Wifi className="w-4 h-4 shrink-0 text-amber-300" />
+          <span>🟢 Internet Terhubung Kembali! Data tersimpan di memori lokal sedang disinkronkan ke Cloud Firestore.</span>
+        </div>
+      )}
+
       {/* Header / Navbar */}
       <Navbar
         isDark={isDark}
