@@ -46,7 +46,15 @@ export default function App() {
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string; allowedTabs?: string[] } | null>(() => getStoredCurrentUser());
-  const [adminDashboardOpen, setAdminDashboardOpen] = useState<boolean>(false);
+  const [adminDashboardOpen, setAdminDashboardOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const closed = sessionStorage.getItem('steak11_dashboard_closed');
+      if (closed === 'true') return false;
+      const user = getStoredCurrentUser();
+      return Boolean(user);
+    }
+    return false;
+  });
   const [employeeAttendanceOpen, setEmployeeAttendanceOpen] = useState(false);
   const [gasModalOpen, setGasModalOpen] = useState(false);
 
@@ -166,13 +174,15 @@ export default function App() {
 
   const handleLogout = async () => {
     isLoggingOutRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('steak11_dashboard_closed', 'true');
+      sessionStorage.removeItem('steak11_active_tab');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
     setCurrentUser(null);
     clearStoredCurrentUser();
     setAdminDashboardOpen(false);
     setAdminLoginOpen(false);
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
     try {
       await signOut(auth);
     } catch (err) {
@@ -329,9 +339,13 @@ export default function App() {
           isOpen={adminLoginOpen}
           onClose={() => setAdminLoginOpen(false)}
           currentUser={currentUser}
-          onOpenDashboard={() => setAdminDashboardOpen(true)}
+          onOpenDashboard={() => {
+            if (typeof window !== 'undefined') sessionStorage.removeItem('steak11_dashboard_closed');
+            setAdminDashboardOpen(true);
+          }}
           onSuccessLogin={(userData) => {
             if (userData) {
+              if (typeof window !== 'undefined') sessionStorage.removeItem('steak11_dashboard_closed');
               setCurrentUser(userData);
               saveStoredCurrentUser(userData);
               setAdminDashboardOpen(true);

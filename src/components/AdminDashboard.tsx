@@ -165,7 +165,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
 }) => {
   // Navigation Tab
-  const [activeTab, setActiveTab] = useState<
+  const [activeTab, setActiveTabState] = useState<
     | 'dashboard'
     | 'kasir'
     | 'pesanan'
@@ -195,7 +195,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     | 'jadwal'
     | 'pengunjung'
     | 'user_guide'
-  >('dashboard');
+  >(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('steak11_active_tab');
+      if (saved) return saved as any;
+    }
+    return 'dashboard';
+  });
+
+  const setActiveTab = (tab: any) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('steak11_active_tab', tab);
+    }
+  };
 
   if (!isOpen) return null;
 
