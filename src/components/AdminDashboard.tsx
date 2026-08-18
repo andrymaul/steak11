@@ -4102,8 +4102,10 @@ function doPost(e) {
   // --- Store Branding Settings Handler ---
   const handleSaveBrandingSettings = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (checkReadOnlyPermission()) return;
     saveBranding(brandingSettings);
-    showToast('Identitas & Branding Toko berhasil disimpan dan diintegrasikan ke Landing Page!');
+    window.dispatchEvent(new Event('branding_updated'));
+    showToast('✅ Identitas & Branding / Konten Header & Footer Web berhasil disimpan!');
   };
 
   // --- Inventory CRUD Handlers ---
@@ -9696,10 +9698,11 @@ function doPost(e) {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    saveBranding(brandingSettings);
-                    window.dispatchEvent(new Event('branding_updated'));
-                    showToast('✅ Konten Header & Footer Landing Page berhasil diperbarui!');
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSaveBrandingSettings();
                   }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all cursor-pointer shadow-xs"
                 >
