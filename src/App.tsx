@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Navbar } from './components/Navbar';
@@ -11,12 +11,24 @@ import { TestimonialsSection } from './components/TestimonialsSection';
 import { Footer } from './components/Footer';
 import { CartModal } from './components/CartModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
-import { AdminDashboard } from './components/AdminDashboard';
-import { GasScriptModal } from './components/GasScriptModal';
-import { EmployeeAttendanceModal } from './components/EmployeeAttendanceModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { CartItem, AdminUser } from './types';
 import { getStoredMenuItems, getStoredCurrentUser, saveStoredCurrentUser, clearStoredCurrentUser, SYSTEM_ALL_TABS, getStoredAdmins, saveAdmins } from './utils';
 import { startPerUserFirestoreSync, pushAllLocalDataToFirestore } from './lib/firebaseServices';
+
+// Lazy loaded heavy portal components
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const GasScriptModal = lazy(() => import('./components/GasScriptModal').then(module => ({ default: module.GasScriptModal })));
+const EmployeeAttendanceModal = lazy(() => import('./components/EmployeeAttendanceModal').then(module => ({ default: module.EmployeeAttendanceModal })));
+
+const ComponentLoader = ({ label }: { label?: string }) => (
+  <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-purple-950/80 backdrop-blur-sm text-white p-4">
+    <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+    <span className="font-extrabold text-sm font-baloo text-amber-300">
+      {label || 'Memuat Modul Steak 11...'}
+    </span>
+  </div>
+);
 
 export default function App() {
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -297,22 +309,30 @@ export default function App() {
         />
       )}
 
-      {/* Admin Dashboard */}
+      {/* Admin Dashboard (Lazy Loaded with Error Boundary & Suspense) */}
       {adminDashboardOpen && (
-        <AdminDashboard
-          isOpen={adminDashboardOpen}
-          onClose={handleLogout}
-          onOpenGasModal={() => setGasModalOpen(true)}
-          currentUser={currentUser}
-        />
+        <ErrorBoundary fallbackTitle="Terjadi Kendala pada Admin Dashboard">
+          <Suspense fallback={<ComponentLoader label="Memuat Admin Dashboard Steak 11..." />}>
+            <AdminDashboard
+              isOpen={adminDashboardOpen}
+              onClose={handleLogout}
+              onOpenGasModal={() => setGasModalOpen(true)}
+              currentUser={currentUser}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Google Apps Script Modal */}
       {gasModalOpen && (
-        <GasScriptModal
-          isOpen={gasModalOpen}
-          onClose={() => setGasModalOpen(false)}
-        />
+        <ErrorBoundary fallbackTitle="Terjadi Kendala pada Modal Google Apps Script">
+          <Suspense fallback={<ComponentLoader label="Memuat Panduan Google Script..." />}>
+            <GasScriptModal
+              isOpen={gasModalOpen}
+              onClose={() => setGasModalOpen(false)}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Floating Toast Notification */}
@@ -324,16 +344,20 @@ export default function App() {
 
       {/* Employee Attendance Modal */}
       {employeeAttendanceOpen && (
-        <EmployeeAttendanceModal
-          isOpen={employeeAttendanceOpen}
-          onClose={() => setEmployeeAttendanceOpen(false)}
-          initialEmpId={authStaffId}
-          initialPin={authStaffPin}
-          onOpenAdmin={() => {
-            setEmployeeAttendanceOpen(false);
-            setAdminLoginOpen(true);
-          }}
-        />
+        <ErrorBoundary fallbackTitle="Terjadi Kendala pada Portal Absensi Staf">
+          <Suspense fallback={<ComponentLoader label="Memuat Portal Absensi..." />}>
+            <EmployeeAttendanceModal
+              isOpen={employeeAttendanceOpen}
+              onClose={() => setEmployeeAttendanceOpen(false)}
+              initialEmpId={authStaffId}
+              initialPin={authStaffPin}
+              onOpenAdmin={() => {
+                setEmployeeAttendanceOpen(false);
+                setAdminLoginOpen(true);
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );
