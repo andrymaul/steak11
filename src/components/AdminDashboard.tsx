@@ -2408,7 +2408,9 @@ function doPost(e) {
       (a.status || '').toLowerCase().includes(searchLower);
     const matchOutlet =
       attOutletFilter === 'ALL' ||
-      (a.outlet || '').toLowerCase().trim() === attOutletFilter.toLowerCase().trim();
+      (a.outlet || '').toLowerCase().trim() === attOutletFilter.toLowerCase().trim() ||
+      (a.outlet || '').toLowerCase().trim().includes(attOutletFilter.toLowerCase().trim()) ||
+      attOutletFilter.toLowerCase().trim().includes((a.outlet || '').toLowerCase().trim());
     const matchDate = !attDateFilter || a.date === attDateFilter;
     return matchSearch && matchOutlet && matchDate;
   });

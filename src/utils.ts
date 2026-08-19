@@ -254,6 +254,14 @@ export function saveEmployees(employees: Employee[]): void {
   syncAllEmployeesToFirebase(employees);
 }
 
+// --- DATE HELPERS ---
+export function getLocalDateStr(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // --- ATTENDANCE STORAGE ---
 export function getStoredAttendance(): AttendanceRecord[] {
   const stored = localStorage.getItem('steak11_attendance');

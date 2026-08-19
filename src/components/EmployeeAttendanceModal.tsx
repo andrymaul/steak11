@@ -28,7 +28,8 @@ import {
   saveAttendance,
   getStoredLocations,
   getStoredWaSettings,
-  getStoredBranding
+  getStoredBranding,
+  getLocalDateStr
 } from '../utils';
 
 interface EmployeeAttendanceModalProps {
@@ -89,12 +90,16 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStr();
 
   useEffect(() => {
     const handleLocUpdate = () => {
       const locList = getStoredLocations();
       setLocations(locList);
+    };
+
+    const handleAttUpdate = () => {
+      setAttendance(getStoredAttendance());
     };
 
     if (isOpen) {
@@ -143,8 +148,10 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     }
 
     window.addEventListener('locations_updated', handleLocUpdate);
+    window.addEventListener('attendance_updated', handleAttUpdate);
     return () => {
       window.removeEventListener('locations_updated', handleLocUpdate);
+      window.removeEventListener('attendance_updated', handleAttUpdate);
     };
   }, [isOpen]);
 

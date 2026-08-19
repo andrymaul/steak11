@@ -33,7 +33,8 @@ import {
   getStoredLocations,
   getUnifiedUsers,
   getStoredWaSettings,
-  getStoredBranding
+  getStoredBranding,
+  getLocalDateStr
 } from '../utils';
 
 interface PresensiKameraManagerProps {
@@ -90,9 +91,14 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStr();
 
   useEffect(() => {
+    const handleAttUpdated = () => {
+      setAttendance(getStoredAttendance());
+    };
+    window.addEventListener('attendance_updated', handleAttUpdated);
+
     const locList = getStoredLocations();
     setLocations(locList);
 
@@ -131,7 +137,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
           role: matchedUser.role || 'Kasir',
           outlet: matchedUser.outlet || (locList[0]?.name || 'Steak 11, Kalisari'),
           phone: matchedUser.phone || '081200000000',
-          joinDate: new Date().toISOString().split('T')[0],
+          joinDate: getLocalDateStr(),
           dailyRate: 125000,
           hourlyRate: 16000,
           dailyAllowance: 25000,
@@ -167,6 +173,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     fetchGpsLocation();
 
     return () => {
+      window.removeEventListener('attendance_updated', handleAttUpdated);
       stopCamera();
     };
   }, []);
