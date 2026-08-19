@@ -719,7 +719,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
 /**
  * Legacy compatibility stubs for global collections
  */
-export const syncAllMenuItemsToFirebase = (items: MenuItem[]) => syncUserDataToFirestore('menu_items', items);
+export const syncAllMenuItemsToFirebase = (items: MenuItem[]) => {
+  syncUserDataToFirestore('menu_items', items);
+  syncCollectionWithDeletionToFirestore('menu_items', items);
+};
 export const syncAllRacikOptionsToFirebase = (c: any, s: any, a: any) => {
   syncUserDataToFirestore('chicken_options', c);
   syncUserDataToFirestore('sauce_options', s);
@@ -728,12 +731,16 @@ export const syncAllRacikOptionsToFirebase = (c: any, s: any, a: any) => {
 export const syncAllCategoriesToFirebase = (cats: any) => syncUserDataToFirestore('menu_categories', cats);
 export const syncEntireMenuDataToFirebase = (m: any, c: any, s: any, a: any, cat: any) => {
   syncUserDataToFirestore('menu_items', m);
+  syncCollectionWithDeletionToFirestore('menu_items', m);
   syncUserDataToFirestore('chicken_options', c);
   syncUserDataToFirestore('sauce_options', s);
   syncUserDataToFirestore('addon_options', a);
   syncUserDataToFirestore('menu_categories', cat);
 };
-export const syncAllOrdersToFirebase = (orders: OrderItem[]) => syncUserDataToFirestore('orders', orders);
+export const syncAllOrdersToFirebase = (orders: OrderItem[]) => {
+  syncUserDataToFirestore('orders', orders);
+  syncCollectionWithDeletionToFirestore('orders', orders);
+};
 export const syncAllAttendanceToFirebase = (records: any) => syncUserDataToFirestore('attendance', records);
 export const syncAllCustomersToFirebase = (customers: any) => syncUserDataToFirestore('customers', customers);
 export const syncAllEmployeesToFirebase = (employees: any) => syncUserDataToFirestore('employees', employees);

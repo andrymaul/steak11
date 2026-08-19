@@ -29,8 +29,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdminLogin }) => {
         <div className="bg-white border-y border-slate-200 py-2.5 overflow-hidden mb-10 text-[#3D1259]">
           <div className="max-w-7xl mx-auto px-4 flex items-center gap-3">
             <span className="px-2.5 py-0.5 rounded-md bg-[#3D1259] text-white font-black text-[10px] uppercase shrink-0">INFO UTAMA</span>
-            <div className="text-xs font-sans text-[#3D1259] font-black tracking-wide overflow-hidden whitespace-nowrap">
-              <span className="inline-block animate-marquee">{branding.footerRunningText}</span>
+            <div className="text-xs font-sans text-[#3D1259] font-black tracking-wide overflow-hidden whitespace-nowrap flex-1">
+              <div className="inline-flex animate-marquee gap-8">
+                <span>{branding.footerRunningText}</span>
+                <span>{branding.footerRunningText}</span>
+                <span>{branding.footerRunningText}</span>
+                <span>{branding.footerRunningText}</span>
+              </div>
             </div>
           </div>
         </div>

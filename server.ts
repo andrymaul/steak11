@@ -3,7 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 
 const app = express();
-const PORT = 3000;
+let PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json());
 
@@ -235,8 +235,19 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server Steak 11 & Node.js WA Gateway berjalan di http://0.0.0.0:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server Steak 11 & Node.js WA Gateway berjalan di http://localhost:${PORT}`);
+  });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      const nextPort = PORT + 1;
+      console.warn(`⚠️ Port ${PORT} sedang digunakan, mengalihkan ke port ${nextPort}...`);
+      PORT = nextPort;
+      server.listen(PORT, '0.0.0.0');
+    } else {
+      console.error('Server error:', err);
+    }
   });
 }
 

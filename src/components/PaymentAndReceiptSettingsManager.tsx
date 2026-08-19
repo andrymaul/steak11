@@ -28,7 +28,8 @@ import {
   getStoredReceiptSettings,
   saveReceiptSettings,
   getStoredLocations,
-  isRegisteredAdmin
+  isRegisteredAdmin,
+  formatRupiah
 } from '../utils';
 
 interface PaymentAndReceiptSettingsManagerProps {

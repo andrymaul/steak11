@@ -335,6 +335,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     ctx.font = '11px sans-serif';
     ctx.fillText(cleanAddress, 18, panelY + 94);
 
+    // Explicitly export camera selfie in Base64 Data URL format (data:image/jpeg;base64,...)
     return canvas.toDataURL('image/jpeg', 0.88);
   };
 
@@ -699,7 +700,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
               <Clock className="w-4 h-4 text-amber-500" /> Presensi Digital Selfie & Shift Tracking
             </h4>
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-purple-900 dark:text-amber-300 bg-amber-200/80 dark:bg-purple-900 px-3 py-1 rounded-full">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Watermark Otentik
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Watermark Otentik (Base64 JPEG)
             </div>
           </div>
 

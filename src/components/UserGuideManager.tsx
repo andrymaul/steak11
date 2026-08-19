@@ -329,13 +329,13 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       id: 'guide-system-2',
       category: 'system',
       categoryLabel: 'System & Firebase',
-      categoryIcon: Flame,
-      title: '14. Integrasi Real-Time Cloud Firestore & Google Sheets (GAS)',
-      summary: 'Konfigurasi koneksi database Firebase Firestore dan backup sekunder ke Google Sheets Apps Script.',
+      categoryIcon: Database,
+      title: '14. Integrasi Real-Time Firebase Cloud Firestore & Google Sheets (GAS)',
+      summary: 'Konfigurasi koneksi database Firebase Cloud Firestore dan backup sekunder ke Google Sheets Apps Script.',
       badge: 'Database Cloud',
       targetTab: 'firebase',
       steps: [
-        'Buka menu "Firebase Firestore" untuk memeriksa status sinkronisasi real-time Cloud Firestore.',
+        'Buka menu "Firebase Sync" untuk memeriksa status sinkronisasi real-time Firebase Cloud Firestore.',
         'Seluruh transaksi, stok, dan absensi tersinkronkan secara otomatis antar perangkat kasir & admin.',
         'Jika ingin mengaktifkan backup otomatis ke Google Spreadsheet: Buka menu "Integrasi & System", masukkan URL Web App Google Apps Script (GAS), lalu klik "Uji Koneksi" & "Simpan URL".'
       ]
@@ -440,7 +440,7 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
               <Sparkles className="w-3.5 h-3.5" /> PUSAT PANDUAN PENGGUNA TERPADU
             </span>
             <span className="text-xs text-purple-200 font-bold hidden sm:inline">
-              Steak 11 v3.5 — Modul Panduan Resmi
+              Steak 11 v1.0 — Modul Panduan Resmi
             </span>
           </div>
 

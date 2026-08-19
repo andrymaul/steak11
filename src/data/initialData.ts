@@ -133,8 +133,8 @@ export const LOCATIONS: LocationItem[] = [
     hours: 'Setiap Hari : 15.00-22.00 WIB',
     phone: '081223233299',
     mapUrl: 'https://share.google/O3f5RdhdFB6oE7toi',
-    startWorkTime: '15:00',
-    endWorkTime: '22:00',
+    startWorkTime: '14:00',
+    endWorkTime: '23:00',
     onlineDeliveryPartners: {
       gofoodUrl: 'https://gofood.link/a/steak11cibubur',
       grabfoodUrl: 'https://grab.onelink.me/steak11cibubur',
@@ -143,7 +143,7 @@ export const LOCATIONS: LocationItem[] = [
       isGofoodActive: true,
       isGrabfoodActive: true,
       isShopeefoodActive: true,
-      isMaximActive: true
+      isMaximActive: false
     },
     supportedServiceTypes: {
       dineIn: true,
@@ -159,8 +159,8 @@ export const LOCATIONS: LocationItem[] = [
     hours: 'Setiap Hari : 15.00-22.00 WIB',
     phone: '081223233299',
     mapUrl: 'https://share.google/4WOCcckZ4Kfvxj6hj',
-    startWorkTime: '15:00',
-    endWorkTime: '22:00',
+    startWorkTime: '14:00',
+    endWorkTime: '23:00',
     onlineDeliveryPartners: {
       gofoodUrl: 'https://gofood.link/a/steak11kalisari',
       grabfoodUrl: 'https://grab.onelink.me/steak11kalisari',
@@ -185,8 +185,8 @@ export const LOCATIONS: LocationItem[] = [
     hours: 'Setiap Hari : 16.00-23.00 WIB',
     phone: '081223233299',
     mapUrl: 'https://share.google/J4atKAQkJzuKX8OfM',
-    startWorkTime: '16:00',
-    endWorkTime: '23:00',
+    startWorkTime: '14:30',
+    endWorkTime: '23:30',
     onlineDeliveryPartners: {
       gofoodUrl: 'https://gofood.link/a/steak11cilangkap',
       grabfoodUrl: 'https://grab.onelink.me/steak11cilangkap',
@@ -211,8 +211,8 @@ export const LOCATIONS: LocationItem[] = [
     hours: 'Senin-Jumat : 10.00-18.00 WIB',
     phone: '081223233299',
     mapUrl: 'https://share.google/L2FHRrb133CrSfkUD',
-    startWorkTime: '10:00',
-    endWorkTime: '18:00',
+    startWorkTime: '09:00',
+    endWorkTime: '21:00',
     onlineDeliveryPartners: {
       gofoodUrl: 'https://gofood.link/a/steak11kuningan',
       grabfoodUrl: 'https://grab.onelink.me/steak11kuningan',
@@ -237,8 +237,8 @@ export const LOCATIONS: LocationItem[] = [
     hours: 'Setiap Hari : 15.00-22.00 WIB',
     phone: '081223233299',
     mapUrl: 'https://share.google/3N0QsIy9hYIYJxOxd',
-    startWorkTime: '15:00',
-    endWorkTime: '22:00',
+    startWorkTime: '14:00',
+    endWorkTime: '23:00',
     onlineDeliveryPartners: {
       gofoodUrl: 'https://gofood.link/a/steak11jatisampurna',
       grabfoodUrl: 'https://grab.onelink.me/steak11jatisampurna',
@@ -358,90 +358,180 @@ export const DEFAULT_GAS_URL = '';
 
 export const DEFAULT_EMPLOYEES: any[] = [
   {
-    id: 'EMP-001',
-    name: 'Asep Saepulloh',
-    role: 'Chef / Cook',
+    id: 'S11-001',
+    name: 'Andry Maulana',
+    username: 'andry',
+    role: 'Chef / Koki',
     outlet: 'Steak 11, Cibubur',
-    phone: '08123456701',
-    joinDate: '2024-01-15',
-    dailyRate: 130000,
-    hourlyRate: 18000,
-    dailyAllowance: 25000,
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
     status: 'Aktif',
-    pin: '1101',
-    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi']
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
   },
   {
-    id: 'EMP-002',
-    name: 'Rina Kurnia',
-    role: 'Kasir',
-    outlet: 'Steak 11, Kuningan',
-    phone: '08123456702',
-    joinDate: '2024-03-01',
-    dailyRate: 120000,
-    hourlyRate: 16000,
-    dailyAllowance: 25000,
+    id: 'S11-002',
+    name: 'Desi Suci Afriani',
+    username: 'desi',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Cibubur',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
     status: 'Aktif',
-    pin: '1102',
-    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi']
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
   },
   {
-    id: 'EMP-003',
-    name: 'Doni Setiawan',
-    role: 'Waitress',
-    outlet: 'Steak 11, Kalisari',
-    phone: '08123456703',
-    joinDate: '2024-05-10',
-    dailyRate: 115000,
-    hourlyRate: 15000,
-    dailyAllowance: 20000,
-    status: 'Aktif',
-    pin: '1103',
-    allowedTabs: ['kasir', 'pesanan', 'absensi']
-  },
-  {
-    id: 'EMP-004',
-    name: 'Hendra Wijaya',
-    role: 'Manager Outlet',
+    id: 'S11-003',
+    name: 'Rizky Musyaffa Fajari',
+    username: 'fajar',
+    role: 'Chef / Koki',
     outlet: 'Steak 11, Cilangkap',
-    phone: '08123456704',
-    joinDate: '2023-11-20',
-    dailyRate: 175000,
-    hourlyRate: 22000,
-    dailyAllowance: 30000,
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
     status: 'Aktif',
-    pin: '1104',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets']
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
   },
   {
-    id: 'EMP-005',
-    name: 'Febri',
+    id: 'S11-004',
+    name: 'Achmad Fuad Putranto',
+    username: 'fuad',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Kalisari',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
+    status: 'Aktif',
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'S11-005',
+    name: 'Aura Tri Nabila Putri',
+    username: 'aura',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Cibubur',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
+    status: 'Aktif',
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'S11-006',
+    name: 'Anggraini Putri',
+    username: 'putri',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Cibubur',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
+    status: 'Aktif',
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'S11-007',
+    name: 'Muhammad Yusuf Al-Mahdi',
+    username: 'yusuf',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Kuningan',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 100000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
+    status: 'Aktif',
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'S11-008',
+    name: 'Febrian Dwi Anggoro',
     username: 'febri',
-    role: 'Kasir',
-    outlet: 'Steak 11, Kalisari',
-    phone: '08123456705',
-    joinDate: '2025-01-10',
-    dailyRate: 125000,
-    hourlyRate: 16000,
-    dailyAllowance: 25000,
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Cilangkap',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 80000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
     status: 'Aktif',
-    pin: '1105',
-    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
   },
   {
-    id: 'EMP-006',
-    name: 'Andhira',
+    id: 'S11-009',
+    name: 'Andhira Pratama Hasibuan',
     username: 'andhira',
-    role: 'Kasir',
-    outlet: 'Steak 11, Kalisari',
-    phone: '08123456706',
-    joinDate: '2025-01-12',
-    dailyRate: 125000,
-    hourlyRate: 16000,
-    dailyAllowance: 25000,
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Jatisampurna',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
     status: 'Aktif',
-    pin: '1106',
-    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'S11-010',
+    name: 'Muhammad Zacky Alfiansyah',
+    username: 'zacky',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Kalisari',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
+    status: 'Aktif',
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
+  },
+  {
+    id: 'S11-011',
+    name: 'Adam Mubin Muzaki',
+    username: 'adam',
+    role: 'Chef / Koki',
+    outlet: 'Steak 11, Cilangkap',
+    phone: '081223233299',
+    joinDate: '2026-05-28',
+    dailyRate: 60000,
+    hourlyRate: 0,
+    dailyAllowance: 10000,
+    punctualityAllowancePerDay: 10000,
+    status: 'Aktif',
+    pin: '1234',
+    allowedTabs: ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera']
   }
 ];
 
@@ -561,9 +651,7 @@ export const DEFAULT_PAYROLL: any[] = [
 
 export const DEFAULT_MENU_CATEGORIES = [
   { id: 'signature', name: 'Signature Steak', description: 'Menu utama paha ayam juicy boneless' },
-  { id: 'addon', name: 'Extra Addon', description: 'Tambahan daging, kentang wedges & ekstra saus' },
-  { id: 'minuman', name: 'Minuman & Beverage', description: 'Es teh manis, lemon tea, & minuman segar' },
-  { id: 'paket_combo', name: 'Paket Hemat Combo', description: 'Paket kenyang steak + minum + snack' }
+  { id: 'addon', name: 'Extra Addon', description: 'Tambahan daging, kentang wedges & ekstra saus' }
 ];
 
 export const DEFAULT_ADMINS: AdminUser[] = [
@@ -578,7 +666,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: '1111',
     createdAt: '2026-01-01',
     lastLogin: '2026-08-11 00:00',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'firebase', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
   },
   {
     id: 'adm-001',
@@ -591,59 +679,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: '1111',
     createdAt: '2026-01-01',
     lastLogin: '2026-08-10 22:30',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'firebase', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
-  },
-  {
-    id: 'adm-002',
-    username: 'kasir_tebet',
-    fullName: 'Siti Rahma (Admin Kasir Tebet)',
-    role: 'Admin Kasir',
-    phone: '081298765432',
-    email: 'kasir.tebet@steak11.com',
-    status: 'Aktif',
-    passwordPin: '1122',
-    createdAt: '2026-02-15',
-    lastLogin: '2026-08-10 18:00',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'inventory', 'reviews', 'shifts', 'absensi']
-  },
-  {
-    id: 'adm-003',
-    username: 'manager_margonda',
-    fullName: 'Budi Santoso (Manager Outlet Margonda)',
-    role: 'Manager Outlet',
-    phone: '081311223344',
-    email: 'manager.depok@steak11.com',
-    status: 'Aktif',
-    passwordPin: '3344',
-    createdAt: '2026-03-01',
-    lastLogin: '2026-08-09 21:15',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets']
-  },
-  {
-    id: 'adm-005',
-    username: 'febri',
-    fullName: 'Febri (Kasir / Staf)',
-    role: 'Kasir',
-    phone: '08123456705',
-    email: 'febri@steak11.com',
-    status: 'Aktif',
-    passwordPin: '1105',
-    createdAt: '2026-01-01',
-    lastLogin: '2026-08-18 10:00',
-    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
-  },
-  {
-    id: 'adm-006',
-    username: 'andhira',
-    fullName: 'Andhira (Kasir / Staf)',
-    role: 'Kasir',
-    phone: '08123456706',
-    email: 'andhira@steak11.com',
-    status: 'Aktif',
-    passwordPin: '1106',
-    createdAt: '2026-01-01',
-    lastLogin: '2026-08-18 10:00',
-    allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'reviews', 'absensi', 'presensi_kamera']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
   },
   {
     id: 'visitor-001',
@@ -656,7 +692,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: 'Google Auth',
     createdAt: '2026-08-15',
     lastLogin: '2026-08-17 19:30',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'firebase', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
   },
   {
     id: 'visitor-002',
@@ -669,7 +705,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: 'Google Auth',
     createdAt: '2026-08-16',
     lastLogin: '2026-08-17 20:00',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'firebase', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
   }
 ];
 
@@ -701,12 +737,12 @@ export const DEFAULT_BRANDING: StoreBrandingSettings = {
   mainAddress: 'Cabang Utama: Tebet, Margonda Depok, Bintaro, Bekasi & Gading Serpong',
   aboutDescription: 'Bukan sekadar steak ayam biasa, ini rasa yang MYTHIC. Terbuat dari 100% daging paha ayam segar pilihan bertabur 11 rempah rahasia yang dipadukan saus racikan homemade premium.',
   showAnnouncementBar: true,
-  announcementText: '🔥 PROMO MYTHIC: Diskon Rp 5.000 untuk Porsi Puas 2 Ayam Hotplate! Pakai Kode Voucher: MYTHIC11',
+  announcementText: '🔥 PROMO MYTHIC: REVIEW GOOGLE MAPS FREE MINI CHICKEN STEAK!!!',
   announcementLink: '#menu',
-  footerRunningText: '⚡ PROMO MYTHIC HOTPLATE STEAK 11 — DAGING PAHA AYAM BONELESS JUICY 100% HALAL — BISA PESAN ONLINE DENGAN PENGIRIMAN INSTAN ⚡',
+  footerRunningText: '⚡ PROMO MYTHIC STEAK 11 — DAGING PAHA AYAM BONELESS JUICY 100% HALAL — BISA PESAN ONLINE DENGAN PENGIRIMAN INSTAN ⚡',
   footerCopyrightText: '© 2026 STEAK 11 — MYTHIC CHICKEN TASTE. ALL RIGHTS RESERVED.',
   googleMapsUrl: 'https://maps.google.com/?q=Steak+11',
-  systemVersionText: 'Steak 11 v3.5 System'
+  systemVersionText: 'Steak 11 v1.0 System'
 };
 
 export const DEFAULT_INVENTORY: InventoryItem[] = [
@@ -793,7 +829,7 @@ export const DEFAULT_PROMOS: PromoVoucher[] = [
   {
     id: 'PRM-001',
     code: 'MYTHIC11',
-    description: 'Diskon Spesial Rp 5.000 untuk Porsi Puas 2 Potong Ayam',
+    description: 'REVIEW GOOGLE MAPS FREE MINI CHICKEN STEAK!!!',
     discountType: 'nominal',
     discountValue: 5000,
     minOrderAmount: 30000,
@@ -1132,14 +1168,14 @@ export const DEFAULT_ROLE_SETTINGS: RoleSetting[] = [
     name: 'Pengunjung',
     targetType: 'both',
     description: 'Akses Pengunjung (Visitor / Google Auth). Dapat melihat semua menu dasbor aplikasi, namun tidak dapat mengubah/menghapus data (Read-Only).',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'wa', 'branding', 'system', 'firebase', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'wa', 'branding', 'system', 'supabase', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
   },
   {
     id: 'role-super-admin',
     name: 'Super Admin',
     targetType: 'admin',
     description: 'Akses penuh tanpa batas ke seluruh menu sistem, database, audit log, dan pengaturan branding.',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'firebase', 'payment_receipt_settings', 'audit_logs', 'customers']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'supabase', 'payment_receipt_settings', 'audit_logs', 'customers']
   },
   {
     id: 'role-admin',

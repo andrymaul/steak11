@@ -27,6 +27,7 @@ import {
 import { Employee, AttendanceRecord, LocationItem } from '../types';
 import {
   getStoredEmployees,
+  saveEmployees,
   getStoredAttendance,
   saveAttendance,
   getStoredLocations,
@@ -404,7 +405,8 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     ctx.font = '10px sans-serif';
     ctx.fillText(`📍 ${cleanAddress}`, textLeftMargin, cardY + 94);
 
-    return canvas.toDataURL('image/jpeg', 0.90);
+    // Explicitly export camera selfie in Base64 Data URL format (data:image/jpeg;base64,...)
+    return canvas.toDataURL('image/jpeg', 0.88);
   };
 
   const handleTakeSnap = (actionType: 'MASUK' | 'PULANG') => {
@@ -959,8 +961,11 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-purple-900/50 pb-3">
             <div className="flex items-center gap-2">
               <Camera className="w-5 h-5 text-amber-500" />
-              <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
+              <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
                 Kamera & Watermark Selfie
+                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-600 dark:text-amber-300 text-[10px] font-extrabold font-mono border border-amber-400/30">
+                  Format: Base64
+                </span>
               </h3>
             </div>
             <div className="text-xs font-bold text-slate-500 dark:text-slate-400">

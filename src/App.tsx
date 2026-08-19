@@ -15,7 +15,7 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CartItem, AdminUser } from './types';
 import { getStoredMenuItems, getStoredCurrentUser, saveStoredCurrentUser, clearStoredCurrentUser, SYSTEM_ALL_TABS, getStoredAdmins, saveAdmins } from './utils';
-import { startPerUserFirestoreSync, pushAllLocalDataToFirestore } from './lib/firebaseServices';
+import { startPerUserFirestoreSync, pullAllFirestoreDataToLocal, pushAllLocalDataToFirestore } from './lib/firebaseServices';
 
 import { AdminDashboard } from './components/AdminDashboard';
 import { GasScriptModal } from './components/GasScriptModal';
@@ -144,10 +144,6 @@ export default function App() {
         } catch (e) {
           console.warn('Error syncing auth user to admins list:', e);
         }
-
-        setTimeout(() => {
-          pushAllLocalDataToFirestore().catch(() => {});
-        }, 100);
       } else {
         if (user && !user.emailVerified) {
           signOut(auth).catch(() => {});
@@ -162,6 +158,16 @@ export default function App() {
         }
       }
     });
+
+    // Initial Firebase Sync on App Load
+    pullAllFirestoreDataToLocal().then((res) => {
+      if (res.success && res.pulledKeys && res.pulledKeys > 0) {
+        console.log('✅ Synchronized latest data from Cloud Firestore!');
+      } else {
+        // If Firestore is clean, push local initial datasets to Firestore
+        pushAllLocalDataToFirestore().catch(() => {});
+      }
+    }).catch(() => {});
 
     unsubFirestore = startPerUserFirestoreSync();
 

@@ -76,7 +76,6 @@ export const SYSTEM_ALL_TABS = [
   { id: 'wa', name: 'Notifikasi WhatsApp' },
   { id: 'branding', name: 'Identitas & Branding' },
   { id: 'system', name: 'Integrasi & System' },
-  { id: 'firebase', name: 'Firebase Firestore' },
   { id: 'payment_receipt_settings', name: 'Pembayaran & Struk' },
   { id: 'audit_logs', name: 'Audit Log Aktivitas' },
   { id: 'customers', name: 'Data Pelanggan & WA' },
@@ -325,12 +324,8 @@ export function saveMenuCategories(categories: { id: string; name: string; descr
 }
 
 export async function syncAllLocalMenuToFirebase(): Promise<void> {
-  const menuItems = getStoredMenuItems();
-  const chickenOpts = getStoredChickenOptions();
-  const sauceOpts = getStoredSauceOptions();
-  const addonOpts = getStoredAddonOptions();
-  const categories = getStoredMenuCategories();
-  await syncEntireMenuDataToFirebase(menuItems, chickenOpts, sauceOpts, addonOpts, categories);
+  const { pushAllLocalDataToFirestore } = await import('./lib/firebaseServices');
+  await pushAllLocalDataToFirestore().catch(() => {});
 }
 
 // --- ADMIN USERS STORAGE ---

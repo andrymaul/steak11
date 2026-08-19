@@ -150,7 +150,7 @@ import { PresensiKameraManager } from './PresensiKameraManager';
 import { CustomerManager } from './CustomerManager';
 import { FirebaseSettingsPanel } from './FirebaseSettingsPanel';
 import { UserGuideManager } from './UserGuideManager';
-import { refreshEmployeesFromFirebase } from '../lib/firebaseServices';
+import { refreshEmployeesFromFirebase, pullAllFirestoreDataToLocal } from '../lib/firebaseServices';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -5107,22 +5107,22 @@ function doPost(e) {
                   </button>
                 )}
 
-                {canAccessTab('firebase') && (
+                {(canAccessTab('firebase') || canAccessTab('admin')) && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('firebase'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                       activeTab === 'firebase'
-                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                        ? 'bg-amber-500 dark:bg-amber-400 text-purple-950 shadow-md'
                         : 'text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-900/40'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Flame className="w-4 h-4 text-amber-500 shrink-0 animate-pulse" />
-                      <span>Firebase Firestore</span>
+                      <Flame className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>Firebase Sync</span>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-extrabold text-[10px]">
-                      CLOUD
+                      Firestore
                     </span>
                   </button>
                 )}
@@ -5223,7 +5223,7 @@ function doPost(e) {
           </div>
 
           <div className="p-3 border-t border-slate-100 dark:border-purple-900/40 bg-slate-50/60 dark:bg-purple-950/30 text-[10px] text-slate-400 text-center font-mono">
-            {brandingSettings.systemVersionText || 'Steak 11 v3.5 System'}
+            {brandingSettings.systemVersionText || 'Steak 11 v1.0 System'}
           </div>
         </aside>
 
@@ -9821,7 +9821,7 @@ function doPost(e) {
                     </label>
                     <input
                       type="text"
-                      placeholder="Steak 11 v3.5 System"
+                      placeholder="Steak 11 v1.0 System"
                       value={brandingSettings.systemVersionText || ''}
                       onChange={(e) => setBrandingSettings({ ...brandingSettings, systemVersionText: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-[#12071B] text-slate-800 dark:text-amber-300 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 text-xs"
@@ -10101,7 +10101,7 @@ function doPost(e) {
           </div>
         )}
 
-        {/* TAB FIREBASE FIRESTORE */}
+        {/* TAB FIREBASE DATABASE */}
         {activeTab === 'firebase' && (
           <div className="space-y-6">
             <div className="bg-white dark:bg-[#180B24] p-6 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
