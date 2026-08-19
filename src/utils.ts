@@ -285,6 +285,9 @@ export function saveAttendance(records: AttendanceRecord[]): void {
   });
 
   localStorage.setItem('steak11_attendance', JSON.stringify(sorted));
+  try {
+    localStorage.setItem('steak11_attendance_save_time', Date.now().toString());
+  } catch {}
   window.dispatchEvent(new Event('attendance_updated'));
   syncAllAttendanceToFirebase(sorted);
 }

@@ -657,8 +657,18 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // If this tab or device recently saved localData, use localData as source of truth and push to Firestore
-          if (isRecentlySaved && localData) {
+          // If local and remote are both arrays (e.g. attendance, orders, employees), merge by ID so new local items are never overwritten
+          if (Array.isArray(localData) && Array.isArray(remoteData)) {
+            finalData = mergeArrayById(localData, remoteData);
+            if (key === 'attendance') {
+              finalData.sort((a: any, b: any) => {
+                const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+                const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+                return dateB.localeCompare(dateA);
+              });
+            }
+            needsRemotePush = finalData.length > remoteData.length;
+          } else if (isRecentlySaved && localData) {
             finalData = localData;
             needsRemotePush = true;
           } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
