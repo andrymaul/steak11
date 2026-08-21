@@ -509,7 +509,9 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       notes: notes || `Presensi Masuk (${evalResult.badgeText})`,
       locationName: gpsLocationText,
       latitude: coords?.lat,
-      longitude: coords?.lng
+      longitude: coords?.lng,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     const updated = [newRecord, ...attendance];
@@ -559,12 +561,12 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     }
 
     if (!todayRecord) {
-      setErrorMsg(`${currentEmp.name} belum Presensi Masuk hari ini! Silakan Presensi Masuk terlebih dahulu.`);
+      setErrorMsg(`Belum ada rekam Presensi Masuk untuk ${currentEmp.name} hari ini!`);
       return;
     }
 
     if (todayRecord.clockOutTime) {
-      setErrorMsg(`${currentEmp.name} sudah melakukan Presensi Pulang hari ini pukul ${todayRecord.clockOutTime}.`);
+      setErrorMsg(`${currentEmp.name} sudah melakukan Presensi Pulang hari ini pukul ${todayRecord.clockOutTime}!`);
       return;
     }
 
@@ -574,19 +576,16 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     }
 
     const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
+    const timeStr = now.toTimeString().split(' ')[0]; // HH:mm:ss
     const evalResult = getClockOutEvaluation();
 
-    // Calculate hours worked
-    const clockInParts = todayRecord.clockInTime.split(':').map(Number);
-    const clockOutParts = timeStr.split(':').map(Number);
-
-    const inMinutes = clockInParts[0] * 60 + clockInParts[1];
-    const outMinutes = clockOutParts[0] * 60 + clockOutParts[1];
-    let diffMinutes = outMinutes - inMinutes;
-    if (diffMinutes < 0) diffMinutes += 24 * 60; // Overnight shift
-
-    const hours = +(diffMinutes / 60).toFixed(1);
+    const [inH, inM] = todayRecord.clockInTime.split(':').map(Number);
+    const [outH, outM] = timeStr.split(':').map(Number);
+    let totalInMin = inH * 60 + inM;
+    let totalOutMin = outH * 60 + outM;
+    if (totalOutMin < totalInMin) totalOutMin += 24 * 60; // Overnight
+    const durationMin = totalOutMin - totalInMin;
+    const hours = +(durationMin / 60).toFixed(1);
     const finalHours = hours > 0 ? hours : 8.0;
 
     const updated = attendance.map((rec) => {
@@ -598,7 +597,8 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
           earlyOutMinutes: evalResult.earlyOutMinutes,
           clockOutSelfieUrl: capturedSelfie,
           hoursWorked: finalHours,
-          notes: rec.notes ? `${rec.notes} | Pulang: ${evalResult.badgeText}` : evalResult.badgeText
+          notes: rec.notes ? `${rec.notes} | Pulang: ${evalResult.badgeText}` : evalResult.badgeText,
+          updatedAt: new Date().toISOString()
         };
       }
       return rec;

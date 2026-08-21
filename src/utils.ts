@@ -284,10 +284,21 @@ export function saveAttendance(records: AttendanceRecord[]): void {
     return dateB.localeCompare(dateA);
   });
 
-  localStorage.setItem('steak11_attendance', JSON.stringify(sorted));
   try {
+    localStorage.setItem('steak11_attendance', JSON.stringify(sorted));
     localStorage.setItem('steak11_attendance_save_time', Date.now().toString());
-  } catch {}
+  } catch (err) {
+    console.warn('LocalStorage quota warning for attendance, trimming large selfies:', err);
+    try {
+      // If quota exceeded, preserve the last 10 selfies and strip older heavy base64 strings from local storage
+      const lightweight = sorted.map((rec, idx) => ({
+        ...rec,
+        selfieUrl: idx < 10 ? rec.selfieUrl : undefined,
+        clockOutSelfieUrl: idx < 10 ? rec.clockOutSelfieUrl : undefined
+      }));
+      localStorage.setItem('steak11_attendance', JSON.stringify(lightweight));
+    } catch {}
+  }
   window.dispatchEvent(new Event('attendance_updated'));
   syncAllAttendanceToFirebase(sorted);
 }

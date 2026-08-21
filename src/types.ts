@@ -164,6 +164,9 @@ export interface AttendanceRecord {
   earlyOutMinutes?: number; // Jumlah menit pulang awal
   latitude?: number;
   longitude?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  isDeleted?: boolean;
 }
 
 export interface PayrollSlip {

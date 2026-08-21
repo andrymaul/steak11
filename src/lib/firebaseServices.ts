@@ -557,6 +557,38 @@ export const cleanUpLegacyUserDocs = async (): Promise<{ success: boolean; delet
   };
 };
 
+const getItemTimestamp = (item: any): number => {
+  if (!item) return 0;
+  if (item.updatedAt) {
+    const t = new Date(item.updatedAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (item.createdAt) {
+    const t = new Date(item.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  // If id is ATT-1740000000000 or ORD-1740000000000 or contains a large millisecond timestamp
+  if (typeof item.id === 'string') {
+    const numMatch = item.id.match(/\d{12,14}/);
+    if (numMatch) {
+      const t = parseInt(numMatch[0], 10);
+      if (!isNaN(t) && t > 1000000000000) return t;
+    }
+  }
+  // If date + clockInTime/time is present (e.g. date: "2026-08-21", clockInTime: "18:55:00")
+  if (item.date) {
+    const timeStr = item.clockInTime || item.time || item.clockOutTime || '';
+    if (timeStr) {
+      const fullStr = `${item.date}T${timeStr.length === 5 ? timeStr + ':00' : timeStr}`;
+      const t = new Date(fullStr).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+    const t = new Date(item.date).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  return 0;
+};
+
 const mergeArrayById = (localArray: any[], remoteArray: any[], remoteUpdatedAtStr?: string): any[] => {
   if (!Array.isArray(localArray)) return Array.isArray(remoteArray) ? remoteArray : [];
   if (!Array.isArray(remoteArray)) return Array.isArray(localArray) ? localArray : [];
@@ -571,19 +603,20 @@ const mergeArrayById = (localArray: any[], remoteArray: any[], remoteUpdatedAtSt
     }
   });
 
-  // 2. Only retain a local item if it was created/updated offline *AFTER* the remote snapshot was saved
+  // 2. Retain local items that are recent or newer than remote snapshot
   localArray.forEach((item) => {
     if (item && item.id) {
       const existing = map.get(String(item.id));
       if (!existing) {
-        const itemCreatedTime = new Date(item.createdAt || item.updatedAt || item.date || 0).getTime();
-        // Only keep if genuinely created newer than remote snapshot timestamp (offline creation)
-        if (remoteTime > 0 && itemCreatedTime > remoteTime) {
+        const itemCreatedTime = getItemTimestamp(item);
+        // Retain if created within last 24h or newer than remote snapshot timestamp
+        const isRecent = itemCreatedTime > 0 && (Date.now() - itemCreatedTime < 86400000);
+        if (isRecent || (remoteTime > 0 && itemCreatedTime >= remoteTime)) {
           map.set(String(item.id), item);
         }
       } else {
-        const localItemTime = new Date(item.updatedAt || item.date || 0).getTime();
-        const existingItemTime = new Date(existing.updatedAt || existing.date || 0).getTime();
+        const localItemTime = getItemTimestamp(item);
+        const existingItemTime = getItemTimestamp(existing);
         if (localItemTime > existingItemTime) {
           map.set(String(item.id), item);
         }

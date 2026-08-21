@@ -584,7 +584,9 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       locationName: gpsLocationText,
       selfieUrl: capturedSelfie,
       latitude: coords?.lat,
-      longitude: coords?.lng
+      longitude: coords?.lng,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     const updated = [newRecord, ...attendance];
@@ -675,7 +677,8 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
           clockOutStatus: evalResult.clockOutStatus,
           earlyOutMinutes: evalResult.earlyOutMinutes,
           clockOutSelfieUrl: capturedSelfie,
-          notes: notes ? `${rec.notes} | Pulang: ${notes}` : rec.notes
+          notes: notes ? `${rec.notes} | Pulang: ${notes}` : rec.notes,
+          updatedAt: new Date().toISOString()
         };
       }
       return rec;
