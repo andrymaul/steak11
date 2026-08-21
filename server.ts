@@ -35,6 +35,22 @@ const waLogs: { timestamp: string; phone: string; message: string; status: 'SUCC
   }
 ];
 
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAPbxCv1rkcDX-3NFErXNBUx0ilJcw3rp4",
+  authDomain: "steak11-2fa2a.firebaseapp.com",
+  projectId: "steak11-2fa2a",
+  storageBucket: "steak11-2fa2a.firebasestorage.app",
+  messagingSenderId: "529741743252",
+  appId: "1:529741743252:web:d5072c854ad58c0528e081",
+  firestoreDatabaseId: "(default)"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const fbDb = getFirestore(fbApp);
+
 // --- HEALTH CHECK ---
 app.get('/api/health', (req, res) => {
   res.json({
@@ -43,6 +59,43 @@ app.get('/api/health', (req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });
+});
+
+app.get('/api/firestore-diagnostics', async (req, res) => {
+  try {
+    const targetUid = 'shared_app_store';
+    const attDocRef = doc(fbDb, 'users', targetUid, 'data', 'attendance');
+    const snap = await getDoc(attDocRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return res.json({
+        success: true,
+        exists: true,
+        updatedAt: data?.updatedAt,
+        recordCount: Array.isArray(data?.payload) ? data.payload.length : 0,
+        records: Array.isArray(data?.payload) ? data.payload.map((r: any) => ({
+          id: r.id,
+          name: r.employeeName,
+          date: r.date,
+          time: r.clockInTime,
+          outlet: r.outlet,
+          status: r.status
+        })) : []
+      });
+    } else {
+      return res.json({
+        success: true,
+        exists: false,
+        message: 'Dokumen attendance belum ada di Cloud Firestore.'
+      });
+    }
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: err?.message || String(err),
+      code: err?.code
+    });
+  }
 });
 
 // Store for System Updates History
