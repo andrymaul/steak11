@@ -371,9 +371,22 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
     }
   } catch {}
 
+  let sanitizedPayload = payload;
+  if (dataKey === 'attendance' && Array.isArray(payload)) {
+    // Keep selfies for the latest 25 attendance records and omit heavy base64 from older ones
+    sanitizedPayload = payload.map((rec: any, idx: number) => {
+      if (idx < 25) return rec;
+      return {
+        ...rec,
+        selfieUrl: undefined,
+        clockOutSelfieUrl: undefined
+      };
+    });
+  }
+
   try {
     const sharedDocRef = doc(db, 'users', targetUid, 'data', dataKey);
-    await setDoc(sharedDocRef, { payload, updatedAt: new Date().toISOString() }, { merge: true });
+    await setDoc(sharedDocRef, { payload: sanitizedPayload, updatedAt: new Date().toISOString() }, { merge: true });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
@@ -687,6 +700,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
 
           let finalData = remoteData;
+          let needsRemotePush = false;
 
           // For arrays (attendance, orders, employees, menu, etc), safe merge without reviving deleted items
           if (Array.isArray(localData) && Array.isArray(remoteData)) {
@@ -698,6 +712,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
                 return dateB.localeCompare(dateA);
               });
             }
+            needsRemotePush = finalData.length > remoteData.length;
           } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
             // For configuration objects (branding, settings), remote is primary with local fallback
             finalData = { ...localData, ...remoteData };
@@ -714,6 +729,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
             if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
               window.dispatchEvent(new Event('racik_options_updated'));
             }
+          }
+
+          if (needsRemotePush) {
+            syncUserDataToFirestore(key, finalData).catch(() => {});
           }
         } else {
           // Document does not exist in Firestore yet: seed from initial / local data once

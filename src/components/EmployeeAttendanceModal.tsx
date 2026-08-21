@@ -270,7 +270,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     setIsCameraActive(false);
   };
 
-  // Watermark Renderer on Canvas (Orange & Purple Steak 11 Theme, No Icons, Direct Address)
+  // Watermark Renderer on Canvas (Orange & Purple Steak 11 Theme, Lightweight Base64 for Firestore & LocalStorage)
   const createWatermarkedPhoto = (
     imageSource: HTMLVideoElement | HTMLImageElement,
     empName: string,
@@ -280,36 +280,36 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     actionType: 'MASUK' | 'PULANG'
   ): string => {
     const canvas = canvasRef.current || document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
+    canvas.width = 480;
+    canvas.height = 360;
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
 
     // 1. Draw base picture
     ctx.drawImage(imageSource, 0, 0, canvas.width, canvas.height);
 
-    // 2. Top Watermark Header (Steak 11 Purple & Orange, No Emojis/Icons, No Border Lines)
-    const topGrad = ctx.createLinearGradient(0, 0, 0, 70);
+    // 2. Top Watermark Header
+    const topGrad = ctx.createLinearGradient(0, 0, 0, 55);
     topGrad.addColorStop(0, 'rgba(37, 8, 56, 0.95)');
     topGrad.addColorStop(1, 'rgba(37, 8, 56, 0)');
     ctx.fillStyle = topGrad;
-    ctx.fillRect(0, 0, canvas.width, 70);
+    ctx.fillRect(0, 0, canvas.width, 55);
 
     ctx.fillStyle = '#FF8A00'; // Steak 11 Orange
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillText('STEAK 11 - PRESENSI KARYAWAN', 18, 30);
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('STEAK 11 - PRESENSI KARYAWAN', 14, 24);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(`VERIFIED SELFIE RECORD • SHIFT ${actionType}`, 18, 50);
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillText(`VERIFIED SELFIE RECORD • SHIFT ${actionType}`, 14, 40);
 
-    // 3. Bottom Watermark Panel (Steak 11 Purple & Orange, No Emojis/Icons, No Border Lines)
-    const panelHeight = 125;
+    // 3. Bottom Watermark Panel
+    const panelHeight = 92;
     const panelY = canvas.height - panelHeight;
 
     const bottomGrad = ctx.createLinearGradient(0, panelY, 0, canvas.height);
     bottomGrad.addColorStop(0, 'rgba(26, 6, 40, 0.2)');
-    bottomGrad.addColorStop(0.3, 'rgba(37, 8, 56, 0.92)');
+    bottomGrad.addColorStop(0.25, 'rgba(37, 8, 56, 0.92)');
     bottomGrad.addColorStop(1, 'rgba(37, 8, 56, 0.98)');
     ctx.fillStyle = bottomGrad;
     ctx.fillRect(0, panelY, canvas.width, panelHeight);
@@ -323,27 +323,27 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     });
     const timeFormatted = now.toLocaleTimeString('id-ID', { hour12: false });
 
-    // Text Overlay (No Emojis/Icons)
+    // Text Overlay
     ctx.fillStyle = '#FF8A00'; // Steak 11 Orange
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText(`${empName.toUpperCase()} (${empRole})`, 18, panelY + 28);
+    ctx.font = 'bold 12.5px sans-serif';
+    ctx.fillText(`${empName.toUpperCase()} (${empRole})`, 14, panelY + 22);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = '13px sans-serif';
-    ctx.fillText(`${outletName}`, 18, panelY + 50);
+    ctx.font = '11px sans-serif';
+    ctx.fillText(`${outletName}`, 14, panelY + 39);
 
     ctx.fillStyle = '#f3e8ff';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(`${dateFormatted} | ${timeFormatted} WIB`, 18, panelY + 72);
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`${dateFormatted} | ${timeFormatted} WIB`, 14, panelY + 56);
 
-    // Address Only (No "Lokasi:")
+    // Address Only
     const cleanAddress = (gpsInfo || '').replace(/^Lokasi:\s*/i, '');
     ctx.fillStyle = '#ffa000'; // Warm Orange
-    ctx.font = '11px sans-serif';
-    ctx.fillText(cleanAddress, 18, panelY + 94);
+    ctx.font = '9.5px sans-serif';
+    ctx.fillText(cleanAddress.slice(0, 75), 14, panelY + 73);
 
-    // Explicitly export camera selfie in Base64 Data URL format (data:image/jpeg;base64,...)
-    return canvas.toDataURL('image/jpeg', 0.88);
+    // Optimized lightweight Base64 Data URL (~25KB)
+    return canvas.toDataURL('image/jpeg', 0.65);
   };
 
   const handleTakeSnap = (actionType: 'MASUK' | 'PULANG') => {

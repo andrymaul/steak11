@@ -295,8 +295,8 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     actionType: 'MASUK' | 'PULANG'
   ): string => {
     const canvas = canvasRef.current || document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
+    canvas.width = 480;
+    canvas.height = 360;
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
 
@@ -319,30 +319,30 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     };
 
     // 2. Top-Right Verified Executive Badge
-    const badgeX = canvas.width - 240;
-    const badgeY = 16;
-    const badgeW = 224;
-    const badgeH = 34;
+    const badgeW = 180;
+    const badgeH = 26;
+    const badgeX = canvas.width - badgeW - 10;
+    const badgeY = 10;
 
-    drawRoundedRect(badgeX, badgeY, badgeW, badgeH, 8);
+    drawRoundedRect(badgeX, badgeY, badgeW, badgeH, 6);
     ctx.fillStyle = 'rgba(20, 7, 34, 0.88)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 184, 0, 0.6)';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.fillStyle = '#FFB800'; // Gold Accent
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('STEAK 11 • PRESENSI VERIFIED', badgeX + 16, badgeY + 21);
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillText('STEAK 11 • PRESENSI VERIFIED', badgeX + 10, badgeY + 17);
 
     // 3. Bottom Executive Glass Card Panel
-    const cardMarginHorizontal = 14;
-    const cardMarginBottom = 14;
-    const cardH = 125;
+    const cardMarginHorizontal = 10;
+    const cardMarginBottom = 10;
+    const cardH = 92;
     const cardW = canvas.width - cardMarginHorizontal * 2;
     const cardX = cardMarginHorizontal;
     const cardY = canvas.height - cardH - cardMarginBottom;
-    const cardRadius = 12;
+    const cardRadius = 10;
 
     // Glass Background Fill with Gradient
     drawRoundedRect(cardX, cardY, cardW, cardH, cardRadius);
@@ -359,16 +359,16 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     ctx.stroke();
 
     // Left Gold Accent Bar
-    drawRoundedRect(cardX, cardY, 6, cardH, 3);
+    drawRoundedRect(cardX, cardY, 5, cardH, 2.5);
     ctx.fillStyle = '#FFB800'; // Gold Accent Bar
     ctx.fill();
 
     // Action Badge Tag (SHIFT MASUK vs SHIFT PULANG)
-    const tagW = 110;
-    const tagH = 22;
-    const tagX = cardX + cardW - tagW - 14;
-    const tagY = cardY + 12;
-    drawRoundedRect(tagX, tagY, tagW, tagH, 6);
+    const tagW = 90;
+    const tagH = 18;
+    const tagX = cardX + cardW - tagW - 10;
+    const tagY = cardY + 8;
+    drawRoundedRect(tagX, tagY, tagW, tagH, 5);
     ctx.fillStyle = actionType === 'MASUK' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)';
     ctx.fill();
     ctx.strokeStyle = actionType === 'MASUK' ? '#10B981' : '#F59E0B';
@@ -376,8 +376,8 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     ctx.stroke();
 
     ctx.fillStyle = actionType === 'MASUK' ? '#34D399' : '#FBBF24';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.fillText(`SHIFT ${actionType}`, tagX + 16, tagY + 15);
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText(`SHIFT ${actionType}`, tagX + 12, tagY + 12);
 
     // Text Content Inside Executive Glass Card
     const now = new Date();
@@ -389,31 +389,31 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     });
     const timeFormatted = now.toLocaleTimeString('id-ID', { hour12: false });
 
-    const textLeftMargin = cardX + 18;
+    const textLeftMargin = cardX + 14;
 
     // Line 1: Employee Name & Role
     ctx.fillStyle = '#FFB800'; // Gold accent
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText(`${empName.toUpperCase()} • ${empRole}`, textLeftMargin, cardY + 28);
+    ctx.font = 'bold 12.5px sans-serif';
+    ctx.fillText(`${empName.toUpperCase()} • ${empRole}`, textLeftMargin, cardY + 22);
 
     // Line 2: Outlet Name
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText(`${outletName}`, textLeftMargin, cardY + 50);
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(`${outletName}`, textLeftMargin, cardY + 39);
 
     // Line 3: Timestamp Emerald Monospace
     ctx.fillStyle = '#34D399'; // Emerald Neon
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText(`🕒 ${dateFormatted} | ${timeFormatted} WIB`, textLeftMargin, cardY + 72);
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText(`🕒 ${dateFormatted} | ${timeFormatted} WIB`, textLeftMargin, cardY + 56);
 
     // Line 4: Clean GPS Location Address
     const cleanAddress = (gpsInfo || '').replace(/^Lokasi:\s*/i, '');
     ctx.fillStyle = '#E9D5FF'; // Light Lavender
-    ctx.font = '10px sans-serif';
-    ctx.fillText(`📍 ${cleanAddress}`, textLeftMargin, cardY + 94);
+    ctx.font = '9.5px sans-serif';
+    ctx.fillText(`📍 ${cleanAddress.slice(0, 75)}`, textLeftMargin, cardY + 73);
 
-    // Explicitly export camera selfie in Base64 Data URL format (data:image/jpeg;base64,...)
-    return canvas.toDataURL('image/jpeg', 0.88);
+    // Lightweight Base64 Data URL (~25KB)
+    return canvas.toDataURL('image/jpeg', 0.65);
   };
 
   const handleTakeSnap = (actionType: 'MASUK' | 'PULANG') => {

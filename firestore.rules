@@ -11,16 +11,9 @@ service cloud.firestore {
       return request.resource.data.payload != null;
     }
 
-    // Public catalog collections (Menu, Outlets, Promos, Reviews, Branding)
+    // Public & shared app store collections (Menu, Outlets, Promos, Reviews, Orders, Attendance, Employees, etc)
     match /users/shared_app_store/data/{dataKey} {
-      // Publicly readable datasets for Landing Page & POS
-      allow read: if dataKey in [
-        'menu_items', 'menu_categories', 'chicken_options', 'sauce_options', 
-        'addon_options', 'locations', 'branding', 'promos', 'reviews', 'orders',
-        'healthcheck'
-      ] || isAuthenticated();
-
-      // Write allowed for valid app store payloads
+      allow read: if true;
       allow write: if isValidPayload() || isAuthenticated();
     }
 
