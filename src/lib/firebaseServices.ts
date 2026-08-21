@@ -557,33 +557,41 @@ export const cleanUpLegacyUserDocs = async (): Promise<{ success: boolean; delet
   };
 };
 
-const mergeArrayById = (localArray: any[], remoteArray: any[]): any[] => {
+const mergeArrayById = (localArray: any[], remoteArray: any[], remoteUpdatedAtStr?: string): any[] => {
   if (!Array.isArray(localArray)) return Array.isArray(remoteArray) ? remoteArray : [];
   if (!Array.isArray(remoteArray)) return Array.isArray(localArray) ? localArray : [];
 
+  const remoteTime = remoteUpdatedAtStr ? new Date(remoteUpdatedAtStr).getTime() : 0;
   const map = new Map<string, any>();
-  // 1. Add all remote items
+
+  // 1. Remote items from Cloud Firestore are the authoritative ground truth
   remoteArray.forEach((item) => {
     if (item && item.id) {
       map.set(String(item.id), item);
     }
   });
-  // 2. Add local items if missing, or update if local has a newer timestamp
+
+  // 2. Only retain a local item if it was created/updated offline *AFTER* the remote snapshot was saved
   localArray.forEach((item) => {
     if (item && item.id) {
       const existing = map.get(String(item.id));
       if (!existing) {
-        map.set(String(item.id), item);
+        const itemCreatedTime = new Date(item.createdAt || item.updatedAt || item.date || 0).getTime();
+        // Only keep if genuinely created newer than remote snapshot timestamp (offline creation)
+        if (remoteTime > 0 && itemCreatedTime > remoteTime) {
+          map.set(String(item.id), item);
+        }
       } else {
-        const localTime = new Date(item.updatedAt || item.date || 0).getTime();
-        const remoteTime = new Date(existing.updatedAt || existing.date || 0).getTime();
-        if (localTime > remoteTime) {
+        const localItemTime = new Date(item.updatedAt || item.date || 0).getTime();
+        const existingItemTime = new Date(existing.updatedAt || existing.date || 0).getTime();
+        if (localItemTime > existingItemTime) {
           map.set(String(item.id), item);
         }
       }
     }
   });
-  return Array.from(map.values());
+
+  return Array.from(map.values()).filter((item) => !item.isDeleted);
 };
 
 /**
@@ -633,19 +641,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
 
       const unsub = onSnapshot(sharedDocRef, (docSnap) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
-          const remoteData = docSnap.data().payload;
+          const docData = docSnap.data();
+          const remoteData = docData.payload;
+          const remoteUpdatedAt = docData.updatedAt;
           const currentLocal = localStorage.getItem('steak11_' + key);
-
-          // Read save_time from localStorage (persistent across reloads & tabs)
-          let lastSaveTime = 0;
-          try {
-            if (typeof window !== 'undefined') {
-              const lastSaveTimeStr = localStorage.getItem('steak11_' + key + '_save_time');
-              lastSaveTime = lastSaveTimeStr ? parseInt(lastSaveTimeStr, 10) : 0;
-            }
-          } catch {}
-
-          const isRecentlySaved = (Date.now() - lastSaveTime) < 300000; // 5 minute window
 
           let localData: any = null;
           if (currentLocal) {
@@ -655,11 +654,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
 
           let finalData = remoteData;
-          let needsRemotePush = false;
 
-          // If local and remote are both arrays (e.g. attendance, orders, employees), merge by ID so new local items are never overwritten
+          // For arrays (attendance, orders, employees, menu, etc), safe merge without reviving deleted items
           if (Array.isArray(localData) && Array.isArray(remoteData)) {
-            finalData = mergeArrayById(localData, remoteData);
+            finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
             if (key === 'attendance') {
               finalData.sort((a: any, b: any) => {
                 const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
@@ -667,26 +665,14 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
                 return dateB.localeCompare(dateA);
               });
             }
-            needsRemotePush = finalData.length > remoteData.length;
-          } else if (isRecentlySaved && localData) {
-            finalData = localData;
-            needsRemotePush = true;
           } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
-            // For configuration objects like branding/settings, merge properties so local edits are preserved
-            finalData = { ...remoteData, ...localData };
-            needsRemotePush = false;
+            // For configuration objects (branding, settings), remote is primary with local fallback
+            finalData = { ...localData, ...remoteData };
           } else {
             finalData = remoteData;
-            needsRemotePush = false;
           }
 
-          const remoteJson = JSON.stringify(remoteData);
           const finalJson = JSON.stringify(finalData);
-
-          // Prevent infinite snapshot write loops if remote data is already identical
-          if (finalJson === remoteJson) {
-            needsRemotePush = false;
-          }
 
           if (finalJson !== currentLocal || finalJson !== lastRemoteJson) {
             lastRemoteJson = finalJson;
@@ -696,11 +682,8 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
               window.dispatchEvent(new Event('racik_options_updated'));
             }
           }
-
-          if (needsRemotePush) {
-            setDoc(sharedDocRef, { payload: finalData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-          }
         } else {
+          // Document does not exist in Firestore yet: seed from initial / local data once
           const rawLocal = localStorage.getItem('steak11_' + key);
           let initialData: any;
           if (rawLocal !== null) {
@@ -714,7 +697,9 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
           setDoc(sharedDocRef, { payload: initialData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
-      }, () => {});
+      }, (err) => {
+        console.warn(`Error on listener for ${key}:`, err);
+      });
       unsubscribes.push(unsub);
     } catch (err) {
       console.warn(`Error setting listener for ${key}:`, err);
