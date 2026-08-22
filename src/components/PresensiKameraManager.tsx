@@ -16,13 +16,7 @@ import {
   UserCheck,
   AlertTriangle,
   Eye,
-  Image as ImageIcon,
-  Calendar,
-  Search,
-  Download,
-  Trash2,
-  Filter,
-  FileSpreadsheet
+  Image as ImageIcon
 } from 'lucide-react';
 import { Employee, AttendanceRecord, LocationItem } from '../types';
 import {
@@ -91,10 +85,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
   const [isLocating, setIsLocating] = useState(false);
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
-  // Live Attendance Table State & Submission State
-  const [attViewMode, setAttViewMode] = useState<'today' | 'all'>('all');
-  const [attSearchQuery, setAttSearchQuery] = useState('');
-  const [attOutletQuery, setAttOutletQuery] = useState('ALL');
+  // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
 
 
@@ -472,29 +463,6 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       (a.employeeId === selectedEmpId ||
         (currentEmp && (a.employeeName || '').toLowerCase() === currentEmp.name.toLowerCase()))
   );
-
-  const todayRecords = attendance.filter((a) => a.date === todayStr);
-
-  const displayedAttendance = attendance.filter((a) => {
-    if (attViewMode === 'today' && a.date !== todayStr) return false;
-    const searchLower = attSearchQuery.toLowerCase().trim();
-    if (searchLower) {
-      const match =
-        (a.employeeName || '').toLowerCase().includes(searchLower) ||
-        (a.employeeId || '').toLowerCase().includes(searchLower) ||
-        (a.outlet || '').toLowerCase().includes(searchLower) ||
-        (a.notes || '').toLowerCase().includes(searchLower);
-      if (!match) return false;
-    }
-    if (attOutletQuery !== 'ALL') {
-      const cleanOutlet = (a.outlet || '').toLowerCase().trim();
-      const cleanFilter = attOutletQuery.toLowerCase().trim();
-      if (!cleanOutlet.includes(cleanFilter) && !cleanFilter.includes(cleanOutlet)) {
-        return false;
-      }
-    }
-    return true;
-  });
 
   const getClockInEvaluation = () => {
     const now = new Date();
@@ -1139,218 +1107,6 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* SEKSI TABEL LIVE REKAP PRESENSI HARI INI */}
-      <div className="bg-white dark:bg-[#1f0e30] p-6 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-purple-900/50 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-500" />
-              <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
-                Live Rekam Presensi Masuk & Pulang
-              </h3>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black font-mono border border-emerald-500/30">
-                {displayedAttendance.length} Data Terbaca
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Daftar kehadiran staff yang baru saja melakukan absensi selfie & tersinkron secara realtime ke database.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* View Mode Toggle: Hari Ini vs Semua */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-purple-950 border border-slate-200 dark:border-purple-800 text-xs">
-              <button
-                type="button"
-                onClick={() => setAttViewMode('today')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  attViewMode === 'today'
-                    ? 'bg-amber-400 text-purple-950 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                }`}
-              >
-                Hari Ini ({todayRecords.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setAttViewMode('all')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  attViewMode === 'all'
-                    ? 'bg-amber-400 text-purple-950 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
-                }`}
-              >
-                Semua Riwayat ({attendance.length})
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={async () => {
-                if (showToast) showToast('🔄 Menyinkronkan data presensi dari Cloud...');
-                const refreshed = await pullAttendanceFromFirestore();
-                if (refreshed && refreshed.length > 0) setAttendance(refreshed);
-                if (showToast) showToast('✅ Data presensi berhasil diperbarui!');
-              }}
-              className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 hover:bg-slate-200 dark:hover:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 border border-slate-200 dark:border-purple-800 cursor-pointer"
-              title="Refresh Data dari Cloud"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-amber-500" /> Refresh
-            </button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari nama staff / catatan..."
-              value={attSearchQuery}
-              onChange={(e) => setAttSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-          </div>
-
-          <select
-            value={attOutletQuery}
-            onChange={(e) => setAttOutletQuery(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
-          >
-            <option value="ALL">Semua Outlet</option>
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.name}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Attendance Table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-purple-900/50">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-purple-950/80 text-slate-700 dark:text-amber-300 font-bold border-b border-slate-200 dark:border-purple-900">
-                <th className="p-3.5">Tanggal & Staff</th>
-                <th className="p-3.5">Selfie Watermark</th>
-                <th className="p-3.5">Outlet Jaga</th>
-                <th className="p-3.5">Jam Masuk (Clock In)</th>
-                <th className="p-3.5">Jam Pulang (Clock Out)</th>
-                <th className="p-3.5">Durasi Kerja</th>
-                <th className="p-3.5">Status & Evaluasi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-purple-900/30">
-              {displayedAttendance.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400 text-xs">
-                    {attViewMode === 'today'
-                      ? 'Belum ada karyawan yang presensi hari ini. Silakan pilih karyawan & ambil foto selfie di atas.'
-                      : 'Belum ada rekam presensi yang sesuai kriteria pencarian.'}
-                  </td>
-                </tr>
-              ) : (
-                displayedAttendance.map((rec, idx) => (
-                  <tr key={`${rec.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-purple-950/40 transition-colors">
-                    <td className="p-3.5 align-top">
-                      <span className="font-extrabold text-slate-900 dark:text-slate-100 block">
-                        {rec.employeeName}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        📅 {rec.date} ({rec.employeeId})
-                      </span>
-                    </td>
-                    <td className="p-3.5 align-top">
-                      <div className="flex items-center gap-1.5">
-                        {rec.selfieUrl ? (
-                          <div
-                            onClick={() => setPreviewModalImg(rec.selfieUrl || null)}
-                            className="w-11 h-11 rounded-lg border-2 border-emerald-500 overflow-hidden cursor-pointer hover:scale-105 transition-transform relative group shadow-xs shrink-0"
-                            title="Foto Selfie Masuk (Klik untuk perbesar)"
-                          >
-                            <img src={rec.selfieUrl} alt="Selfie Masuk" className="w-full h-full object-cover" />
-                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-emerald-300 text-[8px] font-black text-center py-0.2">
-                              MASUK
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic">Masuk: -</span>
-                        )}
-
-                        {rec.clockOutSelfieUrl ? (
-                          <div
-                            onClick={() => setPreviewModalImg(rec.clockOutSelfieUrl || null)}
-                            className="w-11 h-11 rounded-lg border-2 border-amber-400 overflow-hidden cursor-pointer hover:scale-105 transition-transform relative group shadow-xs shrink-0"
-                            title="Foto Selfie Pulang (Klik untuk perbesar)"
-                          >
-                            <img src={rec.clockOutSelfieUrl} alt="Selfie Pulang" className="w-full h-full object-cover" />
-                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-amber-300 text-[8px] font-black text-center py-0.2">
-                              PULANG
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="p-3.5 align-top">
-                      <span className="font-bold block text-purple-900 dark:text-amber-300">{rec.outlet}</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 leading-tight">
-                        📍 {rec.locationName || 'GPS Verified'}
-                      </span>
-                    </td>
-                    <td className="p-3.5 align-top">
-                      <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                        {rec.clockInTime} WIB
-                      </div>
-                      {rec.clockInStatus === 'Terlambat Masuk' ? (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
-                          Terlambat {rec.lateMinutes || 0}m
-                        </span>
-                      ) : (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
-                          Tepat Waktu
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3.5 align-top">
-                      <div className="font-mono text-amber-600 dark:text-amber-400 font-bold text-xs">
-                        {rec.clockOutTime ? `${rec.clockOutTime} WIB` : 'Sedang Bertugas'}
-                      </div>
-                      {rec.clockOutStatus === 'Pulang Awal' ? (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300 border border-rose-300">
-                          Pulang Awal {rec.earlyOutMinutes || 0}m
-                        </span>
-                      ) : rec.clockOutTime ? (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300">
-                          Pulang Tepat
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="p-3.5 align-top font-extrabold text-purple-900 dark:text-amber-300 text-xs">
-                      {rec.hoursWorked || 0} Jam
-                    </td>
-                    <td className="p-3.5 align-top">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                          rec.status === 'Hadir'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                        }`}
-                      >
-                        {rec.status}
-                      </span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
-                        {rec.notes || '-'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
 
