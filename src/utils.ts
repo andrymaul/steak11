@@ -237,15 +237,14 @@ export function saveStoredGasUrl(url: string): void {
 // --- EMPLOYEE MANAGEMENT STORAGE ---
 export function getStoredEmployees(): Employee[] {
   const stored = localStorage.getItem('steak11_employees');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_EMPLOYEES;
+      return [];
     }
   }
-  saveEmployees(DEFAULT_EMPLOYEES);
   return DEFAULT_EMPLOYEES;
 }
 

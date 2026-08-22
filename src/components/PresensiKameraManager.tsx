@@ -27,11 +27,9 @@ import {
 import { Employee, AttendanceRecord, LocationItem } from '../types';
 import {
   getStoredEmployees,
-  saveEmployees,
   getStoredAttendance,
   saveAttendance,
   getStoredLocations,
-  getUnifiedUsers,
   getStoredWaSettings,
   getStoredBranding,
   getLocalDateStr
@@ -119,42 +117,6 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     };
 
     let defaultEmp = findMatchedEmployee(currentUser?.name);
-
-    // If not found, check unified users or admins
-    if (!defaultEmp && currentUser?.name) {
-      const unified = getUnifiedUsers();
-      const clean = currentUser.name.trim().toLowerCase();
-      const matchedUser = unified.find((u) =>
-        u.name.toLowerCase() === clean ||
-        u.username.toLowerCase() === clean ||
-        u.id.toLowerCase() === clean
-      );
-
-      if (matchedUser) {
-        const newEmp: Employee = {
-          id: matchedUser.type === 'employee' ? matchedUser.id : `EMP-${Date.now().toString().slice(-4)}`,
-          name: matchedUser.name,
-          username: matchedUser.username,
-          role: matchedUser.role || 'Kasir',
-          outlet: matchedUser.outlet || (locList[0]?.name || 'Steak 11, Kalisari'),
-          phone: matchedUser.phone || '081200000000',
-          joinDate: getLocalDateStr(),
-          dailyRate: 125000,
-          hourlyRate: 16000,
-          dailyAllowance: 25000,
-          status: 'Aktif',
-          pin: matchedUser.pinOrPass || '1111',
-          allowedTabs: matchedUser.allowedTabs
-        };
-        const allEmps = getStoredEmployees();
-        if (!allEmps.some((e) => e.id === newEmp.id || e.name.toLowerCase() === newEmp.name.toLowerCase())) {
-          const updatedEmps = [...allEmps, newEmp];
-          saveEmployees(updatedEmps);
-          empList = updatedEmps.filter((e) => e.status === 'Aktif');
-          defaultEmp = newEmp;
-        }
-      }
-    }
 
     setEmployees(empList);
 

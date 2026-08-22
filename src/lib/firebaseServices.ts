@@ -605,17 +605,6 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
       if (sharedSnap.exists() && sharedSnap.data()?.payload !== undefined) {
         const remoteData = sharedSnap.data().payload;
         let finalData = remoteData;
-        const currentLocalRaw = localStorage.getItem('steak11_' + key);
-        if (currentLocalRaw) {
-          try {
-            const localData = JSON.parse(currentLocalRaw);
-            if (Array.isArray(remoteData) && Array.isArray(localData)) {
-              finalData = mergeArrayById(localData, remoteData);
-            } else if (remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData) && localData && typeof localData === 'object') {
-              finalData = { ...localData, ...remoteData };
-            }
-          } catch {}
-        }
         localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
         window.dispatchEvent(new Event(key + '_updated'));
         if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
@@ -805,17 +794,20 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // For arrays (attendance, orders, employees, menu, etc), safe merge without reviving deleted items
+          // For arrays: attendance is merged to preserve offline clock-in, but master collections (employees, menu, admins, etc.) use remoteData directly to prevent deleted records from resurrecting
           if (Array.isArray(localData) && Array.isArray(remoteData)) {
-            finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
             if (key === 'attendance') {
+              finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
               finalData.sort((a: any, b: any) => {
                 const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
                 const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
                 return dateB.localeCompare(dateA);
               });
+              needsRemotePush = finalData.length > remoteData.length;
+            } else {
+              finalData = remoteData;
+              needsRemotePush = false;
             }
-            needsRemotePush = finalData.length > remoteData.length;
           } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
             // For configuration objects (branding, settings), remote is primary with local fallback
             finalData = { ...localData, ...remoteData };
