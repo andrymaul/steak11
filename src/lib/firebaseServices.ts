@@ -10,7 +10,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { getDb, getAuthInstance, isFirebaseConfigured } from './firebase';
-import { MenuItem, OrderItem, AttendanceRecord } from '../types';
+import { MenuItem, OrderItem, AttendanceRecord, Employee } from '../types';
 import {
   MENU_ITEMS,
   CHICKEN_OPTIONS,
@@ -230,6 +230,140 @@ export const subscribeToMenuItems = (callback: (items: MenuItem[]) => void): (()
 };
 
 /**
+ * Subscribe to Realtime Employees from Cloud Firestore
+ */
+export const subscribeToEmployees = (callback: (employees: Employee[]) => void): (() => void) => {
+  const db = getDb();
+  if (!isFirebaseConfigured() || !db) return () => {};
+  try {
+    const docRef = doc(db, 'users', 'shared_app_store', 'data', 'employees');
+    return onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists() && snapshot.data()?.payload) {
+        const remoteData = snapshot.data().payload;
+        if (Array.isArray(remoteData)) {
+          try {
+            localStorage.setItem('steak11_employees', JSON.stringify(remoteData));
+          } catch {}
+          window.dispatchEvent(new Event('employees_updated'));
+          callback(remoteData);
+        }
+      }
+    }, (err) => {
+      console.warn('Error on subscribeToEmployees:', err);
+    });
+  } catch (error) {
+    console.warn('Error setting subscribeToEmployees:', error);
+    return () => {};
+  }
+};
+
+/**
+ * Pull latest Employees directly from Cloud Firestore
+ */
+export const pullEmployeesFromFirestore = async (): Promise<Employee[]> => {
+  const db = getDb();
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'employees');
+      const snap = await getDoc(docRef);
+      if (snap.exists() && snap.data()?.payload && Array.isArray(snap.data()?.payload)) {
+        const remoteEmployees = snap.data().payload;
+        try {
+          localStorage.setItem('steak11_employees', JSON.stringify(remoteEmployees));
+        } catch {}
+        window.dispatchEvent(new Event('employees_updated'));
+        return remoteEmployees;
+      }
+    } catch (e) {
+      console.warn('Error in pullEmployeesFromFirestore:', e);
+    }
+  }
+
+  const raw = localStorage.getItem('steak11_employees');
+  if (raw) {
+    try { return JSON.parse(raw); } catch {}
+  }
+  return DEFAULT_EMPLOYEES;
+};
+
+export const refreshEmployeesFromFirebase = pullEmployeesFromFirestore;
+
+/**
+ * Save new Employee directly to Cloud Firestore
+ */
+export const saveEmployeeDirectToCloud = async (newEmp: Employee): Promise<Employee[]> => {
+  const db = getDb();
+  const current = await pullEmployeesFromFirestore();
+  const updated = [newEmp, ...current.filter((e) => e.id !== newEmp.id)];
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'employees');
+      await setDoc(docRef, { payload: updated, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore save employee error:', e);
+    }
+  }
+
+  try {
+    localStorage.setItem('steak11_employees', JSON.stringify(updated));
+  } catch {}
+
+  window.dispatchEvent(new Event('employees_updated'));
+  return updated;
+};
+
+/**
+ * Update an existing Employee directly in Cloud Firestore
+ */
+export const updateEmployeeInCloud = async (updatedEmp: Employee): Promise<Employee[]> => {
+  const db = getDb();
+  const current = await pullEmployeesFromFirestore();
+  const updated = current.map((e) => (e.id === updatedEmp.id ? { ...e, ...updatedEmp } : e));
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'employees');
+      await setDoc(docRef, { payload: updated, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore update employee error:', e);
+    }
+  }
+
+  try {
+    localStorage.setItem('steak11_employees', JSON.stringify(updated));
+  } catch {}
+
+  window.dispatchEvent(new Event('employees_updated'));
+  return updated;
+};
+
+/**
+ * Delete an Employee directly from Cloud Firestore
+ */
+export const deleteEmployeeFromCloud = async (empId: string): Promise<Employee[]> => {
+  const db = getDb();
+  const current = await pullEmployeesFromFirestore();
+  const updated = current.filter((e) => e.id !== empId);
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'employees');
+      await setDoc(docRef, { payload: updated, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore delete employee error:', e);
+    }
+  }
+
+  try {
+    localStorage.setItem('steak11_employees', JSON.stringify(updated));
+  } catch {}
+
+  window.dispatchEvent(new Event('employees_updated'));
+  return updated;
+};
+
+/**
  * Subscribe to Realtime Attendance from Cloud Firestore
  */
 export const subscribeToAttendance = (callback: (records: AttendanceRecord[]) => void): (() => void) => {
@@ -241,21 +375,16 @@ export const subscribeToAttendance = (callback: (records: AttendanceRecord[]) =>
       if (snapshot.exists() && snapshot.data()?.payload) {
         const remoteData = snapshot.data().payload;
         if (Array.isArray(remoteData)) {
-          const currentLocalRaw = localStorage.getItem('steak11_attendance');
-          let localData: AttendanceRecord[] = [];
-          if (currentLocalRaw) {
-            try {
-              localData = JSON.parse(currentLocalRaw);
-            } catch {}
-          }
-          const merged = mergeArrayById(localData, remoteData);
-          merged.sort((a: any, b: any) => {
+          const sorted = [...remoteData].sort((a: any, b: any) => {
             const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
             const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
             return dateB.localeCompare(dateA);
           });
-          localStorage.setItem('steak11_attendance', JSON.stringify(merged));
-          callback(merged);
+          try {
+            localStorage.setItem('steak11_attendance', JSON.stringify(sorted));
+          } catch {}
+          window.dispatchEvent(new Event('attendance_updated'));
+          callback(sorted);
         }
       }
     }, (err) => {
@@ -1066,7 +1195,6 @@ export const syncAllSuppliersToFirebase = (suppliers: any) => syncUserDataToFire
 export const syncAllPurchaseOrdersToFirebase = (pos: any) => syncUserDataToFirestore('purchase_orders', pos);
 export const syncAllLocationsToFirebase = (locs: any) => syncUserDataToFirestore('locations', locs);
 export const startRealtimeFirestoreSync = () => () => {};
-export const refreshEmployeesFromFirebase = async (): Promise<any[] | null> => null;
 
 
 

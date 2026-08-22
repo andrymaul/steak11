@@ -33,7 +33,9 @@ import {
   subscribeToAttendance,
   saveAttendanceRecordDirectToCloud,
   updateAttendanceRecordInCloud,
-  deleteAttendanceRecordFromCloud
+  deleteAttendanceRecordFromCloud,
+  subscribeToEmployees,
+  pullEmployeesFromFirestore
 } from '../lib/firebaseServices';
 
 interface PresensiKameraManagerProps {
@@ -145,14 +147,30 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       }
     });
 
+    // Realtime employees sync with Cloud Firestore
+    const unsubEmp = subscribeToEmployees((liveEmployees) => {
+      if (liveEmployees && Array.isArray(liveEmployees)) {
+        const active = liveEmployees.filter((e) => e.status === 'Aktif');
+        setEmployees(active);
+      }
+    });
+
     pullAttendanceFromFirestore().then((records) => {
       if (records && records.length > 0) {
         setAttendance(records);
       }
     }).catch(() => {});
 
+    pullEmployeesFromFirestore().then((records) => {
+      if (records && records.length > 0) {
+        const active = records.filter((e) => e.status === 'Aktif');
+        setEmployees(active);
+      }
+    }).catch(() => {});
+
     return () => {
       if (unsubAtt) unsubAtt();
+      if (unsubEmp) unsubEmp();
       window.removeEventListener('attendance_updated', handleAttUpdated);
       stopCamera();
     };

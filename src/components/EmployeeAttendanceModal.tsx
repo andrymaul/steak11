@@ -35,7 +35,9 @@ import {
   pullAttendanceFromFirestore,
   subscribeToAttendance,
   saveAttendanceRecordDirectToCloud,
-  updateAttendanceRecordInCloud
+  updateAttendanceRecordInCloud,
+  subscribeToEmployees,
+  pullEmployeesFromFirestore
 } from '../lib/firebaseServices';
 
 interface EmployeeAttendanceModalProps {
@@ -154,6 +156,13 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       pullAttendanceFromFirestore().then((records) => {
         if (records && records.length > 0) setAttendance(records);
       }).catch(() => {});
+
+      pullEmployeesFromFirestore().then((records) => {
+        if (records && records.length > 0) {
+          const active = records.filter((e) => e.status === 'Aktif');
+          setEmployees(active);
+        }
+      }).catch(() => {});
     } else {
       stopCamera();
     }
@@ -164,10 +173,18 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       }
     });
 
+    const unsubEmp = subscribeToEmployees((liveEmployees) => {
+      if (liveEmployees && Array.isArray(liveEmployees)) {
+        const active = liveEmployees.filter((e) => e.status === 'Aktif');
+        setEmployees(active);
+      }
+    });
+
     window.addEventListener('locations_updated', handleLocUpdate);
     window.addEventListener('attendance_updated', handleAttUpdate);
     return () => {
       if (unsubAtt) unsubAtt();
+      if (unsubEmp) unsubEmp();
       window.removeEventListener('locations_updated', handleLocUpdate);
       window.removeEventListener('attendance_updated', handleAttUpdate);
     };

@@ -156,7 +156,12 @@ import {
   pullAttendanceFromFirestore,
   subscribeToAttendance,
   updateAttendanceRecordInCloud,
-  deleteAttendanceRecordFromCloud
+  deleteAttendanceRecordFromCloud,
+  subscribeToEmployees,
+  pullEmployeesFromFirestore,
+  saveEmployeeDirectToCloud,
+  updateEmployeeInCloud,
+  deleteEmployeeFromCloud
 } from '../lib/firebaseServices';
 
 interface AdminDashboardProps {
@@ -1009,11 +1014,22 @@ function doPost(e) {
 
   useEffect(() => {
     let unsubAtt: (() => void) | null = null;
+    let unsubEmp: (() => void) | null = null;
     if (isOpen) {
       loadAllData();
+      pullEmployeesFromFirestore().then((records) => {
+        if (records && records.length > 0) setEmployees(records);
+      }).catch(() => {});
       pullAttendanceFromFirestore().then((records) => {
         if (records && records.length > 0) setAttendance(records);
       }).catch(() => {});
+
+      unsubEmp = subscribeToEmployees((liveEmployees) => {
+        if (liveEmployees && Array.isArray(liveEmployees)) {
+          setEmployees(liveEmployees);
+        }
+      });
+
       unsubAtt = subscribeToAttendance((liveRecords) => {
         if (liveRecords && Array.isArray(liveRecords)) {
           setAttendance(liveRecords);
@@ -1032,6 +1048,7 @@ function doPost(e) {
     ];
     events.forEach((evt) => window.addEventListener(evt, handleUpdate));
     return () => {
+      if (unsubEmp) unsubEmp();
       if (unsubAtt) unsubAtt();
       events.forEach((evt) => window.removeEventListener(evt, handleUpdate));
     };
@@ -1041,6 +1058,11 @@ function doPost(e) {
     if (isOpen && activeTab === 'absensi') {
       pullAttendanceFromFirestore().then((records) => {
         if (records && records.length > 0) setAttendance(records);
+      }).catch(() => {});
+    }
+    if (isOpen && activeTab === 'karyawan') {
+      pullEmployeesFromFirestore().then((records) => {
+        if (records && records.length > 0) setEmployees(records);
       }).catch(() => {});
     }
   }, [isOpen, activeTab]);
@@ -1536,11 +1558,11 @@ function doPost(e) {
       setEditingOutletId(null);
       showToast('Data outlet berhasil dihapus!');
     } else if (type === 'employee') {
-      const updated = employees.filter((e) => e.id !== id);
-      setEmployees(updated);
-      saveEmployees(updated);
+      deleteEmployeeFromCloud(id).then((updated) => {
+        setEmployees(updated);
+      });
       setShowAddEmpModal(false);
-      showToast('Data karyawan berhasil dihapus!');
+      showToast('✅ Data karyawan berhasil dihapus dari Cloud Firestore!');
     } else if (type === 'attendance') {
       deleteAttendanceRecordFromCloud(id).then((updated) => {
         setAttendance(updated);
@@ -1945,30 +1967,28 @@ function doPost(e) {
 
     const finalEmpId = empCustomId.trim() || `EMP-${Date.now().toString().slice(-4)}`;
 
-    let updated: Employee[];
     if (editingEmpId) {
-      updated = employees.map((e) =>
-        e.id === editingEmpId
-          ? {
-              ...e,
-              id: finalEmpId,
-              name: empName.trim(),
-              username: empUsername.trim() || undefined,
-              password: empPin,
-              pin: empPin,
-              role: empRole,
-              outlet: empOutlet,
-              phone: empPhone,
-              dailyRate: empDailyRate,
-              hourlyRate: empHourlyRate,
-              dailyAllowance: empDailyAllowance,
-              punctualityAllowancePerDay: empPunctualityAllowance,
-              latePenaltyPerDay: empLatePenaltyPerDay,
-              status: empStatus,
-              allowedTabs: empAllowedTabs,
-            }
-          : e
-      );
+      const existing = employees.find((e) => e.id === editingEmpId);
+      const updatedEmp: Employee = {
+        ...(existing || {}),
+        id: finalEmpId,
+        name: empName.trim(),
+        username: empUsername.trim() || undefined,
+        password: empPin,
+        pin: empPin,
+        role: empRole,
+        outlet: empOutlet,
+        phone: empPhone,
+        joinDate: existing?.joinDate || new Date().toISOString().split('T')[0],
+        dailyRate: empDailyRate,
+        hourlyRate: empHourlyRate,
+        dailyAllowance: empDailyAllowance,
+        punctualityAllowancePerDay: empPunctualityAllowance,
+        latePenaltyPerDay: empLatePenaltyPerDay,
+        status: empStatus,
+        allowedTabs: empAllowedTabs,
+      };
+      updateEmployeeInCloud(updatedEmp).then((updated) => setEmployees(updated));
     } else {
       const newEmp: Employee = {
         id: finalEmpId,
@@ -1988,13 +2008,11 @@ function doPost(e) {
         status: empStatus,
         allowedTabs: empAllowedTabs,
       };
-      updated = [...employees, newEmp];
+      saveEmployeeDirectToCloud(newEmp).then((updated) => setEmployees(updated));
     }
 
-    setEmployees(updated);
-    saveEmployees(updated);
     setShowAddEmpModal(false);
-    showToast(`🔥 Data Karyawan "${empName.trim()}" berhasil disimpan & tersinkronisasi ke Firebase!`);
+    showToast(`✅ Data Karyawan "${empName.trim()}" berhasil disimpan ke Cloud Firestore & tersinkronisasi realtime!`);
   };
 
   const handleDeleteEmp = (id: string) => {
