@@ -163,9 +163,6 @@ export default function App() {
     pullAllFirestoreDataToLocal().then((res) => {
       if (res.success && res.pulledKeys && res.pulledKeys > 0) {
         console.log('✅ Synchronized latest data from Cloud Firestore!');
-      } else {
-        // If Firestore is clean, push local initial datasets to Firestore
-        pushAllLocalDataToFirestore().catch(() => {});
       }
     }).catch(() => {});
 

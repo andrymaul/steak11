@@ -429,22 +429,16 @@ export const pullAttendanceFromFirestore = async (): Promise<AttendanceRecord[]>
   }
 
   if (remoteRecords && Array.isArray(remoteRecords)) {
-    const currentLocalRaw = localStorage.getItem('steak11_attendance');
-    let localData: AttendanceRecord[] = [];
-    if (currentLocalRaw) {
-      try {
-        localData = JSON.parse(currentLocalRaw);
-      } catch {}
-    }
-    const merged = mergeArrayById(localData, remoteRecords);
-    merged.sort((a: any, b: any) => {
+    const sorted = [...remoteRecords].sort((a: any, b: any) => {
       const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
       const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
       return dateB.localeCompare(dateA);
     });
-    localStorage.setItem('steak11_attendance', JSON.stringify(merged));
+    try {
+      localStorage.setItem('steak11_attendance', JSON.stringify(sorted));
+    } catch {}
     window.dispatchEvent(new Event('attendance_updated'));
-    return merged;
+    return sorted;
   }
 
   const raw = localStorage.getItem('steak11_attendance');
@@ -457,6 +451,53 @@ export const pullAttendanceFromFirestore = async (): Promise<AttendanceRecord[]>
 /**
  * Save new Attendance record directly to Cloud Firestore & Server API
  */
+/**
+ * Safely sanitizes attendance records for Cloud Firestore:
+ * 1. Keeps base64 selfies on top 5 most recent records to prevent doc > 1MB error
+ * 2. Completely strips any undefined field values to prevent Firestore unsupported field value errors
+ */
+export const sanitizeAttendanceForFirestore = (records: AttendanceRecord[]): AttendanceRecord[] => {
+  if (!Array.isArray(records)) return [];
+  return records.map((rec, idx) => {
+    const copy: any = { ...rec };
+    if (idx >= 5) {
+      delete copy.selfieUrl;
+      delete copy.clockOutSelfieUrl;
+    }
+    Object.keys(copy).forEach((k) => {
+      if (copy[k] === undefined) {
+        delete copy[k];
+      }
+    });
+    return copy as AttendanceRecord;
+  });
+};
+
+/**
+ * Removes any undefined properties from payload for Firestore compatibility
+ */
+export const sanitizePayloadForFirestore = (payload: any): any => {
+  if (Array.isArray(payload)) {
+    return payload.map((item) => {
+      if (item && typeof item === 'object') {
+        const copy: any = { ...item };
+        Object.keys(copy).forEach((k) => {
+          if (copy[k] === undefined) delete copy[k];
+        });
+        return copy;
+      }
+      return item;
+    });
+  } else if (payload && typeof payload === 'object') {
+    const copy: any = { ...payload };
+    Object.keys(copy).forEach((k) => {
+      if (copy[k] === undefined) delete copy[k];
+    });
+    return copy;
+  }
+  return payload;
+};
+
 export const saveAttendanceRecordDirectToCloud = async (newRecord: AttendanceRecord): Promise<AttendanceRecord[]> => {
   const db = getDb();
   let currentRecords = await pullAttendanceFromFirestore();
@@ -468,23 +509,16 @@ export const saveAttendanceRecordDirectToCloud = async (newRecord: AttendanceRec
     return dateB.localeCompare(dateA);
   });
 
-  // Keep latest 30 photos for Firestore 1MB doc size safety
-  const sanitized = updated.map((rec: any, idx: number) => {
-    if (idx < 30) return rec;
-    return {
-      ...rec,
-      selfieUrl: undefined,
-      clockOutSelfieUrl: undefined
-    };
-  });
+  const sanitized = sanitizeAttendanceForFirestore(updated);
 
   // 1. Direct Firestore write
   if (db && isFirebaseConfigured()) {
     try {
       const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
       await setDoc(docRef, { payload: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+      console.log('✅ Attendance saved to Cloud Firestore successfully!');
     } catch (e) {
-      console.warn('Direct Firestore save error:', e);
+      console.error('Direct Firestore save error:', e);
     }
   }
 
@@ -529,21 +563,15 @@ export const updateAttendanceRecordInCloud = async (updatedRecord: AttendanceRec
     return dateB.localeCompare(dateA);
   });
 
-  const sanitized = updated.map((rec: any, idx: number) => {
-    if (idx < 30) return rec;
-    return {
-      ...rec,
-      selfieUrl: undefined,
-      clockOutSelfieUrl: undefined
-    };
-  });
+  const sanitized = sanitizeAttendanceForFirestore(updated);
 
   if (db && isFirebaseConfigured()) {
     try {
       const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
       await setDoc(docRef, { payload: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+      console.log('✅ Attendance updated in Cloud Firestore successfully!');
     } catch (e) {
-      console.warn('Direct Firestore update error:', e);
+      console.error('Direct Firestore update error:', e);
     }
   }
 
@@ -575,22 +603,15 @@ export const deleteAttendanceRecordFromCloud = async (recordId: string): Promise
   let currentRecords = await pullAttendanceFromFirestore();
   
   const updated = currentRecords.filter((rec) => rec.id !== recordId);
-
-  const sanitized = updated.map((rec: any, idx: number) => {
-    if (idx < 30) return rec;
-    return {
-      ...rec,
-      selfieUrl: undefined,
-      clockOutSelfieUrl: undefined
-    };
-  });
+  const sanitized = sanitizeAttendanceForFirestore(updated);
 
   if (db && isFirebaseConfigured()) {
     try {
       const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
       await setDoc(docRef, { payload: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+      console.log('✅ Attendance deleted from Cloud Firestore successfully!');
     } catch (e) {
-      console.warn('Direct Firestore delete error:', e);
+      console.error('Direct Firestore delete error:', e);
     }
   }
 
@@ -758,15 +779,9 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
 
   let sanitizedPayload = payload;
   if (dataKey === 'attendance' && Array.isArray(payload)) {
-    // Keep selfies for the latest 25 attendance records and omit heavy base64 from older ones
-    sanitizedPayload = payload.map((rec: any, idx: number) => {
-      if (idx < 25) return rec;
-      return {
-        ...rec,
-        selfieUrl: undefined,
-        clockOutSelfieUrl: undefined
-      };
-    });
+    sanitizedPayload = sanitizeAttendanceForFirestore(payload);
+  } else {
+    sanitizedPayload = sanitizePayloadForFirestore(payload);
   }
 
   try {
@@ -1093,20 +1108,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // For arrays: attendance is merged to preserve offline clock-in, but master collections (employees, menu, admins, etc.) use remoteData directly to prevent deleted records from resurrecting
-          if (Array.isArray(localData) && Array.isArray(remoteData)) {
-            if (key === 'attendance') {
-              finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
-              finalData.sort((a: any, b: any) => {
-                const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
-                const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
-                return dateB.localeCompare(dateA);
-              });
-              needsRemotePush = finalData.length > remoteData.length;
-            } else {
-              finalData = remoteData;
-              needsRemotePush = false;
-            }
+          // For arrays: collections use remoteData directly as the authoritative single source of truth
+          if (Array.isArray(remoteData)) {
+            finalData = remoteData;
+            needsRemotePush = false;
           } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
             // For configuration objects (branding, settings), remote is primary with local fallback
             finalData = { ...localData, ...remoteData };
