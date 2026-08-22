@@ -50,7 +50,8 @@ import {
   syncAllReviewsToFirebase,
   syncAllSuppliersToFirebase,
   syncAllPurchaseOrdersToFirebase,
-  syncAllLocationsToFirebase
+  syncAllLocationsToFirebase,
+  pushAllLocalDataToFirestore
 } from './lib/firebaseServices';
 
 export const SYSTEM_ALL_TABS = [
@@ -346,7 +347,6 @@ export function saveMenuCategories(categories: { id: string; name: string; descr
 }
 
 export async function syncAllLocalMenuToFirebase(): Promise<void> {
-  const { pushAllLocalDataToFirestore } = await import('./lib/firebaseServices');
   await pushAllLocalDataToFirestore().catch(() => {});
 }
 

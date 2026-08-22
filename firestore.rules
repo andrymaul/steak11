@@ -1,44 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper Functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isValidPayload() {
-      return request.resource.data.payload != null;
-    }
-
-    // Public & shared app store collections (Menu, Outlets, Promos, Reviews, Orders, Attendance, Employees, etc)
-    match /users/shared_app_store/data/{dataKey} {
-      allow read: if true;
-      allow write: if isValidPayload() || isAuthenticated();
-    }
-
-    // Direct orders collection (Public Customer Checkout & Admin POS)
-    match /orders/{orderId} {
-      allow read: if true;
-      allow create: if request.resource.data.customerName != null;
-      allow update, delete: if isAuthenticated();
-    }
-
-    // Direct menu collection (Public catalog)
-    match /menu_items/{itemId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
-    }
-
-    // Healthcheck & Shared System Ping
-    match /shared_data/{docId} {
+    // Steak 11 - Cloud Firestore Realtime Database Rules
+    // Mengizinkan sinkronisasi realtime untuk Kasir POS, Kitchen Display, Presensi Kamera Selfie, Menu, dan Admin
+    match /{document=**} {
       allow read, write: if true;
-    }
-
-    // User-scoped data fallback rules
-    match /users/{userId}/data/{dataKey} {
-      allow read: if request.auth.uid == userId || userId == 'shared_app_store';
-      allow write: if (request.auth.uid == userId || userId == 'shared_app_store') && isValidPayload();
     }
   }
 }
