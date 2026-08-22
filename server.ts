@@ -61,7 +61,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/firestore-diagnostics', async (req, res) => {
+// --- ATTENDANCE SERVER API (DUAL-CHANNEL CROSS-BROWSER SYNC) ---
+app.get('/api/attendance', async (req, res) => {
   try {
     const targetUid = 'shared_app_store';
     const attDocRef = doc(fbDb, 'users', targetUid, 'data', 'attendance');
@@ -70,33 +71,69 @@ app.get('/api/firestore-diagnostics', async (req, res) => {
       const data = snap.data();
       return res.json({
         success: true,
-        exists: true,
-        updatedAt: data?.updatedAt,
-        recordCount: Array.isArray(data?.payload) ? data.payload.length : 0,
-        records: Array.isArray(data?.payload) ? data.payload.map((r: any) => ({
-          id: r.id,
-          name: r.employeeName,
-          date: r.date,
-          time: r.clockInTime,
-          outlet: r.outlet,
-          status: r.status
-        })) : []
-      });
-    } else {
-      return res.json({
-        success: true,
-        exists: false,
-        message: 'Dokumen attendance belum ada di Cloud Firestore.'
+        attendance: Array.isArray(data?.payload) ? data.payload : []
       });
     }
+    return res.json({ success: true, attendance: [] });
   } catch (err: any) {
-    return res.status(500).json({
-      success: false,
-      error: err?.message || String(err),
-      code: err?.code
-    });
+    return res.status(500).json({ success: false, error: err?.message });
   }
 });
+
+app.post('/api/attendance', async (req, res) => {
+  try {
+    const { attendance } = req.body || {};
+    if (!Array.isArray(attendance)) {
+      return res.status(400).json({ success: false, message: 'Invalid attendance array' });
+    }
+    const targetUid = 'shared_app_store';
+    const attDocRef = doc(fbDb, 'users', targetUid, 'data', 'attendance');
+    
+    // Merge with existing records on server
+    const currentSnap = await getDoc(attDocRef);
+    const existing = currentSnap.exists() && Array.isArray(currentSnap.data()?.payload) ? currentSnap.data().payload : [];
+    
+    const map = new Map();
+    existing.forEach((item: any) => { if (item?.id) map.set(String(item.id), item); });
+    attendance.forEach((item: any) => {
+      if (item?.id) {
+        const prev = map.get(String(item.id));
+        map.set(String(item.id), {
+          ...(prev || {}),
+          ...item,
+          selfieUrl: item.selfieUrl || prev?.selfieUrl,
+          clockOutSelfieUrl: item.clockOutSelfieUrl || prev?.clockOutSelfieUrl
+        });
+      }
+    });
+    
+    const merged = Array.from(map.values()).sort((a: any, b: any) => {
+      const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+      const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+      return dateB.localeCompare(dateA);
+    });
+
+    // Sanitize payload: keep latest 30 photos for Firestore document quota limit safety
+    const sanitized = merged.map((rec: any, idx: number) => {
+      if (idx < 30) return rec;
+      return {
+        ...rec,
+        selfieUrl: undefined,
+        clockOutSelfieUrl: undefined
+      };
+    });
+
+    await setDoc(attDocRef, {
+      payload: sanitized,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    return res.json({ success: true, count: merged.length, attendance: merged });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message });
+  }
+});
+
 
 // Store for System Updates History
 const systemUpdateHistory: Array<{

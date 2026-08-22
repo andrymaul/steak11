@@ -268,44 +268,56 @@ export const subscribeToAttendance = (callback: (records: AttendanceRecord[]) =>
 };
 
 /**
- * Pull the latest Attendance records directly from Cloud Firestore
+ * Pull the latest Attendance records directly from Cloud Firestore (with API server fallback)
  */
 export const pullAttendanceFromFirestore = async (): Promise<AttendanceRecord[]> => {
   const db = getDb();
-  if (!db || !isFirebaseConfigured()) {
-    const raw = localStorage.getItem('steak11_attendance');
-    if (raw) {
-      try { return JSON.parse(raw); } catch {}
-    }
-    return [];
-  }
-  try {
-    const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
-    const snap = await getDoc(docRef);
-    if (snap.exists() && snap.data()?.payload) {
-      const remoteData = snap.data().payload;
-      if (Array.isArray(remoteData)) {
-        const currentLocalRaw = localStorage.getItem('steak11_attendance');
-        let localData: AttendanceRecord[] = [];
-        if (currentLocalRaw) {
-          try {
-            localData = JSON.parse(currentLocalRaw);
-          } catch {}
-        }
-        const merged = mergeArrayById(localData, remoteData);
-        merged.sort((a: any, b: any) => {
-          const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
-          const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
-          return dateB.localeCompare(dateA);
-        });
-        localStorage.setItem('steak11_attendance', JSON.stringify(merged));
-        window.dispatchEvent(new Event('attendance_updated'));
-        return merged;
+  let remoteRecords: AttendanceRecord[] | null = null;
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
+      const snap = await getDoc(docRef);
+      if (snap.exists() && snap.data()?.payload && Array.isArray(snap.data()?.payload)) {
+        remoteRecords = snap.data()?.payload;
       }
+    } catch (e) {
+      console.warn('Direct Firestore fetch error, falling back to server API:', e);
     }
-  } catch (e) {
-    console.warn('Error pulling attendance from Firestore:', e);
   }
+
+  // Fallback to /api/attendance if Firestore SDK had network/permission hiccups
+  if (!remoteRecords || remoteRecords.length === 0) {
+    try {
+      const res = await fetch('/api/attendance');
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && Array.isArray(json.attendance) && json.attendance.length > 0) {
+          remoteRecords = json.attendance;
+        }
+      }
+    } catch {}
+  }
+
+  if (remoteRecords && Array.isArray(remoteRecords)) {
+    const currentLocalRaw = localStorage.getItem('steak11_attendance');
+    let localData: AttendanceRecord[] = [];
+    if (currentLocalRaw) {
+      try {
+        localData = JSON.parse(currentLocalRaw);
+      } catch {}
+    }
+    const merged = mergeArrayById(localData, remoteRecords);
+    merged.sort((a: any, b: any) => {
+      const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+      const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+      return dateB.localeCompare(dateA);
+    });
+    localStorage.setItem('steak11_attendance', JSON.stringify(merged));
+    window.dispatchEvent(new Event('attendance_updated'));
+    return merged;
+  }
+
   const raw = localStorage.getItem('steak11_attendance');
   if (raw) {
     try { return JSON.parse(raw); } catch {}
@@ -473,6 +485,15 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
     await setDoc(sharedDocRef, { payload: sanitizedPayload, updatedAt: new Date().toISOString() }, { merge: true });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
+  }
+
+  // Dual-channel sync: Also post attendance to backend server API
+  if (dataKey === 'attendance' && Array.isArray(payload) && typeof fetch !== 'undefined') {
+    fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attendance: sanitizedPayload })
+    }).catch(() => {});
   }
 };
 
