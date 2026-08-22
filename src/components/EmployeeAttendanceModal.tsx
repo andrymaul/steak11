@@ -526,7 +526,8 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       updatedAt: new Date().toISOString()
     };
 
-    const updated = [newRecord, ...attendance];
+    const currentStored = getStoredAttendance();
+    const updated = [newRecord, ...currentStored.filter((r) => r.id !== newRecord.id)];
     setAttendance(updated);
     saveAttendance(updated);
 
@@ -600,7 +601,8 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     const hours = +(durationMin / 60).toFixed(1);
     const finalHours = hours > 0 ? hours : 8.0;
 
-    const updated = attendance.map((rec) => {
+    const currentStored = getStoredAttendance();
+    const updated = currentStored.map((rec) => {
       if (rec.id === todayRecord.id) {
         return {
           ...rec,
