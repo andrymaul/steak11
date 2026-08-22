@@ -605,6 +605,16 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
       if (sharedSnap.exists() && sharedSnap.data()?.payload !== undefined) {
         const remoteData = sharedSnap.data().payload;
         let finalData = remoteData;
+        if (key === 'attendance' || key === 'orders' || key === 'cashier_shifts') {
+          const rawLocal = localStorage.getItem('steak11_' + key);
+          let localArr: any[] = [];
+          if (rawLocal) {
+            try { localArr = JSON.parse(rawLocal); } catch {}
+          }
+          if (Array.isArray(localArr) && Array.isArray(remoteData)) {
+            finalData = mergeArrayById(localArr, remoteData);
+          }
+        }
         localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
         window.dispatchEvent(new Event(key + '_updated'));
         if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
@@ -720,9 +730,9 @@ const mergeArrayById = (localArray: any[], remoteArray: any[], _remoteUpdatedAtS
         const existingItemTime = getItemTimestamp(existing);
         const mergedItem = {
           ...existing,
-          ...(localItemTime > existingItemTime ? item : {}),
-          selfieUrl: existing.selfieUrl || item.selfieUrl,
-          clockOutSelfieUrl: existing.clockOutSelfieUrl || item.clockOutSelfieUrl
+          ...(localItemTime >= existingItemTime ? item : {}),
+          selfieUrl: item.selfieUrl || existing.selfieUrl,
+          clockOutSelfieUrl: item.clockOutSelfieUrl || existing.clockOutSelfieUrl
         };
         map.set(String(item.id), mergedItem);
       }
