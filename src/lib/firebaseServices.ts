@@ -10,7 +10,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { getDb, getAuthInstance, isFirebaseConfigured } from './firebase';
-import { MenuItem, OrderItem } from '../types';
+import { MenuItem, OrderItem, AttendanceRecord } from '../types';
 import {
   MENU_ITEMS,
   CHICKEN_OPTIONS,
@@ -227,6 +227,90 @@ export const subscribeToMenuItems = (callback: (items: MenuItem[]) => void): (()
     handleFirestoreError(error, OperationType.GET, MENU_COL);
     return () => {};
   }
+};
+
+/**
+ * Subscribe to Realtime Attendance from Cloud Firestore
+ */
+export const subscribeToAttendance = (callback: (records: AttendanceRecord[]) => void): (() => void) => {
+  const db = getDb();
+  if (!isFirebaseConfigured() || !db) return () => {};
+  try {
+    const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
+    return onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists() && snapshot.data()?.payload) {
+        const remoteData = snapshot.data().payload;
+        if (Array.isArray(remoteData)) {
+          const currentLocalRaw = localStorage.getItem('steak11_attendance');
+          let localData: AttendanceRecord[] = [];
+          if (currentLocalRaw) {
+            try {
+              localData = JSON.parse(currentLocalRaw);
+            } catch {}
+          }
+          const merged = mergeArrayById(localData, remoteData);
+          merged.sort((a: any, b: any) => {
+            const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+            const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+            return dateB.localeCompare(dateA);
+          });
+          localStorage.setItem('steak11_attendance', JSON.stringify(merged));
+          callback(merged);
+        }
+      }
+    }, (err) => {
+      console.warn('Error on subscribeToAttendance:', err);
+    });
+  } catch (error) {
+    console.warn('Error setting subscribeToAttendance:', error);
+    return () => {};
+  }
+};
+
+/**
+ * Pull the latest Attendance records directly from Cloud Firestore
+ */
+export const pullAttendanceFromFirestore = async (): Promise<AttendanceRecord[]> => {
+  const db = getDb();
+  if (!db || !isFirebaseConfigured()) {
+    const raw = localStorage.getItem('steak11_attendance');
+    if (raw) {
+      try { return JSON.parse(raw); } catch {}
+    }
+    return [];
+  }
+  try {
+    const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
+    const snap = await getDoc(docRef);
+    if (snap.exists() && snap.data()?.payload) {
+      const remoteData = snap.data().payload;
+      if (Array.isArray(remoteData)) {
+        const currentLocalRaw = localStorage.getItem('steak11_attendance');
+        let localData: AttendanceRecord[] = [];
+        if (currentLocalRaw) {
+          try {
+            localData = JSON.parse(currentLocalRaw);
+          } catch {}
+        }
+        const merged = mergeArrayById(localData, remoteData);
+        merged.sort((a: any, b: any) => {
+          const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+          const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+          return dateB.localeCompare(dateA);
+        });
+        localStorage.setItem('steak11_attendance', JSON.stringify(merged));
+        window.dispatchEvent(new Event('attendance_updated'));
+        return merged;
+      }
+    }
+  } catch (e) {
+    console.warn('Error pulling attendance from Firestore:', e);
+  }
+  const raw = localStorage.getItem('steak11_attendance');
+  if (raw) {
+    try { return JSON.parse(raw); } catch {}
+  }
+  return [];
 };
 
 /**
@@ -602,37 +686,35 @@ const getItemTimestamp = (item: any): number => {
   return 0;
 };
 
-const mergeArrayById = (localArray: any[], remoteArray: any[], remoteUpdatedAtStr?: string): any[] => {
+const mergeArrayById = (localArray: any[], remoteArray: any[], _remoteUpdatedAtStr?: string): any[] => {
   if (!Array.isArray(localArray)) return Array.isArray(remoteArray) ? remoteArray : [];
   if (!Array.isArray(remoteArray)) return Array.isArray(localArray) ? localArray : [];
 
-  const remoteTime = remoteUpdatedAtStr ? new Date(remoteUpdatedAtStr).getTime() : 0;
   const map = new Map<string, any>();
 
-  // 1. Remote items from Cloud Firestore are the authoritative ground truth
+  // 1. Remote items from Cloud Firestore
   remoteArray.forEach((item) => {
     if (item && item.id) {
       map.set(String(item.id), item);
     }
   });
 
-  // 2. Retain local items that are recent or newer than remote snapshot
+  // 2. Retain & merge local items (ensuring offline and recent records are never lost)
   localArray.forEach((item) => {
     if (item && item.id) {
       const existing = map.get(String(item.id));
       if (!existing) {
-        const itemCreatedTime = getItemTimestamp(item);
-        // Retain if created within last 24h or newer than remote snapshot timestamp
-        const isRecent = itemCreatedTime > 0 && (Date.now() - itemCreatedTime < 86400000);
-        if (isRecent || (remoteTime > 0 && itemCreatedTime >= remoteTime)) {
-          map.set(String(item.id), item);
-        }
+        map.set(String(item.id), item);
       } else {
         const localItemTime = getItemTimestamp(item);
         const existingItemTime = getItemTimestamp(existing);
-        if (localItemTime > existingItemTime) {
-          map.set(String(item.id), item);
-        }
+        const mergedItem = {
+          ...existing,
+          ...(localItemTime > existingItemTime ? item : {}),
+          selfieUrl: existing.selfieUrl || item.selfieUrl,
+          clockOutSelfieUrl: existing.clockOutSelfieUrl || item.clockOutSelfieUrl
+        };
+        map.set(String(item.id), mergedItem);
       }
     }
   });

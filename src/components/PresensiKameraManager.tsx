@@ -36,6 +36,7 @@ import {
   getStoredBranding,
   getLocalDateStr
 } from '../utils';
+import { pullAttendanceFromFirestore, subscribeToAttendance } from '../lib/firebaseServices';
 
 interface PresensiKameraManagerProps {
   showToast?: (msg: string) => void;
@@ -172,7 +173,21 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     setAttendance(getStoredAttendance());
     fetchGpsLocation();
 
+    // Realtime attendance sync with Cloud Firestore
+    const unsubAtt = subscribeToAttendance((liveRecords) => {
+      if (liveRecords && Array.isArray(liveRecords)) {
+        setAttendance(liveRecords);
+      }
+    });
+
+    pullAttendanceFromFirestore().then((records) => {
+      if (records && records.length > 0) {
+        setAttendance(records);
+      }
+    }).catch(() => {});
+
     return () => {
+      if (unsubAtt) unsubAtt();
       window.removeEventListener('attendance_updated', handleAttUpdated);
       stopCamera();
     };
@@ -451,7 +466,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
           actionType
         );
         setCapturedSelfie(watermarkedData);
-        if (showToast) showToast('Foto selfie berhasil diunggah dengan watermark');
+        if (showToast) showToast('📷 Foto selfie berhasil diunggah & dikompres otomatis (< 1MB)');
       };
       img.src = event.target?.result as string;
     };

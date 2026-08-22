@@ -150,7 +150,7 @@ import { PresensiKameraManager } from './PresensiKameraManager';
 import { CustomerManager } from './CustomerManager';
 import { FirebaseSettingsPanel } from './FirebaseSettingsPanel';
 import { UserGuideManager } from './UserGuideManager';
-import { refreshEmployeesFromFirebase, pullAllFirestoreDataToLocal } from '../lib/firebaseServices';
+import { refreshEmployeesFromFirebase, pullAllFirestoreDataToLocal, pullAttendanceFromFirestore, subscribeToAttendance } from '../lib/firebaseServices';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -1001,8 +1001,17 @@ function doPost(e) {
   };
 
   useEffect(() => {
+    let unsubAtt: (() => void) | null = null;
     if (isOpen) {
       loadAllData();
+      pullAttendanceFromFirestore().then((records) => {
+        if (records && records.length > 0) setAttendance(records);
+      }).catch(() => {});
+      unsubAtt = subscribeToAttendance((liveRecords) => {
+        if (liveRecords && Array.isArray(liveRecords)) {
+          setAttendance(liveRecords);
+        }
+      });
       syncFromSheets(true);
     }
     const handleUpdate = () => {
@@ -1016,6 +1025,7 @@ function doPost(e) {
     ];
     events.forEach((evt) => window.addEventListener(evt, handleUpdate));
     return () => {
+      if (unsubAtt) unsubAtt();
       events.forEach((evt) => window.removeEventListener(evt, handleUpdate));
     };
   }, [isOpen]);
@@ -2195,12 +2205,10 @@ function doPost(e) {
 
   // --- Attendance Actions ---
   const handleRefreshAttendance = async () => {
-    if (typeof window !== 'undefined' && navigator.onLine) {
-      await pullAllFirestoreDataToLocal().catch(() => {});
-    }
-    const refreshed = getStoredAttendance();
+    showToast('🔄 Menghubungkan ke Cloud Firestore & menyinkronkan data presensi...');
+    const refreshed = await pullAttendanceFromFirestore();
     setAttendance(refreshed);
-    showToast('Data absensi berhasil diperbarui & disinkronkan!');
+    showToast(`✅ Data presensi berhasil disinkronkan (${refreshed.length} data terbaca dari Cloud Firestore & Local)!`);
   };
 
   const handleDownloadAttendanceXlsx = () => {
@@ -7324,11 +7332,17 @@ function doPost(e) {
             <div className="bg-white dark:bg-[#1f0e30] p-5 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm space-y-4">
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                 <div>
-                  <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
-                    Laporan Rekap Presensi Digital Shift Karyawan
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
+                      Laporan Rekap Presensi Digital Shift Karyawan
+                    </h3>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Firestore Cloud & Local Synced
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500">
-                    Data kehadiran terintegrasi dengan perhitungan durasi jam kerja, foto watermark, dan ekspor data laporan.
+                    Data kehadiran terintegrasi dengan perhitungan durasi jam kerja, foto watermark (&lt; 1MB), dan ekspor data laporan.
                   </p>
                 </div>
 

@@ -31,6 +31,7 @@ import {
   getStoredBranding,
   getLocalDateStr
 } from '../utils';
+import { pullAttendanceFromFirestore, subscribeToAttendance } from '../lib/firebaseServices';
 
 interface EmployeeAttendanceModalProps {
   isOpen: boolean;
@@ -143,13 +144,24 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       setSuccessMsg('');
       setCapturedSelfie(null);
       fetchGpsLocation();
+
+      pullAttendanceFromFirestore().then((records) => {
+        if (records && records.length > 0) setAttendance(records);
+      }).catch(() => {});
     } else {
       stopCamera();
     }
 
+    const unsubAtt = subscribeToAttendance((liveRecords) => {
+      if (liveRecords && Array.isArray(liveRecords)) {
+        setAttendance(liveRecords);
+      }
+    });
+
     window.addEventListener('locations_updated', handleLocUpdate);
     window.addEventListener('attendance_updated', handleAttUpdate);
     return () => {
+      if (unsubAtt) unsubAtt();
       window.removeEventListener('locations_updated', handleLocUpdate);
       window.removeEventListener('attendance_updated', handleAttUpdate);
     };
