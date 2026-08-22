@@ -216,6 +216,54 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // --- AUTO-LOGOUT ON INACTIVITY (5 MINUTES) ---
+  const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Menit = 300.000 ms
+  const lastActivityRef = React.useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    lastActivityRef.current = Date.now();
+
+    const updateActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    // User interaction events
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    
+    // Throttled handler to conserve CPU
+    let lastThrottledCall = 0;
+    const throttledHandler = () => {
+      const now = Date.now();
+      if (now - lastThrottledCall > 2000) {
+        lastThrottledCall = now;
+        updateActivity();
+      }
+    };
+
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, throttledHandler, { passive: true });
+    });
+
+    // Check inactivity interval every 10 seconds
+    const intervalId = setInterval(() => {
+      const inactiveDuration = Date.now() - lastActivityRef.current;
+      if (inactiveDuration >= INACTIVITY_LIMIT_MS) {
+        console.warn('⚠️ Sesi tidak aktif selama 5 menit. Melakukan logout otomatis...');
+        handleLogout();
+        showToastNotification('⏱️ Sesi Anda telah berakhir otomatis karena tidak aktif selama 5 menit.');
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, throttledHandler);
+      });
+    };
+  }, [currentUser]);
+
   const handleAddToCart = (itemId: string) => {
     const currentMenuItems = getStoredMenuItems();
     const item = currentMenuItems.find((i) => i.id === itemId);
