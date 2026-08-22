@@ -100,15 +100,14 @@ export function formatRupiah(val: number): string {
 // --- MENU ITEMS STORAGE ---
 export function getStoredMenuItems(): MenuItem[] {
   const stored = localStorage.getItem('steak11_menu_items');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return MENU_ITEMS;
+      return [];
     }
   }
-  saveMenuItems(MENU_ITEMS);
   return MENU_ITEMS;
 }
 
@@ -121,15 +120,14 @@ export function saveMenuItems(items: MenuItem[]): void {
 // --- RACIK STEAK OPTIONS STORAGE ---
 export function getStoredChickenOptions(): ChickenOption[] {
   const stored = localStorage.getItem('steak11_chicken_options');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return CHICKEN_OPTIONS;
+      return [];
     }
   }
-  saveChickenOptions(CHICKEN_OPTIONS);
   return CHICKEN_OPTIONS;
 }
 
@@ -141,15 +139,14 @@ export function saveChickenOptions(items: ChickenOption[]): void {
 
 export function getStoredSauceOptions(): SauceOption[] {
   const stored = localStorage.getItem('steak11_sauce_options');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return SAUCE_OPTIONS;
+      return [];
     }
   }
-  saveSauceOptions(SAUCE_OPTIONS);
   return SAUCE_OPTIONS;
 }
 
@@ -161,15 +158,14 @@ export function saveSauceOptions(items: SauceOption[]): void {
 
 export function getStoredAddonOptions(): AddonOption[] {
   const stored = localStorage.getItem('steak11_addon_options');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return ADDON_OPTIONS;
+      return [];
     }
   }
-  saveAddonOptions(ADDON_OPTIONS);
   return ADDON_OPTIONS;
 }
 
@@ -182,15 +178,14 @@ export function saveAddonOptions(items: AddonOption[]): void {
 // --- LOCATIONS & SHIFT RULES STORAGE ---
 export function getStoredLocations(): LocationItem[] {
   const stored = localStorage.getItem('steak11_locations');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return LOCATIONS;
+      return [];
     }
   }
-  saveLocations(LOCATIONS);
   return LOCATIONS;
 }
 
@@ -202,15 +197,14 @@ export function saveLocations(locations: LocationItem[]): void {
 
 export function getStoredOrders(): OrderItem[] {
   const stored = localStorage.getItem('steak11_orders');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_ORDERS;
+      return [];
     }
   }
-  saveOrders(DEFAULT_ORDERS);
   return DEFAULT_ORDERS;
 }
 
@@ -265,15 +259,14 @@ export function getLocalDateStr(d: Date = new Date()): string {
 // --- ATTENDANCE STORAGE ---
 export function getStoredAttendance(): AttendanceRecord[] {
   const stored = localStorage.getItem('steak11_attendance');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_ATTENDANCE;
+      return [];
     }
   }
-  saveAttendance(DEFAULT_ATTENDANCE);
   return DEFAULT_ATTENDANCE;
 }
 
@@ -306,15 +299,14 @@ export function saveAttendance(records: AttendanceRecord[]): void {
 // --- PAYROLL STORAGE ---
 export function getStoredPayroll(): PayrollSlip[] {
   const stored = localStorage.getItem('steak11_payroll');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_PAYROLL;
+      return [];
     }
   }
-  savePayroll(DEFAULT_PAYROLL);
   return DEFAULT_PAYROLL;
 }
 
@@ -327,15 +319,14 @@ export function savePayroll(slips: PayrollSlip[]): void {
 // --- MENU CATEGORIES STORAGE ---
 export function getStoredMenuCategories(): { id: string; name: string; description: string }[] {
   const stored = localStorage.getItem('steak11_menu_categories');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_MENU_CATEGORIES;
+      return [];
     }
   }
-  saveMenuCategories(DEFAULT_MENU_CATEGORIES);
   return DEFAULT_MENU_CATEGORIES;
 }
 
@@ -352,17 +343,16 @@ export async function syncAllLocalMenuToFirebase(): Promise<void> {
 // --- ADMIN USERS STORAGE ---
 export function getStoredAdmins(): AdminUser[] {
   const stored = localStorage.getItem('steak11_admins');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     } catch {
-      return DEFAULT_ADMINS;
+      return [];
     }
   }
-  saveAdmins(DEFAULT_ADMINS);
   return DEFAULT_ADMINS;
 }
 
@@ -375,57 +365,17 @@ export function saveAdmins(admins: AdminUser[]): void {
 // --- ROLE & JABATAN MENU SETTINGS STORAGE ---
 export function getStoredRoleSettings(): RoleSetting[] {
   const stored = localStorage.getItem('steak11_role_settings');
-  let rawRoles: RoleSetting[] = DEFAULT_ROLE_SETTINGS;
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        rawRoles = parsed;
+      if (Array.isArray(parsed)) {
+        return parsed;
       }
     } catch {
-      rawRoles = DEFAULT_ROLE_SETTINGS;
+      return [];
     }
   }
-
-  const existingNames = new Set(rawRoles.map((r) => (r.name || '').trim().toLowerCase()));
-  const missingDefaults = DEFAULT_ROLE_SETTINGS.filter(
-    (def) => !existingNames.has((def.name || '').trim().toLowerCase())
-  );
-  const combined = [...rawRoles, ...missingDefaults];
-
-  const seenIds = new Set<string>();
-  const seenNames = new Set<string>();
-  const uniqueRoles: RoleSetting[] = [];
-
-  for (const role of combined) {
-    if (!role || !role.id || !role.name) continue;
-    const cleanId = role.id.trim();
-    const cleanName = role.name.trim().toLowerCase();
-
-    if (!seenIds.has(cleanId) && !seenNames.has(cleanName)) {
-      seenIds.add(cleanId);
-      seenNames.add(cleanName);
-
-      const defaultMatch = DEFAULT_ROLE_SETTINGS.find(
-        (d) => d.name.trim().toLowerCase() === cleanName
-      );
-      let mergedTabs = Array.isArray(role.allowedTabs)
-        ? role.allowedTabs
-        : (defaultMatch?.allowedTabs || []);
-
-      if (cleanName === 'super admin') {
-        mergedTabs = SYSTEM_ALL_TABS.map((t) => t.id);
-      }
-
-      uniqueRoles.push({
-        ...role,
-        name: role.name.trim(),
-        allowedTabs: mergedTabs,
-      });
-    }
-  }
-
-  return uniqueRoles;
+  return DEFAULT_ROLE_SETTINGS;
 }
 
 export function saveRoleSettings(roles: RoleSetting[]): void {
@@ -555,14 +505,14 @@ export function isRegisteredAdmin(user?: { name?: string; role?: string; usernam
 // --- WA NOTIFICATION SETTINGS STORAGE ---
 export function getStoredWaSettings(): WaNotificationSettings {
   const stored = localStorage.getItem('steak11_wa_settings');
-  if (stored) {
+  if (stored !== null) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object') return parsed;
     } catch {
       return DEFAULT_WA_SETTINGS;
     }
   }
-  saveWaSettings(DEFAULT_WA_SETTINGS);
   return DEFAULT_WA_SETTINGS;
 }
 
@@ -575,7 +525,7 @@ export function saveWaSettings(settings: WaNotificationSettings): void {
 // --- STORE BRANDING SETTINGS STORAGE ---
 export function getStoredBranding(): StoreBrandingSettings {
   const stored = localStorage.getItem('steak11_branding');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (parsed && typeof parsed === 'object') {
@@ -585,7 +535,6 @@ export function getStoredBranding(): StoreBrandingSettings {
       return DEFAULT_BRANDING;
     }
   }
-  saveBranding(DEFAULT_BRANDING);
   return DEFAULT_BRANDING;
 }
 
@@ -599,15 +548,14 @@ export function saveBranding(branding: StoreBrandingSettings): void {
 // --- INVENTORY STORAGE ---
 export function getStoredInventory(): InventoryItem[] {
   const stored = localStorage.getItem('steak11_inventory');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_INVENTORY;
+      return [];
     }
   }
-  saveInventory(DEFAULT_INVENTORY);
   return DEFAULT_INVENTORY;
 }
 
@@ -620,15 +568,14 @@ export function saveInventory(items: InventoryItem[]): void {
 // --- PROMOS STORAGE ---
 export function getStoredPromos(): PromoVoucher[] {
   const stored = localStorage.getItem('steak11_promos');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_PROMOS;
+      return [];
     }
   }
-  savePromos(DEFAULT_PROMOS);
   return DEFAULT_PROMOS;
 }
 
@@ -641,15 +588,14 @@ export function savePromos(promos: PromoVoucher[]): void {
 // --- CASHIER SHIFTS STORAGE ---
 export function getStoredCashierShifts(): CashierShiftRecord[] {
   const stored = localStorage.getItem('steak11_cashier_shifts');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_CASHIER_SHIFTS;
+      return [];
     }
   }
-  saveCashierShifts(DEFAULT_CASHIER_SHIFTS);
   return DEFAULT_CASHIER_SHIFTS;
 }
 
@@ -662,7 +608,7 @@ export function saveCashierShifts(shifts: CashierShiftRecord[]): void {
 // --- REVIEWS & TESTIMONIALS STORAGE ---
 export function getStoredReviews(): ReviewItem[] {
   const stored = localStorage.getItem('steak11_reviews');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
@@ -678,10 +624,9 @@ export function getStoredReviews(): ReviewItem[] {
         return unique;
       }
     } catch {
-      return REVIEWS;
+      return [];
     }
   }
-  saveReviews(REVIEWS);
   return REVIEWS;
 }
 
@@ -694,15 +639,14 @@ export function saveReviews(reviews: ReviewItem[]): void {
 // --- SUPPLIERS STORAGE ---
 export function getStoredSuppliers(): Supplier[] {
   const stored = localStorage.getItem('steak11_suppliers');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_SUPPLIERS;
+      return [];
     }
   }
-  saveSuppliers(DEFAULT_SUPPLIERS);
   return DEFAULT_SUPPLIERS;
 }
 
@@ -715,15 +659,14 @@ export function saveSuppliers(suppliers: Supplier[]): void {
 // --- PURCHASE ORDERS STORAGE ---
 export function getStoredPurchaseOrders(): PurchaseOrder[] {
   const stored = localStorage.getItem('steak11_purchase_orders');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_PURCHASE_ORDERS;
+      return [];
     }
   }
-  savePurchaseOrders(DEFAULT_PURCHASE_ORDERS);
   return DEFAULT_PURCHASE_ORDERS;
 }
 
@@ -736,15 +679,14 @@ export function savePurchaseOrders(orders: PurchaseOrder[]): void {
 // --- PETTY CASH EXPENSES STORAGE ---
 export function getStoredExpenses(): PettyCashExpense[] {
   const stored = localStorage.getItem('steak11_expenses');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_EXPENSES;
+      return [];
     }
   }
-  saveExpenses(DEFAULT_EXPENSES);
   return DEFAULT_EXPENSES;
 }
 
@@ -757,15 +699,14 @@ export function saveExpenses(expenses: PettyCashExpense[]): void {
 // --- MENU RECIPES (BOM) STORAGE ---
 export function getStoredRecipes(): MenuRecipe[] {
   const stored = localStorage.getItem('steak11_menu_recipes');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_RECIPES;
+      return [];
     }
   }
-  saveRecipes(DEFAULT_RECIPES);
   return DEFAULT_RECIPES;
 }
 
@@ -778,15 +719,14 @@ export function saveRecipes(recipes: MenuRecipe[]): void {
 // --- STOCK OPNAME LOGS STORAGE ---
 export function getStoredStockOpnames(): StockOpnameLog[] {
   const stored = localStorage.getItem('steak11_stock_opnames');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_STOCK_OPNAMES;
+      return [];
     }
   }
-  saveStockOpnames(DEFAULT_STOCK_OPNAMES);
   return DEFAULT_STOCK_OPNAMES;
 }
 
@@ -799,15 +739,14 @@ export function saveStockOpnames(logs: StockOpnameLog[]): void {
 // --- STOCK TRANSFERS STORAGE ---
 export function getStoredStockTransfers(): StockTransfer[] {
   const stored = localStorage.getItem('steak11_stock_transfers');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_STOCK_TRANSFERS;
+      return [];
     }
   }
-  saveStockTransfers(DEFAULT_STOCK_TRANSFERS);
   return DEFAULT_STOCK_TRANSFERS;
 }
 
@@ -848,7 +787,7 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentMethodSettings = {
 
 export function getStoredPaymentSettings(): PaymentMethodSettings {
   const stored = localStorage.getItem('steak11_payment_settings');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (parsed && typeof parsed === 'object') {
@@ -863,7 +802,6 @@ export function getStoredPaymentSettings(): PaymentMethodSettings {
       return DEFAULT_PAYMENT_SETTINGS;
     }
   }
-  savePaymentSettings(DEFAULT_PAYMENT_SETTINGS);
   return DEFAULT_PAYMENT_SETTINGS;
 }
 
@@ -925,14 +863,13 @@ export function getStoredReceiptSettings(outletName?: string): ReceiptSettings {
   }
 
   const stored = localStorage.getItem('steak11_receipt_settings');
-  if (stored) {
+  if (stored !== null) {
     try {
       return { ...DEFAULT_RECEIPT_SETTINGS, ...JSON.parse(stored) };
     } catch {
       return DEFAULT_RECEIPT_SETTINGS;
     }
   }
-  saveReceiptSettings(DEFAULT_RECEIPT_SETTINGS);
   return DEFAULT_RECEIPT_SETTINGS;
 }
 
@@ -972,15 +909,14 @@ export function getNextReceiptNumber(outletName?: string): string {
 // --- AUDIT LOGS STORAGE ---
 export function getStoredAuditLogs(): AuditLogItem[] {
   const stored = localStorage.getItem('steak11_audit_logs');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_AUDIT_LOGS;
+      return [];
     }
   }
-  saveAuditLogs(DEFAULT_AUDIT_LOGS);
   return DEFAULT_AUDIT_LOGS;
 }
 
@@ -1018,15 +954,14 @@ export function recordAuditLog(log: Omit<AuditLogItem, 'id' | 'timestamp'> & { i
 // --- STOCK MUTATION / KARTU STOK STORAGE ---
 export function getStoredStockMutations(): StockMutation[] {
   const stored = localStorage.getItem('steak11_stock_mutations');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_STOCK_MUTATIONS;
+      return [];
     }
   }
-  saveStockMutations(DEFAULT_STOCK_MUTATIONS);
   return DEFAULT_STOCK_MUTATIONS;
 }
 
@@ -1039,15 +974,14 @@ export function saveStockMutations(mutations: StockMutation[]): void {
 // --- CUSTOMERS / DATA PELANGGAN STORAGE ---
 export function getStoredCustomers(): Customer[] {
   const stored = localStorage.getItem('steak11_customers');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_CUSTOMERS;
+      return [];
     }
   }
-  saveCustomers(DEFAULT_CUSTOMERS);
   return DEFAULT_CUSTOMERS;
 }
 
@@ -1125,7 +1059,7 @@ export function syncCustomersFromOrders(): Customer[] {
 // --- WA GATEWAY CONFIG STORAGE ---
 export function getStoredWaGatewayConfig(): WaGatewayConfig {
   const stored = localStorage.getItem('steak11_wa_gateway_config');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (parsed && typeof parsed === 'object') return parsed;
@@ -1133,7 +1067,6 @@ export function getStoredWaGatewayConfig(): WaGatewayConfig {
       return DEFAULT_WA_GATEWAY_CONFIG;
     }
   }
-  saveWaGatewayConfig(DEFAULT_WA_GATEWAY_CONFIG);
   return DEFAULT_WA_GATEWAY_CONFIG;
 }
 
@@ -1146,12 +1079,12 @@ export function saveWaGatewayConfig(cfg: WaGatewayConfig): void {
 // --- SHIFT TEMPLATES & SCHEDULES STORAGE ---
 export function getStoredShiftTemplates(): WorkShiftTemplate[] {
   const stored = localStorage.getItem('steak11_shift_templates');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_SHIFT_TEMPLATES;
+      return [];
     }
   }
   return DEFAULT_SHIFT_TEMPLATES;
@@ -1163,7 +1096,7 @@ export function saveShiftTemplates(data: WorkShiftTemplate[]): void {
 
 export function getStoredSchedules(): EmployeeSchedule[] {
   const stored = localStorage.getItem('steak11_employee_schedules');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
@@ -1180,12 +1113,12 @@ export function saveSchedules(data: EmployeeSchedule[]): void {
 
 export function getStoredEmployeeLoans(): EmployeeLoan[] {
   const stored = localStorage.getItem('steak11_employee_loans');
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      return DEFAULT_EMPLOYEE_LOANS;
+      return [];
     }
   }
   return DEFAULT_EMPLOYEE_LOANS;
