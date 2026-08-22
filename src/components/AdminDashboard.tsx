@@ -150,7 +150,14 @@ import { PresensiKameraManager } from './PresensiKameraManager';
 import { CustomerManager } from './CustomerManager';
 import { FirebaseSettingsPanel } from './FirebaseSettingsPanel';
 import { UserGuideManager } from './UserGuideManager';
-import { refreshEmployeesFromFirebase, pullAllFirestoreDataToLocal, pullAttendanceFromFirestore, subscribeToAttendance } from '../lib/firebaseServices';
+import {
+  refreshEmployeesFromFirebase,
+  pullAllFirestoreDataToLocal,
+  pullAttendanceFromFirestore,
+  subscribeToAttendance,
+  updateAttendanceRecordInCloud,
+  deleteAttendanceRecordFromCloud
+} from '../lib/firebaseServices';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -1030,6 +1037,14 @@ function doPost(e) {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isOpen && activeTab === 'absensi') {
+      pullAttendanceFromFirestore().then((records) => {
+        if (records && records.length > 0) setAttendance(records);
+      }).catch(() => {});
+    }
+  }, [isOpen, activeTab]);
+
   if (!isOpen) return null;
 
   // --- GAS Order Sync Function ---
@@ -1527,10 +1542,10 @@ function doPost(e) {
       setShowAddEmpModal(false);
       showToast('Data karyawan berhasil dihapus!');
     } else if (type === 'attendance') {
-      const updated = attendance.filter((a) => a.id !== id);
-      setAttendance(updated);
-      saveAttendance(updated);
-      showToast('Rekam absensi berhasil dihapus!');
+      deleteAttendanceRecordFromCloud(id).then((updated) => {
+        setAttendance(updated);
+      });
+      showToast('Rekam absensi berhasil dihapus dari Cloud Firestore!');
     } else if (type === 'menu') {
       const updated = menuItems.filter((m) => m.id !== id);
       setMenuItems(updated);
@@ -2373,36 +2388,35 @@ function doPost(e) {
     setShowEditAttModal(true);
   };
 
-  const handleSaveEditAttendance = () => {
+  const handleSaveEditAttendance = async () => {
     if (checkReadOnlyPermission()) return;
     if (!editingAttId) return;
 
-    const updated = attendance.map((item) => {
-      if (item.id === editingAttId) {
-        return {
-          ...item,
-          employeeName: attEditEmpName,
-          date: attEditDate,
-          outlet: attEditOutlet,
-          clockInTime: attEditClockIn,
-          clockInStatus: attEditClockInStatus,
-          lateMinutes: Number(attEditLateMinutes) || 0,
-          clockOutTime: attEditClockOut || undefined,
-          clockOutStatus: attEditClockOutStatus,
-          earlyOutMinutes: Number(attEditEarlyOutMinutes) || 0,
-          hoursWorked: Number(attEditHoursWorked) || 0,
-          status: attEditStatus,
-          notes: attEditNotes
-        };
-      }
-      return item;
-    });
+    const existingRec = attendance.find((a) => a.id === editingAttId);
+    if (!existingRec) return;
 
+    const updatedRec: AttendanceRecord = {
+      ...existingRec,
+      employeeName: attEditEmpName,
+      date: attEditDate,
+      outlet: attEditOutlet,
+      clockInTime: attEditClockIn,
+      clockInStatus: attEditClockInStatus,
+      lateMinutes: Number(attEditLateMinutes) || 0,
+      clockOutTime: attEditClockOut || undefined,
+      clockOutStatus: attEditClockOutStatus,
+      earlyOutMinutes: Number(attEditEarlyOutMinutes) || 0,
+      hoursWorked: Number(attEditHoursWorked) || 0,
+      status: attEditStatus,
+      notes: attEditNotes,
+      updatedAt: new Date().toISOString()
+    };
+
+    const updated = await updateAttendanceRecordInCloud(updatedRec);
     setAttendance(updated);
-    saveAttendance(updated);
     setShowEditAttModal(false);
     setEditingAttId(null);
-    showToast('Data rekam absensi berhasil diperbarui!');
+    showToast('✅ Data rekam absensi berhasil diperbarui di Cloud Firestore!');
   };
 
   const filteredAttendance = (attendance || []).filter((a) => {

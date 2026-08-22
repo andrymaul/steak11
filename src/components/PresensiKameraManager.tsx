@@ -34,7 +34,13 @@ import {
   getStoredBranding,
   getLocalDateStr
 } from '../utils';
-import { pullAttendanceFromFirestore, subscribeToAttendance } from '../lib/firebaseServices';
+import {
+  pullAttendanceFromFirestore,
+  subscribeToAttendance,
+  saveAttendanceRecordDirectToCloud,
+  updateAttendanceRecordInCloud,
+  deleteAttendanceRecordFromCloud
+} from '../lib/firebaseServices';
 
 interface PresensiKameraManagerProps {
   showToast?: (msg: string) => void;
@@ -85,10 +91,11 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
   const [isLocating, setIsLocating] = useState(false);
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
-  // Live Attendance Table State
-  const [attViewMode, setAttViewMode] = useState<'today' | 'all'>('today');
+  // Live Attendance Table State & Submission State
+  const [attViewMode, setAttViewMode] = useState<'today' | 'all'>('all');
   const [attSearchQuery, setAttSearchQuery] = useState('');
   const [attOutletQuery, setAttOutletQuery] = useState('ALL');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
 
@@ -552,7 +559,7 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     }
   };
 
-  const handleSubmitClockIn = () => {
+  const handleSubmitClockIn = async () => {
     setErrorMsg('');
     if (checkReadOnlyPermission()) return;
     if (!selectedEmpId || !currentEmp) {
@@ -569,6 +576,9 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       setErrorMsg(`Wajib melampirkan Foto Selfie Watermark kehadiran sebelum klik Presensi Masuk.`);
       return;
     }
+
+    setIsSubmitting(true);
+    if (showToast) showToast('☁️ Menyimpan presensi langsung ke Database Cloud Firestore...');
 
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0];
@@ -594,48 +604,54 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       updatedAt: new Date().toISOString()
     };
 
-    const currentStored = getStoredAttendance();
-    const updated = [newRecord, ...currentStored.filter((r) => r.id !== newRecord.id)];
-    setAttendance(updated);
-    saveAttendance(updated);
+    try {
+      // 1. Direct write to Cloud Firestore
+      const updated = await saveAttendanceRecordDirectToCloud(newRecord);
+      setAttendance(updated);
 
-    const waSettings = getStoredWaSettings();
-    const defaultAttendanceTpl = `*PRESENSI NOTIFIKASI {TIPE} STAFF STEAK 11*\n---------------------------\n*Karyawan:* {NAMA} ({ROLE})\n*Outlet:* {OUTLET}\n*Tanggal:* {TANGGAL}\n*Jam:* {WAKTU} WIB\n*Evaluasi:* {EVALUASI}\n*Alamat:* {LOKASI}\n*Catatan:* {CATATAN}\n---------------------------\n_Terverifikasi Sistem Presensi Kamera Steak 11_`;
-    const attendanceTpl = waSettings.templateAttendance || defaultAttendanceTpl;
+      const waSettings = getStoredWaSettings();
+      const defaultAttendanceTpl = `*PRESENSI NOTIFIKASI {TIPE} STAFF STEAK 11*\n---------------------------\n*Karyawan:* {NAMA} ({ROLE})\n*Outlet:* {OUTLET}\n*Tanggal:* {TANGGAL}\n*Jam:* {WAKTU} WIB\n*Evaluasi:* {EVALUASI}\n*Alamat:* {LOKASI}\n*Catatan:* {CATATAN}\n---------------------------\n_Terverifikasi Sistem Presensi Kamera Steak 11_`;
+      const attendanceTpl = waSettings.templateAttendance || defaultAttendanceTpl;
 
-    const waMsg = attendanceTpl
-      .replace(/{TIPE}/g, 'MASUK')
-      .replace(/{NAMA}/g, currentEmp.name)
-      .replace(/{ROLE}/g, currentEmp.role)
-      .replace(/{OUTLET}/g, selectedOutlet)
-      .replace(/{TANGGAL}/g, todayStr)
-      .replace(/{WAKTU}/g, timeStr)
-      .replace(/{EVALUASI}/g, evalResult.badgeText)
-      .replace(/{LOKASI}/g, gpsLocationText)
-      .replace(/{CATATAN}/g, notes || '-');
+      const waMsg = attendanceTpl
+        .replace(/{TIPE}/g, 'MASUK')
+        .replace(/{NAMA}/g, currentEmp.name)
+        .replace(/{ROLE}/g, currentEmp.role)
+        .replace(/{OUTLET}/g, selectedOutlet)
+        .replace(/{TANGGAL}/g, todayStr)
+        .replace(/{WAKTU}/g, timeStr)
+        .replace(/{EVALUASI}/g, evalResult.badgeText)
+        .replace(/{LOKASI}/g, gpsLocationText)
+        .replace(/{CATATAN}/g, notes || '-');
 
-    setWaConfirmData({
-      type: 'MASUK',
-      empName: currentEmp.name,
-      empRole: currentEmp.role,
-      outlet: selectedOutlet,
-      date: todayStr,
-      time: timeStr,
-      statusText: evalResult.clockInStatus,
-      lateOrEarlyText: evalResult.badgeText,
-      address: gpsLocationText,
-      notes: notes || '-',
-      selfieUrl: capturedSelfie,
-      waMessage: waMsg
-    });
+      setWaConfirmData({
+        type: 'MASUK',
+        empName: currentEmp.name,
+        empRole: currentEmp.role,
+        outlet: selectedOutlet,
+        date: todayStr,
+        time: timeStr,
+        statusText: evalResult.clockInStatus,
+        lateOrEarlyText: evalResult.badgeText,
+        address: gpsLocationText,
+        notes: notes || '-',
+        selfieUrl: capturedSelfie,
+        waMessage: waMsg
+      });
 
-    setSuccessMsg(`Berhasil Presensi Masuk untuk ${currentEmp.name} pukul ${timeStr} WIB (${evalResult.badgeText})!`);
-    setCapturedSelfie(null);
-    setNotes('');
-    if (showToast) showToast('✅ Presensi Masuk berhasil dicatat!');
+      setSuccessMsg(`Berhasil Presensi Masuk untuk ${currentEmp.name} pukul ${timeStr} WIB (${evalResult.badgeText})!`);
+      setCapturedSelfie(null);
+      setNotes('');
+      if (showToast) showToast('✅ Presensi Masuk berhasil tersimpan di Cloud Firestore!');
+    } catch (err: any) {
+      console.error('Attendance submit error:', err);
+      setErrorMsg(`Gagal menyimpan presensi: ${err?.message || 'Terjadi kendala jaringan'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleClockOut = () => {
+  const handleClockOut = async () => {
     setErrorMsg('');
     setSuccessMsg('');
 
@@ -659,6 +675,9 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+    if (showToast) showToast('☁️ Menyimpan presensi kepulangan langsung ke Database Cloud Firestore...');
+
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0];
 
@@ -673,61 +692,63 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
     const hours = +(diffMinutes / 60).toFixed(1);
 
     const evalResult = getClockOutEvaluation();
-    const currentStored = getStoredAttendance();
-    const updated = currentStored.map((rec) => {
-      if (rec.id === todayRecord.id) {
-        return {
-          ...rec,
-          clockOutTime: timeStr,
-          hoursWorked: hours,
-          clockOutStatus: evalResult.clockOutStatus,
-          earlyOutMinutes: evalResult.earlyOutMinutes,
-          clockOutSelfieUrl: capturedSelfie,
-          notes: notes ? `${rec.notes} | Pulang: ${notes}` : rec.notes,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return rec;
-    });
-
-    setAttendance(updated);
-    saveAttendance(updated);
-
-    const waSettings = getStoredWaSettings();
-    const defaultAttendanceTpl = `*PRESENSI NOTIFIKASI {TIPE} STAFF STEAK 11*\n---------------------------\n*Karyawan:* {NAMA} ({ROLE})\n*Outlet:* {OUTLET}\n*Tanggal:* {TANGGAL}\n*Jam:* {WAKTU} WIB\n*Evaluasi:* {EVALUASI}\n*Alamat:* {LOKASI}\n*Catatan:* {CATATAN}\n---------------------------\n_Terverifikasi Sistem Presensi Kamera Steak 11_`;
-    const attendanceTpl = waSettings.templateAttendance || defaultAttendanceTpl;
-
-    const waMsg = attendanceTpl
-      .replace(/{TIPE}/g, 'PULANG')
-      .replace(/{NAMA}/g, currentEmp.name)
-      .replace(/{ROLE}/g, currentEmp.role)
-      .replace(/{OUTLET}/g, selectedOutlet)
-      .replace(/{TANGGAL}/g, todayStr)
-      .replace(/{WAKTU}/g, `${timeStr} (Total: ${hours} Jam)`)
-      .replace(/{EVALUASI}/g, evalResult.badgeText)
-      .replace(/{LOKASI}/g, gpsLocationText)
-      .replace(/{CATATAN}/g, notes || '-');
-
-    setWaConfirmData({
-      type: 'PULANG',
-      empName: currentEmp.name,
-      empRole: currentEmp.role,
-      outlet: selectedOutlet,
-      date: todayStr,
-      time: timeStr,
-      statusText: evalResult.clockOutStatus,
-      lateOrEarlyText: evalResult.badgeText,
-      address: gpsLocationText,
+    const updatedRecord: AttendanceRecord = {
+      ...todayRecord,
+      clockOutTime: timeStr,
       hoursWorked: hours,
-      notes: notes || '-',
-      selfieUrl: capturedSelfie,
-      waMessage: waMsg
-    });
+      clockOutStatus: evalResult.clockOutStatus,
+      earlyOutMinutes: evalResult.earlyOutMinutes,
+      clockOutSelfieUrl: capturedSelfie,
+      notes: notes ? `${todayRecord.notes} | Pulang: ${notes}` : todayRecord.notes,
+      updatedAt: new Date().toISOString()
+    };
 
-    setSuccessMsg(`Berhasil Absen Pulang untuk ${currentEmp.name} pukul ${timeStr} WIB (Durasi: ${hours} Jam)!`);
-    setCapturedSelfie(null);
-    setNotes('');
-    if (showToast) showToast('✅ Absen Pulang berhasil dicatat!');
+    try {
+      // 1. Direct update to Cloud Firestore
+      const updated = await updateAttendanceRecordInCloud(updatedRecord);
+      setAttendance(updated);
+
+      const waSettings = getStoredWaSettings();
+      const defaultAttendanceTpl = `*PRESENSI NOTIFIKASI {TIPE} STAFF STEAK 11*\n---------------------------\n*Karyawan:* {NAMA} ({ROLE})\n*Outlet:* {OUTLET}\n*Tanggal:* {TANGGAL}\n*Jam:* {WAKTU} WIB\n*Evaluasi:* {EVALUASI}\n*Alamat:* {LOKASI}\n*Catatan:* {CATATAN}\n---------------------------\n_Terverifikasi Sistem Presensi Kamera Steak 11_`;
+      const attendanceTpl = waSettings.templateAttendance || defaultAttendanceTpl;
+
+      const waMsg = attendanceTpl
+        .replace(/{TIPE}/g, 'PULANG')
+        .replace(/{NAMA}/g, currentEmp.name)
+        .replace(/{ROLE}/g, currentEmp.role)
+        .replace(/{OUTLET}/g, selectedOutlet)
+        .replace(/{TANGGAL}/g, todayStr)
+        .replace(/{WAKTU}/g, `${timeStr} (Total: ${hours} Jam)`)
+        .replace(/{EVALUASI}/g, evalResult.badgeText)
+        .replace(/{LOKASI}/g, gpsLocationText)
+        .replace(/{CATATAN}/g, notes || '-');
+
+      setWaConfirmData({
+        type: 'PULANG',
+        empName: currentEmp.name,
+        empRole: currentEmp.role,
+        outlet: selectedOutlet,
+        date: todayStr,
+        time: timeStr,
+        statusText: evalResult.clockOutStatus,
+        lateOrEarlyText: evalResult.badgeText,
+        address: gpsLocationText,
+        hoursWorked: hours,
+        notes: notes || '-',
+        selfieUrl: capturedSelfie,
+        waMessage: waMsg
+      });
+
+      setSuccessMsg(`Berhasil Absen Pulang untuk ${currentEmp.name} pukul ${timeStr} WIB (Durasi: ${hours} Jam)!`);
+      setCapturedSelfie(null);
+      setNotes('');
+      if (showToast) showToast('✅ Absen Pulang berhasil tersimpan di Cloud Firestore!');
+    } catch (err: any) {
+      console.error('Clock out submit error:', err);
+      setErrorMsg(`Gagal menyimpan presensi pulang: ${err?.message || 'Terjadi kendala jaringan'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSendWaMessage = () => {
@@ -948,26 +969,42 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               onClick={handleSubmitClockIn}
-              disabled={!!todayRecord}
+              disabled={!!todayRecord || isSubmitting}
               className={`py-3 px-4 rounded-xl font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                todayRecord
+                todayRecord || isSubmitting
                   ? 'bg-slate-200 dark:bg-purple-950 text-slate-400 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white'
               }`}
             >
-              <UserCheck className="w-4 h-4" /> PRESENSI MASUK
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" /> MENYIMPAN...
+                </>
+              ) : (
+                <>
+                  <UserCheck className="w-4 h-4" /> PRESENSI MASUK
+                </>
+              )}
             </button>
 
             <button
               onClick={handleClockOut}
-              disabled={!todayRecord || !!todayRecord.clockOutTime}
+              disabled={!todayRecord || !!todayRecord.clockOutTime || isSubmitting}
               className={`py-3 px-4 rounded-xl font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                !todayRecord || todayRecord.clockOutTime
+                !todayRecord || todayRecord.clockOutTime || isSubmitting
                   ? 'bg-slate-200 dark:bg-purple-950 text-slate-400 cursor-not-allowed'
                   : 'bg-[#3D1259] dark:bg-amber-400 hover:bg-purple-900 dark:hover:bg-amber-300 text-amber-300 dark:text-purple-950'
               }`}
             >
-              <LogOut className="w-4 h-4" /> PRESENSI PULANG
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" /> MENYIMPAN...
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" /> PRESENSI PULANG
+                </>
+              )}
             </button>
           </div>
         </div>

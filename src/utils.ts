@@ -267,7 +267,7 @@ export function getStoredAttendance(): AttendanceRecord[] {
       return [];
     }
   }
-  return DEFAULT_ATTENDANCE;
+  return [];
 }
 
 export function saveAttendance(records: AttendanceRecord[]): void {

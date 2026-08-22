@@ -326,6 +326,166 @@ export const pullAttendanceFromFirestore = async (): Promise<AttendanceRecord[]>
 };
 
 /**
+ * Save new Attendance record directly to Cloud Firestore & Server API
+ */
+export const saveAttendanceRecordDirectToCloud = async (newRecord: AttendanceRecord): Promise<AttendanceRecord[]> => {
+  const db = getDb();
+  let currentRecords = await pullAttendanceFromFirestore();
+  
+  const updated = [newRecord, ...currentRecords.filter((r) => r.id !== newRecord.id)];
+  updated.sort((a: any, b: any) => {
+    const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+    const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+    return dateB.localeCompare(dateA);
+  });
+
+  // Keep latest 30 photos for Firestore 1MB doc size safety
+  const sanitized = updated.map((rec: any, idx: number) => {
+    if (idx < 30) return rec;
+    return {
+      ...rec,
+      selfieUrl: undefined,
+      clockOutSelfieUrl: undefined
+    };
+  });
+
+  // 1. Direct Firestore write
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
+      await setDoc(docRef, { payload: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore save error:', e);
+    }
+  }
+
+  // 2. Dual-channel server API write
+  if (typeof fetch !== 'undefined') {
+    try {
+      await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance: sanitized })
+      });
+    } catch (e) {
+      console.warn('Server API save error:', e);
+    }
+  }
+
+  try {
+    localStorage.setItem('steak11_attendance', JSON.stringify(sanitized));
+  } catch {}
+
+  window.dispatchEvent(new Event('attendance_updated'));
+  return sanitized;
+};
+
+/**
+ * Update an existing Attendance record in Cloud Firestore & Server API
+ */
+export const updateAttendanceRecordInCloud = async (updatedRecord: AttendanceRecord): Promise<AttendanceRecord[]> => {
+  const db = getDb();
+  let currentRecords = await pullAttendanceFromFirestore();
+  
+  const updated = currentRecords.map((rec) => {
+    if (rec.id === updatedRecord.id) {
+      return { ...rec, ...updatedRecord, updatedAt: new Date().toISOString() };
+    }
+    return rec;
+  });
+
+  updated.sort((a: any, b: any) => {
+    const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
+    const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
+    return dateB.localeCompare(dateA);
+  });
+
+  const sanitized = updated.map((rec: any, idx: number) => {
+    if (idx < 30) return rec;
+    return {
+      ...rec,
+      selfieUrl: undefined,
+      clockOutSelfieUrl: undefined
+    };
+  });
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
+      await setDoc(docRef, { payload: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore update error:', e);
+    }
+  }
+
+  if (typeof fetch !== 'undefined') {
+    try {
+      await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance: sanitized })
+      });
+    } catch (e) {
+      console.warn('Server API update error:', e);
+    }
+  }
+
+  try {
+    localStorage.setItem('steak11_attendance', JSON.stringify(sanitized));
+  } catch {}
+
+  window.dispatchEvent(new Event('attendance_updated'));
+  return sanitized;
+};
+
+/**
+ * Delete an Attendance record directly from Cloud Firestore & Server API
+ */
+export const deleteAttendanceRecordFromCloud = async (recordId: string): Promise<AttendanceRecord[]> => {
+  const db = getDb();
+  let currentRecords = await pullAttendanceFromFirestore();
+  
+  const updated = currentRecords.filter((rec) => rec.id !== recordId);
+
+  const sanitized = updated.map((rec: any, idx: number) => {
+    if (idx < 30) return rec;
+    return {
+      ...rec,
+      selfieUrl: undefined,
+      clockOutSelfieUrl: undefined
+    };
+  });
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'attendance');
+      await setDoc(docRef, { payload: sanitized, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore delete error:', e);
+    }
+  }
+
+  if (typeof fetch !== 'undefined') {
+    try {
+      await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance: sanitized })
+      });
+    } catch (e) {
+      console.warn('Server API delete error:', e);
+    }
+  }
+
+  try {
+    localStorage.setItem('steak11_attendance', JSON.stringify(sanitized));
+  } catch {}
+
+  window.dispatchEvent(new Event('attendance_updated'));
+  return sanitized;
+};
+
+/**
  * Save or Update an Order in Firestore
  */
 export const saveOrderToFirebase = async (order: OrderItem) => {

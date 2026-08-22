@@ -31,7 +31,12 @@ import {
   getStoredBranding,
   getLocalDateStr
 } from '../utils';
-import { pullAttendanceFromFirestore, subscribeToAttendance } from '../lib/firebaseServices';
+import {
+  pullAttendanceFromFirestore,
+  subscribeToAttendance,
+  saveAttendanceRecordDirectToCloud,
+  updateAttendanceRecordInCloud
+} from '../lib/firebaseServices';
 
 interface EmployeeAttendanceModalProps {
   isOpen: boolean;
@@ -75,6 +80,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // WhatsApp Confirmation Modal State
   const [waConfirmData, setWaConfirmData] = useState<WhatsAppConfirmData | null>(null);
@@ -483,7 +489,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     }
   };
 
-  const handleClockIn = () => {
+  const handleClockIn = async () => {
     setErrorMsg('');
     setSuccessMsg('');
 
@@ -502,6 +508,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       return;
     }
 
+    setIsSubmitting(true);
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0]; // HH:mm:ss
     const evalResult = getClockInEvaluation();
@@ -526,45 +533,50 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       updatedAt: new Date().toISOString()
     };
 
-    const currentStored = getStoredAttendance();
-    const updated = [newRecord, ...currentStored.filter((r) => r.id !== newRecord.id)];
-    setAttendance(updated);
-    saveAttendance(updated);
+    try {
+      const updated = await saveAttendanceRecordDirectToCloud(newRecord);
+      setAttendance(updated);
 
-    const waText =
-      `🥩 *LAPORAN PRESENSI MASUK - STEAK 11*\n` +
-      `------------------------------------\n` +
-      `👤 *Nama Staff:* ${currentEmp.name} (${currentEmp.role})\n` +
-      `🏪 *Outlet Jaga:* ${selectedOutlet}\n` +
-      `📅 *Tanggal:* ${todayStr}\n` +
-      `⏰ *Jam Masuk:* ${timeStr} WIB\n` +
-      `📌 *Status Shift:* ${evalResult.badgeText}\n` +
-      `*Alamat:* ${gpsLocationText}\n` +
-      `📝 *Catatan:* ${notes || 'Presensi Masuk'}\n\n` +
-      `_Terverifikasi via Portal Presensi Digital Steak 11_`;
+      const waText =
+        `🥩 *LAPORAN PRESENSI MASUK - STEAK 11*\n` +
+        `------------------------------------\n` +
+        `👤 *Nama Staff:* ${currentEmp.name} (${currentEmp.role})\n` +
+        `🏪 *Outlet Jaga:* ${selectedOutlet}\n` +
+        `📅 *Tanggal:* ${todayStr}\n` +
+        `⏰ *Jam Masuk:* ${timeStr} WIB\n` +
+        `📌 *Status Shift:* ${evalResult.badgeText}\n` +
+        `*Alamat:* ${gpsLocationText}\n` +
+        `📝 *Catatan:* ${notes || 'Presensi Masuk'}\n\n` +
+        `_Terverifikasi via Portal Presensi Digital Steak 11_`;
 
-    setWaConfirmData({
-      type: 'MASUK',
-      empName: currentEmp.name,
-      empRole: currentEmp.role,
-      outlet: selectedOutlet,
-      date: todayStr,
-      time: timeStr,
-      statusText: evalResult.status,
-      lateOrEarlyText: evalResult.badgeText,
-      address: gpsLocationText,
-      notes: notes || 'Presensi Masuk',
-      selfieUrl: capturedSelfie,
-      waMessage: waText
-    });
+      setWaConfirmData({
+        type: 'MASUK',
+        empName: currentEmp.name,
+        empRole: currentEmp.role,
+        outlet: selectedOutlet,
+        date: todayStr,
+        time: timeStr,
+        statusText: evalResult.status,
+        lateOrEarlyText: evalResult.badgeText,
+        address: gpsLocationText,
+        notes: notes || 'Presensi Masuk',
+        selfieUrl: capturedSelfie,
+        waMessage: waText
+      });
 
-    setSuccessMsg(`Berhasil Presensi Masuk untuk ${currentEmp.name} di ${selectedOutlet} [${evalResult.badgeText}] pukul ${timeStr}! Foto watermark telah disimpan.`);
-    setPin('');
-    setNotes('');
-    setCapturedSelfie(null);
+      setSuccessMsg(`Berhasil Presensi Masuk untuk ${currentEmp.name} di ${selectedOutlet} [${evalResult.badgeText}] pukul ${timeStr}! Foto watermark telah tersimpan di Cloud.`);
+      setPin('');
+      setNotes('');
+      setCapturedSelfie(null);
+    } catch (err: any) {
+      console.error('Modal attendance error:', err);
+      setErrorMsg(`Gagal menyimpan: ${err?.message || 'Kendala jaringan'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleClockOut = () => {
+  const handleClockOut = async () => {
     setErrorMsg('');
     setSuccessMsg('');
 
@@ -588,6 +600,7 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
       return;
     }
 
+    setIsSubmitting(true);
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0]; // HH:mm:ss
     const evalResult = getClockOutEvaluation();
@@ -601,58 +614,65 @@ export const EmployeeAttendanceModal: React.FC<EmployeeAttendanceModalProps> = (
     const hours = +(durationMin / 60).toFixed(1);
     const finalHours = hours > 0 ? hours : 8.0;
 
-    const currentStored = getStoredAttendance();
-    const updated = currentStored.map((rec) => {
-      if (rec.id === todayRecord.id) {
-        return {
-          ...rec,
-          clockOutTime: timeStr,
-          clockOutStatus: evalResult.clockOutStatus,
-          earlyOutMinutes: evalResult.earlyOutMinutes,
-          clockOutSelfieUrl: capturedSelfie,
-          hoursWorked: finalHours,
-          notes: rec.notes ? `${rec.notes} | Pulang: ${evalResult.badgeText}` : evalResult.badgeText,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return rec;
-    });
-
-    setAttendance(updated);
-    saveAttendance(updated);
-
-    const waText =
-      `🥩 *LAPORAN PRESENSI PULANG - STEAK 11*\n` +
-      `------------------------------------\n` +
-      `👤 *Nama Staff:* ${currentEmp.name} (${currentEmp.role})\n` +
-      `🏪 *Outlet Jaga:* ${selectedOutlet}\n` +
-      `📅 *Tanggal:* ${todayStr}\n` +
-      `⏰ *Jam Pulang:* ${timeStr} WIB\n` +
-      `⏱️ *Total Jam Kerja:* ${finalHours} Jam\n` +
-      `📌 *Status Shift:* ${evalResult.badgeText}\n` +
-      `*Alamat:* ${gpsLocationText}\n` +
-      `📝 *Catatan:* ${todayRecord.notes || 'Presensi Pulang'}\n\n` +
-      `_Terverifikasi via Portal Presensi Digital Steak 11_`;
-
-    setWaConfirmData({
-      type: 'PULANG',
-      empName: currentEmp.name,
-      empRole: currentEmp.role,
-      outlet: selectedOutlet,
-      date: todayStr,
-      time: timeStr,
-      statusText: 'Hadir',
-      lateOrEarlyText: evalResult.badgeText,
-      address: gpsLocationText,
+    const updatedRecord: AttendanceRecord = {
+      ...todayRecord,
+      clockOutTime: timeStr,
+      clockOutStatus: evalResult.clockOutStatus,
+      earlyOutMinutes: evalResult.earlyOutMinutes,
+      clockOutSelfieUrl: capturedSelfie,
       hoursWorked: finalHours,
-      notes: todayRecord.notes || 'Presensi Pulang',
-      selfieUrl: capturedSelfie,
-      waMessage: waText
-    });
+      notes: recNotes(todayRecord.notes, evalResult.badgeText),
+      updatedAt: new Date().toISOString()
+    };
 
-    setSuccessMsg(`Berhasil Presensi Pulang untuk ${currentEmp.name}! [${evalResult.badgeText}] Total durasi kerja: ${finalHours} Jam.`);
-    setPin('');
-    setCapturedSelfie(null);
+    try {
+      const updated = await updateAttendanceRecordInCloud(updatedRecord);
+      setAttendance(updated);
+
+      const waText =
+        `🥩 *LAPORAN PRESENSI PULANG - STEAK 11*\n` +
+        `------------------------------------\n` +
+        `👤 *Nama Staff:* ${currentEmp.name} (${currentEmp.role})\n` +
+        `🏪 *Outlet Jaga:* ${selectedOutlet}\n` +
+        `📅 *Tanggal:* ${todayStr}\n` +
+        `⏰ *Jam Pulang:* ${timeStr} WIB\n` +
+        `⏱️ *Total Jam Kerja:* ${finalHours} Jam\n` +
+        `📌 *Status Shift:* ${evalResult.badgeText}\n` +
+        `*Alamat:* ${gpsLocationText}\n` +
+        `📝 *Catatan:* ${todayRecord.notes || 'Presensi Pulang'}\n\n` +
+        `_Terverifikasi via Portal Presensi Digital Steak 11_`;
+
+      setWaConfirmData({
+        type: 'PULANG',
+        empName: currentEmp.name,
+        empRole: currentEmp.role,
+        outlet: selectedOutlet,
+        date: todayStr,
+        time: timeStr,
+        statusText: 'Hadir',
+        lateOrEarlyText: evalResult.badgeText,
+        address: gpsLocationText,
+        hoursWorked: finalHours,
+        notes: todayRecord.notes || 'Presensi Pulang',
+        selfieUrl: capturedSelfie,
+        waMessage: waText
+      });
+
+      setSuccessMsg(`Berhasil Presensi Pulang untuk ${currentEmp.name} [${finalHours} Jam] pukul ${timeStr}!`);
+      setPin('');
+      setNotes('');
+      setCapturedSelfie(null);
+    } catch (err: any) {
+      console.error('Modal clock out error:', err);
+      setErrorMsg(`Gagal menyimpan pulang: ${err?.message || 'Kendala jaringan'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const recNotes = (prevNotes?: string, badgeText?: string) => {
+    if (prevNotes && badgeText) return `${prevNotes} | Pulang: ${badgeText}`;
+    return badgeText || prevNotes || 'Presensi Pulang';
   };
 
   const handleSendWaMessage = () => {
