@@ -461,7 +461,7 @@ export function getUnifiedUsers(): UnifiedUser[] {
           : (adm.allowedTabs || [
               'dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory',
               'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi',
-              'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa',
+              'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa',
               'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide'
             ]),
         status: adm.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'

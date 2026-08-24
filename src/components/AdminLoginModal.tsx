@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, X, ShieldCheck, AlertCircle, Eye, EyeOff, UserPlus, LogIn, Mail, User, Phone } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { SYSTEM_ALL_TABS, getStoredAdmins, getStoredEmployees, saveStoredCurrentUser, saveAdmins } from '../utils';
+import { SYSTEM_ALL_TABS, getStoredAdmins, getStoredEmployees, getStoredRoleSettings, saveStoredCurrentUser, saveAdmins } from '../utils';
 import { AdminUser } from '../types';
 
 interface AdminLoginModalProps {
@@ -194,12 +194,21 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             return;
           }
 
+          const storedRoles = getStoredRoleSettings();
+          const matchedRole = storedRoles.find(
+            (r) => r.name.toLowerCase() === (existingAdmin.role || '').toLowerCase()
+          );
+          const adminAllowed =
+            existingAdmin.allowedTabs && existingAdmin.allowedTabs.length > 0
+              ? existingAdmin.allowedTabs
+              : (matchedRole && matchedRole.allowedTabs && matchedRole.allowedTabs.length > 0
+                ? matchedRole.allowedTabs
+                : SYSTEM_ALL_TABS.map((t) => t.id));
+
           const userData = {
             name: existingAdmin.fullName || existingAdmin.username,
             role: existingAdmin.role || 'Admin',
-            allowedTabs: existingAdmin.allowedTabs && existingAdmin.allowedTabs.length > 0
-              ? existingAdmin.allowedTabs
-              : SYSTEM_ALL_TABS.map((t) => t.id),
+            allowedTabs: adminAllowed,
           };
           saveStoredCurrentUser(userData);
           onSuccessLogin(userData);
@@ -227,12 +236,21 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             return;
           }
 
+          const storedRoles = getStoredRoleSettings();
+          const matchedRole = storedRoles.find(
+            (r) => r.name.toLowerCase() === (existingEmployee.role || '').toLowerCase()
+          );
+          const empAllowed =
+            existingEmployee.allowedTabs && existingEmployee.allowedTabs.length > 0
+              ? existingEmployee.allowedTabs
+              : (matchedRole && matchedRole.allowedTabs && matchedRole.allowedTabs.length > 0
+                ? matchedRole.allowedTabs
+                : ['kasir', 'pesanan', 'inventory', 'absensi', 'presensi_kamera', 'jadwal']);
+
           const userData = {
             name: existingEmployee.name,
             role: existingEmployee.role || 'Kasir',
-            allowedTabs: existingEmployee.allowedTabs && existingEmployee.allowedTabs.length > 0
-              ? existingEmployee.allowedTabs
-              : ['kasir', 'pesanan', 'inventory', 'absensi'],
+            allowedTabs: empAllowed,
           };
           saveStoredCurrentUser(userData);
           onSuccessLogin(userData);

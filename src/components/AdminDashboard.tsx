@@ -240,13 +240,67 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const canAccessTab = (tabId: string): boolean => {
     if (!currentUser) return false;
+    const roleLower = (currentUser.role || '').toLowerCase();
+
+    // 1. Super Admin and Owner ALWAYS have access to all tabs
+    if (roleLower.includes('super') || roleLower.includes('owner')) {
+      return true;
+    }
+
+    const cleanUser = (currentUser.name || '').trim().toLowerCase();
+
+    // 2. Check dynamic latest allowedTabs from employees state
+    const currentEmp = (employees || []).find(
+      (e) =>
+        cleanUser &&
+        (e.name.toLowerCase() === cleanUser ||
+          (e.username && e.username.toLowerCase() === cleanUser) ||
+          e.id.toLowerCase() === cleanUser)
+    );
+    if (currentEmp) {
+      if (currentEmp.allowedTabs && Array.isArray(currentEmp.allowedTabs) && currentEmp.allowedTabs.length > 0) {
+        return currentEmp.allowedTabs.includes(tabId);
+      }
+      const matchedRole = (roleSettings || []).find(
+        (r) => r.name.toLowerCase() === (currentEmp.role || '').toLowerCase()
+      );
+      if (matchedRole && Array.isArray(matchedRole.allowedTabs) && matchedRole.allowedTabs.length > 0) {
+        return matchedRole.allowedTabs.includes(tabId);
+      }
+    }
+
+    // 3. Check dynamic latest allowedTabs from admins state
+    const currentAdm = (adminUsers || []).find(
+      (a) =>
+        cleanUser &&
+        (a.fullName.toLowerCase() === cleanUser ||
+          a.username.toLowerCase() === cleanUser ||
+          a.id.toLowerCase() === cleanUser)
+    );
+    if (currentAdm) {
+      const isSuper = (currentAdm.role || '').toLowerCase().includes('super') || (currentAdm.role || '').toLowerCase().includes('owner');
+      if (isSuper) return true;
+      if (currentAdm.allowedTabs && Array.isArray(currentAdm.allowedTabs) && currentAdm.allowedTabs.length > 0) {
+        return currentAdm.allowedTabs.includes(tabId);
+      }
+      const matchedRole = (roleSettings || []).find(
+        (r) => r.name.toLowerCase() === (currentAdm.role || '').toLowerCase()
+      );
+      if (matchedRole && Array.isArray(matchedRole.allowedTabs) && matchedRole.allowedTabs.length > 0) {
+        return matchedRole.allowedTabs.includes(tabId);
+      }
+      return true;
+    }
+
+    // 4. Fallback to currentUser.allowedTabs from session
     if (currentUser.allowedTabs && Array.isArray(currentUser.allowedTabs)) {
       return currentUser.allowedTabs.includes(tabId);
     }
-    const roleLower = (currentUser.role || '').toLowerCase();
-    if (roleLower.includes('super') || roleLower.includes('owner') || roleLower.includes('admin')) {
+
+    if (roleLower.includes('admin') || roleLower.includes('manager')) {
       return true;
     }
+
     return false;
   };
 
@@ -424,7 +478,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     'kasir', 'pesanan', 'shifts', 'inventory', 'absensi', 'presensi_kamera'
   ]);
   const [adminAllowedTabs, setAdminAllowedTabs] = useState<string[]>([
-    'dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'presensi_kamera', 'customers'
+    'dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'presensi_kamera', 'customers'
   ]);
 
   // Admin Management State

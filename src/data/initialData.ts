@@ -666,7 +666,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: '1111',
     createdAt: '2026-01-01',
     lastLogin: '2026-08-11 00:00',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa', 'branding', 'system', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
   },
   {
     id: 'adm-001',
@@ -679,7 +679,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: '1111',
     createdAt: '2026-01-01',
     lastLogin: '2026-08-10 22:30',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa', 'branding', 'system', 'jadwal', 'pengunjung', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide', 'presensi_kamera']
   },
   {
     id: 'visitor-001',
@@ -692,7 +692,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: 'Google Auth',
     createdAt: '2026-08-15',
     lastLogin: '2026-08-17 19:30',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
   },
   {
     id: 'visitor-002',
@@ -705,7 +705,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
     passwordPin: 'Google Auth',
     createdAt: '2026-08-16',
     lastLogin: '2026-08-17 20:00',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa', 'branding', 'system', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
   }
 ];
 
@@ -1119,35 +1119,35 @@ export const DEFAULT_ROLE_SETTINGS: RoleSetting[] = [
     name: 'Pengunjung',
     targetType: 'both',
     description: 'Akses Pengunjung (Visitor / Google Auth). Dapat melihat semua menu dasbor aplikasi, namun tidak dapat mengubah/menghapus data (Read-Only).',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'wa', 'branding', 'system', 'supabase', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'suppliers', 'purchase_orders', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'wa', 'branding', 'system', 'supabase', 'payment_receipt_settings', 'audit_logs', 'customers', 'pengunjung', 'user_guide']
   },
   {
     id: 'role-super-admin',
     name: 'Super Admin',
     targetType: 'admin',
     description: 'Akses penuh tanpa batas ke seluruh menu sistem, database, audit log, dan pengaturan branding.',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'admin', 'wa', 'branding', 'system', 'supabase', 'payment_receipt_settings', 'audit_logs', 'customers']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'admin', 'wa', 'branding', 'system', 'supabase', 'payment_receipt_settings', 'audit_logs', 'customers', 'user_guide']
   },
   {
     id: 'role-admin',
     name: 'Admin',
     targetType: 'admin',
     description: 'Akses pengelolaan operasional harian resto, transaksi kasir, persediaan, karyawan, absensi, dan laporan.',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'wa', 'payment_receipt_settings', 'audit_logs', 'customers']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'wa', 'payment_receipt_settings', 'audit_logs', 'customers']
   },
   {
     id: 'role-owner',
     name: 'Owner',
     targetType: 'admin',
     description: 'Akses eksekutif untuk memantau omzet harian, laba rugi, laporan analisis bisnis, audit log, dan ulasan.',
-    allowedTabs: ['dashboard', 'analytics', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'audit_logs', 'customers']
+    allowedTabs: ['dashboard', 'analytics', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'audit_logs', 'customers']
   },
   {
     id: 'role-manager-outlet',
     name: 'Manager Outlet',
     targetType: 'both',
     description: 'Manajemen operasional outlet, pesanan, menu, stok, karyawan, absensi, dan closing shift.',
-    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'outlets', 'customers']
+    allowedTabs: ['dashboard', 'kasir', 'pesanan', 'analytics', 'menu', 'racik', 'inventory', 'reviews', 'promos', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'outlets', 'customers']
   },
   {
     id: 'role-supervisor',
@@ -1210,7 +1210,7 @@ export const DEFAULT_ROLE_SETTINGS: RoleSetting[] = [
     name: 'HR & Finance Admin',
     targetType: 'admin',
     description: 'Kelola data karyawan, absensi digital, penggajian/payroll slip, dan laporan keuangan.',
-    allowedTabs: ['dashboard', 'analytics', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'payment_receipt_settings', 'audit_logs']
+    allowedTabs: ['dashboard', 'analytics', 'karyawan', 'absensi', 'presensi_kamera', 'jadwal', 'penggajian', 'shifts', 'expenses', 'payment_receipt_settings', 'audit_logs']
   },
   {
     id: 'role-admin-kasir',
