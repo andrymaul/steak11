@@ -2441,7 +2441,7 @@ function doPost(e) {
       rec.clockInTime + (rec.lateMinutes ? ` (L:${rec.lateMinutes}m)` : ''),
       rec.clockOutTime || (rec.isOvertime ? 'Selesai' : 'Bertugas'),
       `${rec.hoursWorked || 0} jam`,
-      rec.isOvertime || rec.status === 'Lembur' ? `${rec.overtimeHours || rec.hoursWorked} jam (+${formatRupiah(rec.overtimePay || 0)})` : '-',
+      rec.isOvertime || rec.status === 'Lembur' ? `${rec.overtimeHours || rec.hoursWorked || 0} jam` : '-',
       rec.status,
       rec.overtimeReason || rec.notes || '-'
     ]);
@@ -8265,12 +8265,9 @@ function doPost(e) {
                           </td>
                           <td className="p-4 align-top">
                             {rec.isOvertime || rec.status === 'Lembur' ? (
-                              <div className="p-2 rounded-xl bg-amber-50 dark:bg-purple-950/80 border border-amber-300 dark:border-purple-800 text-center max-w-[140px]">
+                              <div className="p-2 rounded-xl bg-amber-50 dark:bg-purple-950/80 border border-amber-300 dark:border-purple-800 text-center max-w-[130px]">
                                 <span className="text-[10px] font-extrabold text-amber-800 dark:text-amber-300 flex items-center justify-center gap-1">
                                   <Clock className="w-3.5 h-3.5 text-amber-500" /> Lembur (Tanpa Foto)
-                                </span>
-                                <span className="text-[9px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                                  Rate: {formatRupiah(rec.overtimeRatePerHour || 15000)}/j
                                 </span>
                               </div>
                             ) : (
@@ -8358,14 +8355,9 @@ function doPost(e) {
                           </td>
                           <td className="p-4 align-top font-bold text-purple-900 dark:text-amber-300">
                             {rec.isOvertime || rec.status === 'Lembur' ? (
-                              <div>
-                                <span className="font-black text-amber-600 dark:text-amber-400 block">
-                                  {rec.overtimeHours || rec.hoursWorked || 0} Jam Lembur
-                                </span>
-                                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 block">
-                                  +{formatRupiah(rec.overtimePay || ((rec.overtimeHours || rec.hoursWorked || 0) * (rec.overtimeRatePerHour || 15000)))}
-                                </span>
-                              </div>
+                              <span className="font-black text-amber-600 dark:text-amber-400 block">
+                                {rec.overtimeHours || rec.hoursWorked || 0} Jam Lembur
+                              </span>
                             ) : (
                               <span>{rec.hoursWorked || 0} Jam</span>
                             )}
