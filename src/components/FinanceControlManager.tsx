@@ -1462,7 +1462,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 2: PETTY CASH & OPERATIONAL EXPENSES (SINKRON DENGAN CLOSING SHIFT) */}
+      {/* SUB-TAB 2: PETTY CASH & OPERATIONAL EXPENSES */}
       {subTab === 'petty_cash' && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-3">
@@ -1470,17 +1470,17 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
               <div>
                 <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-rose-500" />
-                  Pencatatan Kas Kecil & Operasional Laci ({(expenses || []).filter(e => e.source !== 'cash_flow').length} Transaksi)
+                  Pencatatan Kas Kecil & Pengeluaran Operasional ({(expenses || []).length} Transaksi)
                 </h4>
                 <span className="text-[10px] text-slate-400">
-                  ✓ Tersinkronisasi dua arah dengan Kas Keluar Operasional pada Audit Closing Shift
+                  Rekapitulasi seluruh pengeluaran kas kecil laci, operasional harian, dan beban per outlet
                 </span>
               </div>
 
               <div className="text-xs">
-                <span className="text-slate-400">Total Kas Kecil: </span>
+                <span className="text-slate-400">Total Pengeluaran: </span>
                 <span className="font-black text-rose-600 dark:text-rose-400 text-sm">
-                  {formatRupiah((expenses || []).filter(e => e.source !== 'cash_flow').reduce((a, b) => a + b.amount, 0))}
+                  {formatRupiah((expenses || []).reduce((a, b) => a + b.amount, 0))}
                 </span>
               </div>
             </div>
@@ -1493,45 +1493,56 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     <th className="p-2.5">Kategori</th>
                     <th className="p-2.5">Deskripsi Pengeluaran</th>
                     <th className="p-2.5">No. Nota</th>
-                    <th className="p-2.5">Kasir / Outlet</th>
+                    <th className="p-2.5">Kasir / PIC & Outlet</th>
                     <th className="p-2.5">Nominal</th>
                     <th className="p-2.5 text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
-                  {(expenses || [])
-                    .filter(e => e.source !== 'cash_flow')
-                    .map((exp) => (
-                    <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
-                      <td className="p-2.5 text-slate-600 dark:text-slate-300">
-                        {exp.date} <span className="text-[10px] text-slate-400 block">{exp.time}</span>
-                      </td>
-                      <td className="p-2.5">
-                        <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
-                          {exp.category}
-                        </span>
-                        {exp.shiftId && (
-                          <span className="block mt-0.5 text-[9px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">
-                            ✓ Closing: {exp.shiftId}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-2.5 font-extrabold text-slate-800 dark:text-slate-100">{exp.description}</td>
-                      <td className="p-2.5 text-slate-400 font-mono text-[10px]">{exp.receiptNumber || '-'}</td>
-                      <td className="p-2.5 text-slate-500">
-                        {exp.cashierName} <span className="block text-[10px] text-slate-400">{exp.outlet}</span>
-                      </td>
-                      <td className="p-2.5 font-black text-rose-600 dark:text-rose-400">{formatRupiah(exp.amount)}</td>
-                      <td className="p-2.5 text-right">
-                        <button
-                          onClick={() => handleDeleteExpense(exp.id, exp.description)}
-                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                  {expenses.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-6 text-center text-slate-400">
+                        Belum ada data pengeluaran operasional.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    expenses.map((exp) => (
+                      <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                        <td className="p-2.5 text-slate-600 dark:text-slate-300">
+                          {exp.date} <span className="text-[10px] text-slate-400 block">{exp.time}</span>
+                        </td>
+                        <td className="p-2.5">
+                          <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
+                            {exp.category}
+                          </span>
+                          {exp.shiftId ? (
+                            <span className="block mt-0.5 text-[9px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                              ✓ Closing: {exp.shiftId}
+                            </span>
+                          ) : exp.source === 'cash_flow' ? (
+                            <span className="block mt-0.5 text-[9px] text-purple-600 dark:text-purple-400 font-mono font-bold">
+                              📊 Beban Cash Flow
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="p-2.5 font-extrabold text-slate-800 dark:text-slate-100">{exp.description}</td>
+                        <td className="p-2.5 text-slate-400 font-mono text-[10px]">{exp.receiptNumber || '-'}</td>
+                        <td className="p-2.5 text-slate-500">
+                          {exp.cashierName} <span className="block text-[10px] text-slate-400">{exp.outlet}</span>
+                        </td>
+                        <td className="p-2.5 font-black text-rose-600 dark:text-rose-400">{formatRupiah(exp.amount)}</td>
+                        <td className="p-2.5 text-right">
+                          <button
+                            onClick={() => handleDeleteExpense(exp.id, exp.description)}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                            title="Hapus Pengeluaran"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
