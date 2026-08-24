@@ -80,14 +80,14 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   activeParentTab = 'shifts'
 }) => {
   const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'monthly_net_profit' | 'payment_methods'>(
-    () => (activeParentTab === 'expenses' ? 'petty_cash' : (initialSubTab || 'closing_audit'))
+    () => (activeParentTab === 'expenses' ? 'payment_methods' : (initialSubTab || 'closing_audit'))
   );
 
   useEffect(() => {
     if (activeParentTab === 'shifts') {
       setSubTab('closing_audit');
     } else if (activeParentTab === 'expenses' && subTab === 'closing_audit') {
-      setSubTab('petty_cash');
+      setSubTab('payment_methods');
     }
   }, [activeParentTab]);
 
@@ -2006,6 +2006,33 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
         /* Sub-Header Tabs for Laporan Keuangan */
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-slate-100 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-900">
           <div className="flex flex-wrap items-center gap-1.5">
+            {/* 1. Breakdown Metode Pembayaran */}
+            <button
+              onClick={() => setSubTab('payment_methods')}
+              className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+                subTab === 'payment_methods'
+                  ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-purple-900/40'
+              }`}
+            >
+              <CreditCard className="w-4 h-4 text-blue-400" />
+              <span>Breakdown Metode Pembayaran</span>
+            </button>
+
+            {/* 2. Cash Flow & Gross Profit */}
+            <button
+              onClick={() => setSubTab('cash_flow')}
+              className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+                subTab === 'cash_flow'
+                  ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-purple-900/40'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <span>Cash Flow & Gross Profit</span>
+            </button>
+
+            {/* 3. Kas Kecil & Operasional */}
             <button
               onClick={() => setSubTab('petty_cash')}
               className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -2021,18 +2048,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
               </span>
             </button>
 
-            <button
-              onClick={() => setSubTab('cash_flow')}
-              className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-                subTab === 'cash_flow'
-                  ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-purple-900/40'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-              <span>Cash Flow & Gross Profit</span>
-            </button>
-
+            {/* 4. Laba / Rugi Bulanan (Net Profit) */}
             <button
               onClick={() => setSubTab('monthly_net_profit')}
               className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -2043,18 +2059,6 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             >
               <BarChart3 className="w-4 h-4 text-purple-400" />
               <span>Laba / Rugi Bulanan (Net Profit)</span>
-            </button>
-
-            <button
-              onClick={() => setSubTab('payment_methods')}
-              className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-                subTab === 'payment_methods'
-                  ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-purple-900/40'
-              }`}
-            >
-              <CreditCard className="w-4 h-4 text-blue-400" />
-              <span>Breakdown Metode Pembayaran</span>
             </button>
           </div>
 
