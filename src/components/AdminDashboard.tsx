@@ -3776,9 +3776,17 @@ function doPost(e) {
         const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const sch = schedules.find((s) => s.employeeId === emp.id && s.date === dateStr);
         if (sch) {
-          if (sch.isOff || sch.shiftName.toLowerCase().includes('off')) {
+          const rawOutlet = (sch.outlet || emp.outlet || '').trim();
+          const cleanOutlet = rawOutlet.replace(/^Steak\s*11,?\s*/i, '').trim();
+
+          if (sch.isOff || sch.shiftName.toLowerCase().includes('off') || sch.shiftName.toLowerCase().includes('libur')) {
             rowObj[`Tgl ${day}`] = 'OFF';
             countOff++;
+          } else if (cleanOutlet) {
+            rowObj[`Tgl ${day}`] = cleanOutlet;
+            if (sch.shiftName.toLowerCase().includes('pagi')) countPagi++;
+            else if (sch.shiftName.toLowerCase().includes('siang') || sch.shiftName.toLowerCase().includes('mid')) countMid++;
+            else countMalam++;
           } else if (sch.shiftName.toLowerCase().includes('pagi')) {
             rowObj[`Tgl ${day}`] = 'Pagi';
             countPagi++;
@@ -8833,15 +8841,27 @@ function doPost(e) {
                                   colorBg = getShiftBadgeStyle(colorName, isOff);
                                 }
 
+                                const rawOutlet = (sch?.outlet || emp.outlet || '').trim();
+                                const cleanOutlet = rawOutlet.replace(/^Steak\s*11,?\s*/i, '').trim();
+                                const displayText = !sch
+                                  ? '+ Atur'
+                                  : (sch.isOff || sch.shiftName.toLowerCase().includes('off') || sch.shiftName.toLowerCase().includes('libur'))
+                                    ? 'OFF'
+                                    : (cleanOutlet || sch.shiftName.replace('Shift ', '') || 'Masuk');
+
                                 return (
                                   <td
                                     key={dayNum}
                                     onClick={() => handleOpenAssignSchedule(emp.id, dateStr)}
                                     className="p-1 text-center border-l border-slate-100 dark:border-purple-900/40 cursor-pointer hover:scale-105 transition-all"
-                                    title={sch ? `${sch.employeeName}: ${sch.shiftName} (${sch.startTime}-${sch.endTime})` : `Klik untuk atur shift ${emp.name}`}
+                                    title={
+                                      sch
+                                        ? `${sch.employeeName} (${cleanOutlet || rawOutlet}): ${sch.isOff ? 'OFF / Libur' : `${sch.startTime || '14:00'} - ${sch.endTime || '23:00'}`}`
+                                        : `Klik untuk atur shift ${emp.name}`
+                                    }
                                   >
                                     <div className={`p-1 rounded-lg border font-bold text-[9.5px] truncate shadow-2xs ${colorBg}`}>
-                                      {sch ? (sch.isOff ? 'OFF' : sch.shiftName.replace('Shift ', '')) : '+ Atur'}
+                                      {displayText}
                                     </div>
                                   </td>
                                 );
