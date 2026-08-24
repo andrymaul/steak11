@@ -5632,7 +5632,7 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(canAccessTab('expenses') || canAccessTab('shifts')) && (
+                {canAccessTab('expenses') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('expenses'); setIsMobileDrawerOpen(false); }}
