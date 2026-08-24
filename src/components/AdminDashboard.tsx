@@ -2618,7 +2618,7 @@ function doPost(e) {
     const updated = await updateAttendanceRecordInCloud(newRecord);
     setAttendance(updated);
     setShowOvertimeModal(false);
-    showToast(`⏱️ Presensi lembur ${selectedEmp.name} (${otHours} jam = +${formatRupiah(calculatedOvertimePay)}) berhasil dicatat & terintegrasi!`);
+    showToast(`⏱️ Presensi lembur ${selectedEmp.name} (${otHours} jam) berhasil dicatat!`);
   };
 
   const filteredAttendance = (attendance || []).filter((a) => {
@@ -11776,7 +11776,7 @@ function doPost(e) {
                     Catat Presensi Lembur (Tanpa Foto)
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Terintegrasi otomatis dengan Rate Lembur Karyawan & Menu Penggajian
+                    Pencatatan presensi lembur terintegrasi otomatis dengan Menu Penggajian
                   </p>
                 </div>
               </div>
@@ -11811,7 +11811,7 @@ function doPost(e) {
                   <option value="">-- Pilih Karyawan --</option>
                   {employees.filter((e) => e.status === 'Aktif').map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.role} • {emp.outlet}) — Rate: {formatRupiah(emp.hourlyRate || 15000)}/jam
+                      {emp.name} ({emp.role} • {emp.outlet})
                     </option>
                   ))}
                 </select>
@@ -11849,7 +11849,7 @@ function doPost(e) {
               </div>
 
               {/* Jam Lembur & Durasi */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-purple-950/60 border border-amber-200 dark:border-purple-800 space-y-2.5">
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-purple-950/60 border border-amber-200 dark:border-purple-800">
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
@@ -11885,31 +11885,6 @@ function doPost(e) {
                       onChange={(e) => setOtHours(Number(e.target.value))}
                       className="w-full px-2 py-1.5 rounded-lg border-2 border-amber-400 bg-white dark:bg-purple-900 font-black text-center text-amber-700 dark:text-amber-300 text-sm"
                     />
-                  </div>
-                </div>
-
-                {/* Rate Lembur & Live Calculation */}
-                <div className="pt-2 border-t border-amber-200/80 dark:border-purple-800 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] text-slate-500 block">Rate Lembur per Jam:</span>
-                    <div className="flex items-center gap-1 font-mono font-bold text-slate-800 dark:text-slate-200">
-                      <span>Rp</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={1000}
-                        value={otCustomRate}
-                        onChange={(e) => setOtCustomRate(Number(e.target.value))}
-                        className="w-24 px-1.5 py-0.5 rounded border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-900 text-right font-bold text-xs"
-                      />
-                      <span className="text-[10px] text-slate-400">/jam</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[11px] text-slate-500 block">Estimasi Upah Lembur:</span>
-                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                      +{formatRupiah(Math.round((otHours || 0) * (otCustomRate || 0)))}
-                    </span>
                   </div>
                 </div>
               </div>
