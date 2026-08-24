@@ -138,7 +138,7 @@ export interface Employee {
   dailyAllowance: number; // Uang makan & transpor harian
   punctualityAllowancePerDay?: number; // Tunjangan hadir tepat waktu per hari
   latePenaltyPerDay?: number; // Denda potongan keterlambatan per hari terlambat
-  outletBonus?: number; // Bonus Outlet bulanan (Rp)
+  outletBonus?: number; // Bonus Outlet per hari hadir (Rp)
   status: 'Aktif' | 'Non-Aktif';
   isScheduleOff?: boolean; // Status penonaktifan karyawan dari penjadwalan shift (roster)
   pin: string; // PIN / Password 4+ digit untuk absensi & login
@@ -190,7 +190,7 @@ export interface PayrollSlip {
   baseSalary: number; // totalDaysPresent * dailyRate
   totalAllowance: number; // totalDaysPresent * dailyAllowance
   punctualityAllowance?: number; // totalDaysOnTime * punctualityAllowancePerDay
-  outletBonus?: number; // Bonus target omset outlet bulanan
+  outletBonus?: number; // totalDaysPresent * outletBonus (Bonus Outlet per hari hadir)
   bonus: number; // Bonus kinerja / omset / lembur
   deductions: number; // Potongan keterlambatan / kasbon
   netSalary: number; // (baseSalary + totalAllowance + punctualityAllowance + overtimePay + outletBonus + bonus) - deductions

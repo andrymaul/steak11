@@ -1989,7 +1989,7 @@ function doPost(e) {
           const punctualityAllowance = daysOnTime * punctualityRate;
           const hourlyRate = savedEmp.hourlyRate ?? 0;
           const overtimePay = Math.round(totalOvertime * hourlyRate);
-          const outletBonus = savedEmp.outletBonus || 0;
+          const outletBonus = daysPresent * (savedEmp.outletBonus ?? 0);
 
           const lateRate = savedEmp.latePenaltyPerDay ?? 15000;
           const latePenalty = daysLate * lateRate;
@@ -2114,7 +2114,7 @@ function doPost(e) {
         'Uang Makan & Transpor (Rp)': 25000,
         'Tunjangan Tepat Waktu (Rp)': 15000,
         'Denda Potongan Telat (Rp)': 15000,
-        'Bonus Outlet (Rp)': 100000,
+        'Bonus Outlet / Hari (Rp)': 10000,
         'PIN / Password': '1234',
         'Status': 'Aktif'
       },
@@ -2131,7 +2131,7 @@ function doPost(e) {
         'Uang Makan & Transpor (Rp)': 25000,
         'Tunjangan Tepat Waktu (Rp)': 15000,
         'Denda Potongan Telat (Rp)': 15000,
-        'Bonus Outlet (Rp)': 100000,
+        'Bonus Outlet / Hari (Rp)': 10000,
         'PIN / Password': '5678',
         'Status': 'Aktif'
       }
@@ -2199,7 +2199,7 @@ function doPost(e) {
           const dailyAllowance = row['Uang Makan & Transpor (Rp)'] !== undefined ? Number(row['Uang Makan & Transpor (Rp)']) : (row['dailyAllowance'] !== undefined ? Number(row['dailyAllowance']) : 25000);
           const punctualityAllowance = row['Tunjangan Tepat Waktu (Rp)'] !== undefined ? Number(row['Tunjangan Tepat Waktu (Rp)']) : (row['punctualityAllowancePerDay'] !== undefined ? Number(row['punctualityAllowancePerDay']) : 15000);
           const latePenalty = row['Denda Potongan Telat (Rp)'] !== undefined ? Number(row['Denda Potongan Telat (Rp)']) : (row['latePenaltyPerDay'] !== undefined ? Number(row['latePenaltyPerDay']) : 15000);
-          const outletBonus = row['Bonus Outlet (Rp)'] !== undefined ? Number(row['Bonus Outlet (Rp)']) : (row['outletBonus'] !== undefined ? Number(row['outletBonus']) : 0);
+          const outletBonus = row['Bonus Outlet / Hari (Rp)'] !== undefined ? Number(row['Bonus Outlet / Hari (Rp)']) : (row['Bonus Outlet (Rp)'] !== undefined ? Number(row['Bonus Outlet (Rp)']) : (row['outletBonus'] !== undefined ? Number(row['outletBonus']) : 0));
           const pin = String(row['PIN / Password'] || row['pin'] || row['password'] || '1234').trim();
           const statusRaw = String(row['Status'] || row['status'] || 'Aktif').trim();
           const status: 'Aktif' | 'Non-Aktif' = statusRaw.toLowerCase().includes('non') ? 'Non-Aktif' : 'Aktif';
@@ -2290,7 +2290,7 @@ function doPost(e) {
       'Uang Makan & Transpor (Rp)': emp.dailyAllowance,
       'Tunjangan Tepat Waktu (Rp)': emp.punctualityAllowancePerDay || 0,
       'Denda Potongan Telat (Rp)': emp.latePenaltyPerDay || 0,
-      'Bonus Outlet (Rp)': emp.outletBonus || 0,
+      'Bonus Outlet / Hari (Rp)': emp.outletBonus || 0,
       'PIN / Password': emp.password || emp.pin || '-',
       'Status': emp.status
     }));
@@ -2595,7 +2595,7 @@ function doPost(e) {
         const punctualityAllowance = daysOnTime * punctualityRate;
         const latePenaltyRateForEmp = emp.latePenaltyPerDay ?? 15000;
         const latePenalty = daysLate * latePenaltyRateForEmp;
-        const outletBonus = emp.outletBonus || 0;
+        const outletBonus = daysPresent * (emp.outletBonus ?? 0);
 
         // Check if existing slip preserved custom bonus
         const existingSlip = payrollSlips.find(
@@ -2980,7 +2980,7 @@ function doPost(e) {
     setEditAllowance(slip.totalAllowance);
     setEditPunctualityAllowance(slip.punctualityAllowance || 0);
     setEditOvertimePay(slip.overtimePay || 0);
-    setEditOutletBonus(slip.outletBonus ?? (emp?.outletBonus || 0));
+    setEditOutletBonus(slip.outletBonus ?? (slip.totalDaysPresent * (emp?.outletBonus || 0)));
     setEditBonus(slip.bonus);
     setEditLatePenalty(lateDed);
     setEditLoanDeduction(loanDed);
@@ -3023,7 +3023,7 @@ function doPost(e) {
           const newHourlyRate = (targetSlip.totalOvertimeHours && targetSlip.totalOvertimeHours > 0) ? Math.round(Number(editOvertimePay) / targetSlip.totalOvertimeHours) : (emp.hourlyRate ?? 0);
           const newPunctuality = (targetSlip.totalDaysOnTime && targetSlip.totalDaysOnTime > 0) ? Math.round(Number(editPunctualityAllowance) / targetSlip.totalDaysOnTime) : (emp.punctualityAllowancePerDay ?? 15000);
           const newLatePenalty = targetSlip.totalDaysLate > 0 ? Math.round(Number(editLatePenalty) / targetSlip.totalDaysLate) : (emp.latePenaltyPerDay ?? 15000);
-          const newOutletBonus = Number(editOutletBonus);
+          const newOutletBonus = targetSlip.totalDaysPresent > 0 ? Math.round(Number(editOutletBonus) / targetSlip.totalDaysPresent) : (emp.outletBonus ?? 0);
           const updatedTarget: Employee = {
             ...emp,
             dailyRate: newDailyRate,
@@ -7449,7 +7449,7 @@ function doPost(e) {
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 font-bold text-purple-700 dark:text-purple-300">Bonus Outlet:</span>
                       <span className="font-extrabold text-purple-700 dark:text-amber-300">
-                        +{formatRupiah(emp.outletBonus || 0)} / bln
+                        +{formatRupiah(emp.outletBonus || 0)} / hari
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -10742,8 +10742,8 @@ function doPost(e) {
 
               <div>
                 <label className="font-bold text-purple-700 dark:text-purple-300 block mb-1 flex items-center justify-between">
-                  <span>Bonus Outlet / Bulan (Rp):</span>
-                  <span className="text-[10px] font-normal text-slate-400">Insentif Omset</span>
+                  <span>Bonus Outlet / Hari (Rp):</span>
+                  <span className="text-[10px] font-normal text-slate-400">Insentif Omset Harian</span>
                 </label>
                 <input
                   type="number"
@@ -10912,7 +10912,7 @@ function doPost(e) {
                         <span>Gaji Harian: <strong className="text-emerald-600">{formatRupiah(matchedEmp.dailyRate)}</strong></span>
                         <span>• Rate Lembur: <strong className="text-blue-600">{formatRupiah(matchedEmp.hourlyRate ?? 0)}/jam</strong></span>
                         <span>• Uang Makan: <strong className="text-amber-600">{formatRupiah(matchedEmp.dailyAllowance)}</strong></span>
-                        <span>• Bonus Outlet: <strong className="text-purple-600">{formatRupiah(matchedEmp.outletBonus || 0)}</strong></span>
+                        <span>• Bonus Outlet: <strong className="text-purple-600">{formatRupiah(matchedEmp.outletBonus || 0)}/hari</strong></span>
                       </div>
                     </div>
                   )}
@@ -10961,7 +10961,7 @@ function doPost(e) {
 
                     <div>
                       <label className="font-bold text-purple-700 dark:text-purple-300 block mb-1">
-                        Bonus Outlet / Omset (Rp):
+                        Bonus Outlet ({currentSlip.totalDaysPresent} Hari Hadir) (Rp):
                       </label>
                       <input
                         type="number"
