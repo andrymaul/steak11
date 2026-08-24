@@ -518,7 +518,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const pnlNetProfit = pnlGrossProfit - pnlOperatingExpenses - pnlPayrollExpenses;
   const pnlProfitMargin = pnlGrossRevenue > 0 ? (pnlNetProfit / pnlGrossRevenue) * 100 : 0;
 
-  // Payment Methods Breakdown Calculations
+  // Payment Methods Breakdown Calculations (Synchronized with Audit Closing Shift)
   const payMethodQrisOrders = filteredPnlOrders.filter((o) => (o.paymentMethod || 'Cash') === 'QRIS');
   const payMethodCashOrders = filteredPnlOrders.filter((o) => (o.paymentMethod || 'Cash') === 'Cash');
   const payMethodTransferOrders = filteredPnlOrders.filter((o) => (o.paymentMethod || 'Cash') === 'Transfer');
@@ -528,11 +528,6 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const cashTotalRevenue = payMethodCashOrders.reduce((a, b) => a + (b.total || 0), 0);
   const transferTotalRevenue = payMethodTransferOrders.reduce((a, b) => a + (b.total || 0), 0);
   const debitTotalRevenue = payMethodDebitOrders.reduce((a, b) => a + (b.total || 0), 0);
-
-  const qrisSharePct = pnlGrossRevenue > 0 ? (qrisTotalRevenue / pnlGrossRevenue) * 100 : 0;
-  const cashSharePct = pnlGrossRevenue > 0 ? (cashTotalRevenue / pnlGrossRevenue) * 100 : 0;
-  const transferSharePct = pnlGrossRevenue > 0 ? (transferTotalRevenue / pnlGrossRevenue) * 100 : 0;
-  const debitSharePct = pnlGrossRevenue > 0 ? (debitTotalRevenue / pnlGrossRevenue) * 100 : 0;
 
   // CASH FLOW & GROSS PROFIT CALCULATIONS
   // 1. Inflow from Closed Shifts (Total Omset Shift Terkunci - Read Only)
@@ -544,7 +539,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   const totalShiftRevenueLocked = filteredCashFlowShifts.reduce(
     (acc, s) =>
-      acc + (s.totalRevenue || (s.cashRevenue + s.qrisRevenue + s.transferRevenue + (s.onlineFoodRevenue || 0))),
+      acc + (s.totalRevenue || ((s.cashRevenue || 0) + (s.actualQrisRevenue ?? s.qrisRevenue ?? 0) + (s.actualTransferRevenue ?? s.transferRevenue ?? 0) + (s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0))),
     0
   );
 
@@ -552,6 +547,18 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const totalShiftQrisLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.actualQrisRevenue ?? s.qrisRevenue ?? 0), 0);
   const totalShiftTransferLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.actualTransferRevenue ?? s.transferRevenue ?? 0), 0);
   const totalShiftOnlineFoodLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0), 0);
+
+  // Synchronized values with Audit Closing Shift (Priority on verified shifts, fallback to POS orders)
+  const syncShiftRevenueTotal = totalShiftRevenueLocked > 0 ? totalShiftRevenueLocked : pnlGrossRevenue;
+  const syncCashRevenue = totalShiftRevenueLocked > 0 ? totalShiftCashLocked : cashTotalRevenue;
+  const syncQrisRevenue = totalShiftRevenueLocked > 0 ? totalShiftQrisLocked : qrisTotalRevenue;
+  const syncTransferRevenue = totalShiftRevenueLocked > 0 ? totalShiftTransferLocked : transferTotalRevenue;
+  const syncOnlineFoodRevenue = totalShiftRevenueLocked > 0 ? totalShiftOnlineFoodLocked : debitTotalRevenue;
+
+  const syncCashSharePct = syncShiftRevenueTotal > 0 ? (syncCashRevenue / syncShiftRevenueTotal) * 100 : 0;
+  const syncQrisSharePct = syncShiftRevenueTotal > 0 ? (syncQrisRevenue / syncShiftRevenueTotal) * 100 : 0;
+  const syncTransferSharePct = syncShiftRevenueTotal > 0 ? (syncTransferRevenue / syncShiftRevenueTotal) * 100 : 0;
+  const syncOnlineFoodSharePct = syncShiftRevenueTotal > 0 ? (syncOnlineFoodRevenue / syncShiftRevenueTotal) * 100 : 0;
 
   // 2. Outflow from Recorded Operational & Manual Expenses
   const filteredCashFlowExpenses = (expenses || []).filter(
@@ -976,6 +983,178 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
     XLSX.writeFile(wb, `Laporan_Laba_Rugi_Bulanan_${monthlyPnlMonth}_Steak11.xlsx`);
     showToast('📊 File Excel Laporan Laba/Rugi Bulanan berhasil diunduh!');
+  };
+
+  // Print Payment Methods Statement
+  const handlePrintPaymentMethodsReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const periodLabel =
+      pnlMode === 'harian'
+        ? `HARIAN (${pnlDate})`
+        : pnlMode === 'mingguan'
+        ? `MINGGUAN (7 HARI S/D ${pnlDate})`
+        : pnlMode === 'bulanan'
+        ? `BULANAN (${pnlMonth})`
+        : 'KESELURUHAN DATA';
+
+    const content = `
+      <html>
+        <head>
+          <title>Laporan Breakdown Metode Pembayaran - Steak 11</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #1e293b; max-width: 820px; margin: 0 auto; font-size: 12px; }
+            .header { text-align: center; border-bottom: 2px solid #3D1259; padding-bottom: 12px; margin-bottom: 16px; }
+            .header h2 { margin: 0; color: #3D1259; font-size: 20px; }
+            .header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+            .meta-bar { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 16px; font-weight: bold; font-size: 11px; }
+            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+            .card { padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; }
+            .card .label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
+            .card .val { font-size: 16px; font-weight: 800; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+            th { background: #f1f5f9; font-weight: bold; color: #334155; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .bold { font-weight: bold; }
+            .footer { margin-top: 30px; display: flex; justify-content: space-between; text-align: center; font-size: 11px; }
+            .sign { margin-top: 45px; border-top: 1px solid #000; width: 140px; padding-top: 4px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>STEAK 11 — MYTHIC CHICKEN TASTE</h2>
+            <h4 style="margin:4px 0; color:#475569;">LAPORAN DISTRIBUSI METODE PEMBAYARAN (AUDIT CLOSING SHIFT)</h4>
+          </div>
+
+          <div class="meta-bar">
+            <span>PERIODE: ${periodLabel}</span>
+            <span>FILTER OUTLET: ${selectedOutletFilter}</span>
+            <span>TANGGAL CETAK: ${new Date().toLocaleString('id-ID')}</span>
+          </div>
+
+          <div class="grid">
+            <div class="card" style="border-left: 4px solid #3b82f6;">
+              <div class="label">QRIS (${syncQrisSharePct.toFixed(1)}%)</div>
+              <div class="val" style="color: #2563eb;">${formatRupiah(syncQrisRevenue)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #10b981;">
+              <div class="label">Tunai (${syncCashSharePct.toFixed(1)}%)</div>
+              <div class="val" style="color: #059669;">${formatRupiah(syncCashRevenue)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #a855f7;">
+              <div class="label">Transfer (${syncTransferSharePct.toFixed(1)}%)</div>
+              <div class="val" style="color: #9333ea;">${formatRupiah(syncTransferRevenue)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #f97316;">
+              <div class="label">Online Food (${syncOnlineFoodSharePct.toFixed(1)}%)</div>
+              <div class="val" style="color: #ea580c;">${formatRupiah(syncOnlineFoodRevenue)}</div>
+            </div>
+          </div>
+
+          <h4 style="margin: 15px 0 6px; color: #3D1259;">Rincian Distribusi Metode Pembayaran per Shift Closing</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>ID Shift</th>
+                <th>Tanggal & Shift</th>
+                <th>Kasir & Outlet</th>
+                <th class="text-right">Tunai (Rp)</th>
+                <th class="text-right">QRIS (Rp)</th>
+                <th class="text-right">Transfer (Rp)</th>
+                <th class="text-right">Online Food (Rp)</th>
+                <th class="text-right">Total Omset (Rp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredCashFlowShifts.map((s) => `
+                <tr>
+                  <td class="bold">${s.id}</td>
+                  <td>${s.date} • ${s.shiftName}</td>
+                  <td>${s.cashierName} (${s.outlet})</td>
+                  <td class="text-right">${formatRupiah(s.cashRevenue || 0)}</td>
+                  <td class="text-right">${formatRupiah(s.actualQrisRevenue ?? s.qrisRevenue ?? 0)}</td>
+                  <td class="text-right">${formatRupiah(s.actualTransferRevenue ?? s.transferRevenue ?? 0)}</td>
+                  <td class="text-right">${formatRupiah(s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0)}</td>
+                  <td class="text-right bold">${formatRupiah(s.totalRevenue)}</td>
+                </tr>
+              `).join('')}
+              <tr style="background:#f8fafc; font-weight:bold;">
+                <td colspan="3">TOTAL KONSOLIDASI (${filteredCashFlowShifts.length} Shift)</td>
+                <td class="text-right">${formatRupiah(syncCashRevenue)}</td>
+                <td class="text-right">${formatRupiah(syncQrisRevenue)}</td>
+                <td class="text-right">${formatRupiah(syncTransferRevenue)}</td>
+                <td class="text-right">${formatRupiah(syncOnlineFoodRevenue)}</td>
+                <td class="text-right" style="color:#059669;">${formatRupiah(syncShiftRevenueTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <div>
+              <p>Dibuat Oleh,</p>
+              <div class="sign">${currentUser?.name || 'Kasir / Finance'}</div>
+            </div>
+            <div>
+              <p>Disetujui Oleh,</p>
+              <div class="sign">Owner / Management</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
+  // Export Payment Methods Breakdown to Excel
+  const handleExportPaymentMethodsExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const summaryData = [
+      ['STEAK 11 - LAPORAN BREAKDOWN METODE PEMBAYARAN'],
+      ['Periode', pnlMode],
+      ['Filter Outlet', selectedOutletFilter],
+      ['Tanggal Unduh', todayStr],
+      [],
+      ['Metode Pembayaran', 'Nominal (Rp)', 'Porsi Persentase (%)', 'Keterangan'],
+      ['1. QRIS (GoPay/OVO/Shopee/BCA)', syncQrisRevenue, `${syncQrisSharePct.toFixed(2)}%`, 'Nontunai Real-Time'],
+      ['2. Tunai (Cash Laci)', syncCashRevenue, `${syncCashSharePct.toFixed(2)}%`, 'Uang Fisik Kasir'],
+      ['3. Transfer Bank / VA', syncTransferRevenue, `${syncTransferSharePct.toFixed(2)}%`, 'Transfer Bank Resmi'],
+      ['4. Online Food (GoFood/Grab/Shopee)', syncOnlineFoodRevenue, `${syncOnlineFoodSharePct.toFixed(2)}%`, 'Kanal Mitra Digital'],
+      ['TOTAL OMSET', syncShiftRevenueTotal, '100.00%', `${filteredCashFlowShifts.length} Shift Terverifikasi`],
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan Metode Pembayaran');
+
+    const shiftData = [
+      ['ID Shift', 'Tanggal', 'Shift', 'Kasir', 'Outlet', 'Tunai POS (Rp)', 'QRIS (Rp)', 'Transfer Bank (Rp)', 'Online Food (Rp)', 'Total Omset (Rp)', 'Status Audit'],
+      ...filteredCashFlowShifts.map((s) => [
+        s.id,
+        s.date,
+        s.shiftName,
+        s.cashierName,
+        s.outlet,
+        s.cashRevenue || 0,
+        s.actualQrisRevenue ?? s.qrisRevenue ?? 0,
+        s.actualTransferRevenue ?? s.transferRevenue ?? 0,
+        s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0,
+        s.totalRevenue,
+        s.auditStatus || 'Sesuai',
+      ]),
+    ];
+    const wsShift = XLSX.utils.aoa_to_sheet(shiftData);
+    XLSX.utils.book_append_sheet(wb, wsShift, 'Rincian Shift Kasir');
+
+    XLSX.writeFile(wb, `Laporan_Metode_Pembayaran_${pnlMode}_${todayStr}.xlsx`);
+    showToast('📊 File Excel Breakdown Metode Pembayaran berhasil diunduh!');
   };
 
   // Print Cash Flow & Gross Profit Statement
@@ -1816,6 +1995,25 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             </button>
             <button
               onClick={handleExportMonthlyNetProfitExcel}
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
+            </button>
+          </div>
+        )}
+
+        {subTab === 'payment_methods' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrintPaymentMethodsReport}
+              className="px-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-[#3D1259] dark:text-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Cetak</span>
+            </button>
+            <button
+              onClick={handleExportPaymentMethodsExcel}
               className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
@@ -2947,7 +3145,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   Breakdown Distribusi Metode Pembayaran
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Analisis perbandingan nominal transaksi, porsi persentase, dan frekuensi pesanan tunai vs. non-tunai.
+                  Sinkronisasi real-time distribusi penerimaan omset dari Audit Closing Shift & transaksi POS (Tunai, QRIS, Transfer, & Online Food).
                 </p>
               </div>
 
@@ -2983,15 +3181,55 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   >
                     Bulanan
                   </button>
+                  <button
+                    onClick={() => setPnlMode('semua')}
+                    className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer ${
+                      pnlMode === 'semua'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    Semua Data
+                  </button>
                 </div>
+
+                {pnlMode === 'harian' && (
+                  <input
+                    type="date"
+                    value={pnlDate}
+                    onChange={(e) => setPnlDate(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold text-xs"
+                  />
+                )}
+
+                {pnlMode === 'mingguan' && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-400 font-bold">s/d:</span>
+                    <input
+                      type="date"
+                      value={pnlDate}
+                      onChange={(e) => setPnlDate(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold text-xs"
+                    />
+                  </div>
+                )}
+
+                {pnlMode === 'bulanan' && (
+                  <input
+                    type="month"
+                    value={pnlMonth}
+                    onChange={(e) => setPnlMonth(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold text-xs"
+                  />
+                )}
 
                 <select
                   value={selectedOutletFilter}
                   onChange={(e) => setSelectedOutletFilter(e.target.value)}
                   className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold text-xs"
                 >
-                  <option value="ALL">Semua Outlet</option>
-                  {outletsList.map((out) => (
+                  <option value="ALL">Semua Outlet Cabang</option>
+                  {allKnownOutlets.map((out) => (
                     <option key={out} value={out}>
                       {out}
                     </option>
@@ -3000,7 +3238,61 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
               </div>
             </div>
 
-            {/* Payment Method Cards */}
+            {/* Quick Date Presets */}
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+              <span className="text-slate-400 font-bold text-[11px]">Pilih Cepat Tanggal:</span>
+              <button
+                onClick={() => {
+                  setPnlMode('harian');
+                  setPnlDate(todayStr);
+                }}
+                className={`px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
+                  pnlMode === 'harian' && pnlDate === todayStr
+                    ? 'bg-amber-400 text-purple-950 shadow-xs'
+                    : 'bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-purple-300'
+                }`}
+              >
+                Hari Ini
+              </button>
+              <button
+                onClick={() => {
+                  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                  setPnlMode('harian');
+                  setPnlDate(yesterday);
+                }}
+                className="px-2.5 py-1 rounded-lg font-extrabold bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-purple-300 hover:bg-slate-200 cursor-pointer"
+              >
+                Kemarin
+              </button>
+              <button
+                onClick={() => {
+                  setPnlMode('mingguan');
+                  setPnlDate(todayStr);
+                }}
+                className={`px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
+                  pnlMode === 'mingguan'
+                    ? 'bg-amber-400 text-purple-950 shadow-xs'
+                    : 'bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-purple-300'
+                }`}
+              >
+                7 Hari Terakhir
+              </button>
+              <button
+                onClick={() => {
+                  setPnlMode('bulanan');
+                  setPnlMonth(todayStr.substring(0, 7));
+                }}
+                className={`px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
+                  pnlMode === 'bulanan'
+                    ? 'bg-amber-400 text-purple-950 shadow-xs'
+                    : 'bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-purple-300'
+                }`}
+              >
+                Bulan Ini
+              </button>
+            </div>
+
+            {/* Payment Method 4 KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* QRIS */}
               <div className="p-4 rounded-2xl bg-white dark:bg-purple-950/40 border-2 border-blue-500/30 shadow-sm space-y-2">
@@ -3010,15 +3302,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     QRIS (GoPay/OVO/Shopee/BCA)
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-black text-[10px]">
-                    {qrisSharePct.toFixed(1)}%
+                    {syncQrisSharePct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(qrisTotalRevenue)}</p>
+                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(syncQrisRevenue)}</p>
                 <div className="w-full bg-slate-100 dark:bg-purple-900/50 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min(qrisSharePct, 100)}%` }}></div>
+                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min(syncQrisSharePct, 100)}%` }}></div>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  {payMethodQrisOrders.length} Pesanan | Rata-rata: {payMethodQrisOrders.length > 0 ? formatRupiah(Math.round(qrisTotalRevenue / payMethodQrisOrders.length)) : 'Rp 0'}
+                  Nontunai Real-Time • {filteredCashFlowShifts.length} Shift Terverifikasi
                 </p>
               </div>
 
@@ -3030,15 +3322,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     Tunai (Cash Laci)
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-[10px]">
-                    {cashSharePct.toFixed(1)}%
+                    {syncCashSharePct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(cashTotalRevenue)}</p>
+                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(syncCashRevenue)}</p>
                 <div className="w-full bg-slate-100 dark:bg-purple-900/50 rounded-full h-2">
-                  <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Math.min(cashSharePct, 100)}%` }}></div>
+                  <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Math.min(syncCashSharePct, 100)}%` }}></div>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  {payMethodCashOrders.length} Pesanan | Rata-rata: {payMethodCashOrders.length > 0 ? formatRupiah(Math.round(cashTotalRevenue / payMethodCashOrders.length)) : 'Rp 0'}
+                  Uang Fisik Kas Laci • {filteredCashFlowShifts.length} Shift Terverifikasi
                 </p>
               </div>
 
@@ -3050,111 +3342,225 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     Transfer Bank / Virtual Account
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-700 dark:text-purple-300 font-black text-[10px]">
-                    {transferSharePct.toFixed(1)}%
+                    {syncTransferSharePct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(transferTotalRevenue)}</p>
+                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(syncTransferRevenue)}</p>
                 <div className="w-full bg-slate-100 dark:bg-purple-900/50 rounded-full h-2">
-                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${Math.min(transferSharePct, 100)}%` }}></div>
+                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${Math.min(syncTransferSharePct, 100)}%` }}></div>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  {payMethodTransferOrders.length} Pesanan | Rata-rata: {payMethodTransferOrders.length > 0 ? formatRupiah(Math.round(transferTotalRevenue / payMethodTransferOrders.length)) : 'Rp 0'}
+                  Transfer Bank Kasir • {filteredCashFlowShifts.length} Shift Terverifikasi
                 </p>
               </div>
 
-              {/* Debit / EDC */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-purple-950/40 border-2 border-indigo-500/30 shadow-sm space-y-2">
+              {/* Online Food */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-purple-950/40 border-2 border-amber-500/30 shadow-sm space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="font-extrabold text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
-                    <Wallet className="w-4 h-4 text-indigo-500" />
-                    Kartu Debit / EDC
+                  <span className="font-extrabold text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <ShoppingBag className="w-4 h-4 text-amber-500" />
+                    Online Food & Kanal Digital
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-black text-[10px]">
-                    {debitSharePct.toFixed(1)}%
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black text-[10px]">
+                    {syncOnlineFoodSharePct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(debitTotalRevenue)}</p>
+                <p className="font-black text-xl text-slate-900 dark:text-white">{formatRupiah(syncOnlineFoodRevenue)}</p>
                 <div className="w-full bg-slate-100 dark:bg-purple-900/50 rounded-full h-2">
-                  <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min(debitSharePct, 100)}%` }}></div>
+                  <div className="bg-amber-500 h-2 rounded-full" style={{ width: `${Math.min(syncOnlineFoodSharePct, 100)}%` }}></div>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  {payMethodDebitOrders.length} Pesanan | Rata-rata: {payMethodDebitOrders.length > 0 ? formatRupiah(Math.round(debitTotalRevenue / payMethodDebitOrders.length)) : 'Rp 0'}
+                  GoFood / Grab / Shopee • {filteredCashFlowShifts.length} Shift Terverifikasi
                 </p>
               </div>
             </div>
 
-            {/* Filtered Order Transaction List */}
+            {/* Total Consolidation Bar */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-950 to-purple-950 text-white flex flex-wrap items-center justify-between gap-3 shadow-md">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider">
+                  TOTAL KONSOLIDASI OMSET KESELURUHAN METODE [{pnlMode.toUpperCase()}]
+                </span>
+                <p className="text-2xl font-black text-emerald-400">{formatRupiah(syncShiftRevenueTotal)}</p>
+              </div>
+              <div className="text-right text-xs text-purple-200">
+                <p className="font-extrabold text-white">Terintegrasi dengan Modul Audit Closing Shift</p>
+                <p className="text-[11px]">Total {filteredCashFlowShifts.length} rekonsiliasi shift kasir di outlet terpilih</p>
+              </div>
+            </div>
+
+            {/* Rekapitulasi Shift Closing Kasir Berdasarkan Metode Pembayaran */}
             <div className="space-y-3 pt-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400">
-                  Daftar Transaksi Selesai berdasarkan Metode Pembayaran
-                </h5>
-
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-slate-400 font-bold">Filter Metode:</span>
-                  <select
-                    value={selectedPayMethodFilter}
-                    onChange={(e) => setSelectedPayMethodFilter(e.target.value as any)}
-                    className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
-                  >
-                    <option value="ALL">Semua Metode Pembayaran</option>
-                    <option value="QRIS">QRIS</option>
-                    <option value="Cash">Tunai (Cash)</option>
-                    <option value="Transfer">Transfer Bank</option>
-                    <option value="Debit">Debit / EDC</option>
-                  </select>
+                <div>
+                  <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                    <Calculator className="w-4 h-4 text-emerald-500" />
+                    Rekapitulasi Distribusi Metode Pembayaran per Shift Closing
+                  </h5>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Rincian data terverifikasi yang dilaporkan langsung dari form closing shift kasir.
+                  </p>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-purple-900/60 bg-white dark:bg-[#180B24] shadow-xs">
+                <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-500 dark:text-purple-300 font-bold">
-                      <th className="p-2.5">ID Order</th>
-                      <th className="p-2.5">Waktu & Tanggal</th>
-                      <th className="p-2.5">Pelanggan</th>
-                      <th className="p-2.5">Outlet</th>
-                      <th className="p-2.5">Metode Pembayaran</th>
-                      <th className="p-2.5 text-right">Total Transaksi</th>
+                    <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-100 dark:bg-purple-950/80 text-slate-800 dark:text-amber-300 font-extrabold">
+                      <th className="p-3">ID Shift</th>
+                      <th className="p-3">Tanggal & Shift</th>
+                      <th className="p-3">Kasir</th>
+                      <th className="p-3">Outlet Cabang</th>
+                      <th className="p-3 text-right text-emerald-700 dark:text-emerald-300">Tunai (Cash)</th>
+                      <th className="p-3 text-right text-blue-700 dark:text-blue-300">QRIS Nontunai</th>
+                      <th className="p-3 text-right text-purple-700 dark:text-purple-300">Transfer Bank</th>
+                      <th className="p-3 text-right text-amber-700 dark:text-amber-300">Online Food</th>
+                      <th className="p-3 text-right font-black">Total Omset Shift</th>
+                      <th className="p-3 text-center">Status Audit</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
-                    {filteredPnlOrders
-                      .filter(
-                        (o) =>
-                          selectedPayMethodFilter === 'ALL' ||
-                          (o.paymentMethod || 'Cash') === selectedPayMethodFilter
-                      )
-                      .map((ord) => (
-                        <tr key={ord.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
-                          <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100 font-mono">{ord.id}</td>
-                          <td className="p-2.5 text-slate-600 dark:text-slate-300 text-[11px]">
-                            {ord.date} {ord.time ? `• ${ord.time}` : ''}
+                  <tbody className="divide-y divide-slate-100 dark:divide-purple-900/40">
+                    {filteredCashFlowShifts.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                          <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                          <p className="font-bold">Belum ada record Audit Closing Shift pada periode & filter outlet ini.</p>
+                          <p className="text-[11px] mt-1">Data metode pembayaran akan terisi otomatis saat kasir melakukan closing shift.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCashFlowShifts.map((s) => (
+                        <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/20 transition-colors font-medium">
+                          <td className="p-3 font-mono font-bold text-slate-800 dark:text-slate-200">{s.id}</td>
+                          <td className="p-3 text-slate-600 dark:text-slate-300">
+                            {s.date} <span className="text-[10px] text-slate-400 font-bold block">{s.shiftName}</span>
                           </td>
-                          <td className="p-2.5 font-medium text-slate-800 dark:text-slate-200">{ord.customerName}</td>
-                          <td className="p-2.5 text-slate-600 dark:text-slate-300 text-[11px]">{ord.outlet}</td>
-                          <td className="p-2.5">
+                          <td className="p-3 font-bold text-slate-800 dark:text-slate-100">{s.cashierName}</td>
+                          <td className="p-3 text-slate-600 dark:text-slate-300">{s.outlet}</td>
+                          <td className="p-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400">
+                            {formatRupiah(s.cashRevenue || 0)}
+                          </td>
+                          <td className="p-3 text-right font-extrabold text-blue-600 dark:text-blue-400">
+                            {formatRupiah(s.actualQrisRevenue ?? s.qrisRevenue ?? 0)}
+                          </td>
+                          <td className="p-3 text-right font-extrabold text-purple-600 dark:text-purple-400">
+                            {formatRupiah(s.actualTransferRevenue ?? s.transferRevenue ?? 0)}
+                          </td>
+                          <td className="p-3 text-right font-extrabold text-amber-600 dark:text-amber-400">
+                            {formatRupiah(s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0)}
+                          </td>
+                          <td className="p-3 text-right font-black text-slate-900 dark:text-white">
+                            {formatRupiah(s.totalRevenue)}
+                          </td>
+                          <td className="p-3 text-center">
                             <span
-                              className={`px-2 py-0.5 rounded font-black text-[10px] inline-flex items-center gap-1 ${
-                                ord.paymentMethod === 'QRIS'
-                                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                                  : ord.paymentMethod === 'Cash'
-                                  ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
-                                  : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                s.auditStatus === 'Sesuai' || !s.auditStatus
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                               }`}
                             >
-                              {ord.paymentMethod || 'Cash'}
+                              {s.auditStatus || 'Sesuai'}
                             </span>
                           </td>
-                          <td className="p-2.5 text-right font-black text-slate-900 dark:text-white">
-                            {formatRupiah(ord.total)}
-                          </td>
                         </tr>
-                      ))}
+                      ))
+                    )}
                   </tbody>
+                  {filteredCashFlowShifts.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-purple-950 text-white font-black text-xs border-t-2 border-amber-400">
+                        <td colSpan={4} className="p-3 uppercase text-amber-300">
+                          TOTAL KONSOLIDASI ({filteredCashFlowShifts.length} Shift Closing)
+                        </td>
+                        <td className="p-3 text-right text-emerald-300">{formatRupiah(syncCashRevenue)}</td>
+                        <td className="p-3 text-right text-blue-300">{formatRupiah(syncQrisRevenue)}</td>
+                        <td className="p-3 text-right text-purple-300">{formatRupiah(syncTransferRevenue)}</td>
+                        <td className="p-3 text-right text-amber-300">{formatRupiah(syncOnlineFoodRevenue)}</td>
+                        <td className="p-3 text-right text-emerald-400 text-sm">{formatRupiah(syncShiftRevenueTotal)}</td>
+                        <td className="p-3 text-center text-amber-300">REKAP RESMI</td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             </div>
+
+            {/* Optional POS Orders Detail if present */}
+            {filteredPnlOrders.length > 0 && (
+              <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-purple-900/40">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                    <Receipt className="w-4 h-4 text-blue-500" />
+                    Rincian Nota Transaksi POS Individual ({filteredPnlOrders.length} Pesanan)
+                  </h5>
+
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-slate-400 font-bold">Filter Metode POS:</span>
+                    <select
+                      value={selectedPayMethodFilter}
+                      onChange={(e) => setSelectedPayMethodFilter(e.target.value as any)}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                    >
+                      <option value="ALL">Semua Metode Pembayaran</option>
+                      <option value="QRIS">QRIS</option>
+                      <option value="Cash">Tunai (Cash)</option>
+                      <option value="Transfer">Transfer Bank</option>
+                      <option value="Debit">Debit / EDC</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-purple-900/60 bg-white dark:bg-[#180B24]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-500 dark:text-purple-300 font-bold">
+                        <th className="p-2.5">ID Order</th>
+                        <th className="p-2.5">Waktu & Tanggal</th>
+                        <th className="p-2.5">Pelanggan</th>
+                        <th className="p-2.5">Outlet</th>
+                        <th className="p-2.5">Metode Pembayaran</th>
+                        <th className="p-2.5 text-right">Total Transaksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
+                      {filteredPnlOrders
+                        .filter(
+                          (o) =>
+                            selectedPayMethodFilter === 'ALL' ||
+                            (o.paymentMethod || 'Cash') === selectedPayMethodFilter
+                        )
+                        .map((ord) => (
+                          <tr key={ord.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                            <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100 font-mono">{ord.id}</td>
+                            <td className="p-2.5 text-slate-600 dark:text-slate-300 text-[11px]">
+                              {ord.date} {ord.time ? `• ${ord.time}` : ''}
+                            </td>
+                            <td className="p-2.5 font-medium text-slate-800 dark:text-slate-200">{ord.customerName}</td>
+                            <td className="p-2.5 text-slate-600 dark:text-slate-300 text-[11px]">{ord.outlet}</td>
+                            <td className="p-2.5">
+                              <span
+                                className={`px-2 py-0.5 rounded font-black text-[10px] inline-flex items-center gap-1 ${
+                                  ord.paymentMethod === 'QRIS'
+                                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                                    : ord.paymentMethod === 'Cash'
+                                    ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                                }`}
+                              >
+                                {ord.paymentMethod || 'Cash'}
+                              </span>
+                            </td>
+                            <td className="p-2.5 text-right font-black text-slate-900 dark:text-white">
+                              {formatRupiah(ord.total)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
