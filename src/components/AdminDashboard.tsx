@@ -138,7 +138,9 @@ import {
   savePaymentSettings,
   getStoredReceiptSettings,
   saveReceiptSettings,
-  getNextReceiptNumber
+  getNextReceiptNumber,
+  getStoredLatePenaltyThreshold,
+  saveLatePenaltyThreshold
 } from '../utils';
 import { REVIEWS } from '../data/initialData';
 import { ThermalReceiptModal } from './ThermalReceiptModal';
@@ -921,6 +923,8 @@ function doPost(e) {
 
   // Payroll Penalty & Deductions State
   const [latePenaltyRate, setLatePenaltyRate] = useState<number>(15000);
+  const [latePenaltyThresholdMinutes, setLatePenaltyThresholdMinutes] = useState<number>(() => getStoredLatePenaltyThreshold());
+  const [showLatePenaltySettingsModal, setShowLatePenaltySettingsModal] = useState<boolean>(false);
   const [editLatePenalty, setEditLatePenalty] = useState<number>(0);
   const [editLoanDeduction, setEditLoanDeduction] = useState<number>(0);
   const [editOtherDeductions, setEditOtherDeductions] = useState<number>(0);
@@ -1992,7 +1996,13 @@ function doPost(e) {
           const outletBonus = daysPresent * (savedEmp.outletBonus ?? 0);
 
           const lateRate = savedEmp.latePenaltyPerDay ?? 15000;
-          const latePenalty = daysLate * lateRate;
+          const empAtt = (attendance || []).filter(
+            (a) => (a.employeeId === savedEmp.id || (savedEmp.name && (a.employeeName || '').toLowerCase() === savedEmp.name.toLowerCase())) && a.date.startsWith(s.periodMonth)
+          );
+          const daysLatePenalized = empAtt.length > 0
+            ? empAtt.filter((a) => (a.lateMinutes && a.lateMinutes > latePenaltyThresholdMinutes)).length
+            : daysLate;
+          const latePenalty = daysLatePenalized * lateRate;
 
           const activeLoan = employeeLoans.find(
             (l) => l.employeeId === savedEmp.id && l.status === 'ACTIVE' && l.remainingAmount > 0
@@ -2001,7 +2011,7 @@ function doPost(e) {
 
           const existingEmp = employees.find((e) => e.id === savedEmp.id || e.id === editingEmpId);
           const oldLateRate = existingEmp?.latePenaltyPerDay ?? 15000;
-          const oldLateDed = daysLate * oldLateRate;
+          const oldLateDed = daysLatePenalized * oldLateRate;
           const otherDed = Math.max(0, (s.deductions || 0) - (oldLateDed + loanDeduction));
           const totalDeductions = latePenalty + loanDeduction + otherDed;
 
@@ -2571,12 +2581,14 @@ function doPost(e) {
 
         const daysPresent = empAtt.filter((a) => a.status === 'Hadir' || a.status === 'Terlambat').length;
         const daysLate = empAtt.filter((a) => a.status === 'Terlambat' || a.clockInStatus === 'Terlambat Masuk' || (a.lateMinutes && a.lateMinutes > 0)).length;
+        const daysLatePenalized = empAtt.filter((a) => a.lateMinutes && a.lateMinutes > latePenaltyThresholdMinutes).length;
         const daysOnTime = empAtt.filter(
           (a) =>
             a.status === 'Hadir' &&
             a.clockInStatus !== 'Terlambat Masuk' &&
             (!a.lateMinutes || a.lateMinutes === 0)
         ).length;
+        const totalLateMinutes = empAtt.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
 
         const totalHours = empAtt.reduce((sum, a) => sum + (a.hoursWorked || 8), 0);
 
@@ -2594,7 +2606,7 @@ function doPost(e) {
         const punctualityRate = emp.punctualityAllowancePerDay ?? 15000;
         const punctualityAllowance = daysOnTime * punctualityRate;
         const latePenaltyRateForEmp = emp.latePenaltyPerDay ?? 15000;
-        const latePenalty = daysLate * latePenaltyRateForEmp;
+        const latePenalty = daysLatePenalized * latePenaltyRateForEmp;
         const outletBonus = daysPresent * (emp.outletBonus ?? 0);
 
         // Check if existing slip preserved custom bonus
@@ -2621,6 +2633,7 @@ function doPost(e) {
           periodLabel: periodLabelMonth,
           totalDaysPresent: daysPresent,
           totalDaysLate: daysLate,
+          totalLateMinutes: totalLateMinutes,
           totalDaysOnTime: daysOnTime,
           totalHoursWorked: Math.round(totalHours),
           hourlyRate: hourlyRate,
@@ -7441,7 +7454,7 @@ function doPost(e) {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Denda Potongan Telat:</span>
+                      <span className="text-slate-400">Denda Telat (&gt;{latePenaltyThresholdMinutes}m):</span>
                       <span className="font-extrabold text-rose-600 dark:text-rose-400">
                         -{formatRupiah(emp.latePenaltyPerDay ?? 15000)} / hari
                       </span>
@@ -8114,6 +8127,14 @@ function doPost(e) {
                 </button>
 
                 <button
+                  onClick={() => setShowLatePenaltySettingsModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                  title="Pengaturan Batas Toleransi Menit Keterlambatan Denda"
+                >
+                  <Sliders className="w-3.5 h-3.5 text-purple-700 dark:text-amber-400" /> Toleransi Telat ({latePenaltyThresholdMinutes}m)
+                </button>
+
+                <button
                   onClick={handleCalculatePayroll}
                   className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
                   title="Kalkulasi ulang slip gaji karyawan berdasarkan data absensi terkini"
@@ -8356,7 +8377,13 @@ function doPost(e) {
                             {(() => {
                               const emp = employees.find((e) => e.id === slip.employeeId);
                               const lateRate = emp?.latePenaltyPerDay ?? latePenaltyRate ?? 15000;
-                              const latePenaltyVal = slip.totalDaysLate * lateRate;
+                              const empAtt = (attendance || []).filter(
+                                (a) => (a.employeeId === slip.employeeId || (slip.employeeName && (a.employeeName || '').toLowerCase() === slip.employeeName.toLowerCase())) && a.date.startsWith(slip.periodMonth)
+                              );
+                              const daysPenalized = empAtt.length > 0
+                                ? empAtt.filter((a) => (a.lateMinutes && a.lateMinutes > latePenaltyThresholdMinutes)).length
+                                : (lateRate > 0 && slip.deductions >= lateRate ? Math.min(slip.totalDaysLate, Math.floor(slip.deductions / lateRate)) : 0);
+                              const latePenaltyVal = daysPenalized * lateRate;
                               const empLoan = employeeLoans.find((l) => l.employeeId === slip.employeeId && l.status === 'ACTIVE' && l.remainingAmount > 0);
                               const loanVal = empLoan ? Math.min(empLoan.monthlyInstallment, empLoan.remainingAmount) : 0;
 
@@ -8364,7 +8391,7 @@ function doPost(e) {
                                 <div className="space-y-0.5 mt-1">
                                   {latePenaltyVal > 0 && (
                                     <span className="block text-[9px] font-extrabold text-rose-600 dark:text-rose-400">
-                                      🛑 Denda Telat ({slip.totalDaysLate}x): -{formatRupiah(latePenaltyVal)}
+                                      🛑 Denda Telat &gt;{latePenaltyThresholdMinutes}m ({daysPenalized}x): -{formatRupiah(latePenaltyVal)}
                                     </span>
                                   )}
                                   {loanVal > 0 && (
@@ -10730,7 +10757,10 @@ function doPost(e) {
               </div>
 
               <div>
-                <label className="font-bold text-rose-600 dark:text-rose-400 block mb-1">Denda Potongan Telat / Hari (Rp):</label>
+                <label className="font-bold text-rose-600 dark:text-rose-400 block mb-1 flex items-center justify-between">
+                  <span>Denda Potongan Telat / Hari (Rp):</span>
+                  <span className="text-[10px] font-normal text-slate-400">Jika telat &gt;{latePenaltyThresholdMinutes}m</span>
+                </label>
                 <input
                   type="number"
                   value={empLatePenaltyPerDay}
@@ -10997,7 +11027,7 @@ function doPost(e) {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
                           <label className="font-bold block text-[10px] text-rose-700 dark:text-rose-300 mb-0.5">
-                            Denda Telat ({currentSlip.totalDaysLate} Hari):
+                            Denda Telat (&gt;{latePenaltyThresholdMinutes}m):
                           </label>
                           <input
                             type="number"
@@ -11100,6 +11130,88 @@ function doPost(e) {
           </div>
         </div>
       )}
+
+      {/* MODAL PENGATURAN TOLERANSI DENDA TELAT */}
+      {showLatePenaltySettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1a0c28] border border-purple-900/50 rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-purple-900">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/50 text-purple-900 dark:text-amber-300">
+                  <Sliders className="w-5 h-5 text-purple-700 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
+                    Pengaturan Denda Keterlambatan
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Batas toleransi menit keterlambatan penggajian
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLatePenaltySettingsModal(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="p-3 bg-amber-50 dark:bg-purple-950/60 rounded-xl border border-amber-200 dark:border-purple-800 text-[11px] text-amber-900 dark:text-amber-300 space-y-1">
+                <span className="font-extrabold block flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Aturan Denda Potongan Telat:
+                </span>
+                <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                  Karyawan hanya akan dikenakan potongan denda jika waktu keterlambatan presensi masuk <strong>melebihi batas menit toleransi</strong> (misal: telat &gt; 30 menit).
+                </p>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Batas Toleransi Keterlambatan (Menit):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="180"
+                    value={latePenaltyThresholdMinutes}
+                    onChange={(e) => setLatePenaltyThresholdMinutes(Math.max(0, Number(e.target.value)))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-extrabold text-sm text-purple-950 dark:text-amber-300"
+                  />
+                  <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Menit</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Default: 30 menit. Keterlambatan ≤ {latePenaltyThresholdMinutes} menit tidak dikenakan potongan denda.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-purple-900">
+                <button
+                  type="button"
+                  onClick={() => setShowLatePenaltySettingsModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-slate-300 font-bold text-xs cursor-pointer hover:bg-slate-200"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    saveLatePenaltyThreshold(latePenaltyThresholdMinutes);
+                    setShowLatePenaltySettingsModal(false);
+                    showToast(`Pengaturan berhasil disimpan! Denda telat berlaku jika telat > ${latePenaltyThresholdMinutes} menit.`);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-purple-950 text-amber-400 dark:bg-amber-400 dark:text-purple-950 font-extrabold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer hover:bg-purple-900 dark:hover:bg-amber-300"
+                >
+                  <Save className="w-4 h-4" /> Simpan Pengaturan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ENLARGED WATERMARK SELFIE MODAL */}
       {enlargedSelfie && (
         <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">

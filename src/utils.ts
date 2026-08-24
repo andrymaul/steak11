@@ -545,6 +545,22 @@ export function saveBranding(branding: StoreBrandingSettings): void {
   syncUserDataToFirestore('branding', branding);
 }
 
+// --- LATE PENALTY THRESHOLD SETTINGS STORAGE ---
+export function getStoredLatePenaltyThreshold(): number {
+  const stored = localStorage.getItem('steak11_late_penalty_threshold');
+  if (stored !== null) {
+    const val = Number(stored);
+    if (!isNaN(val) && val >= 0) return val;
+  }
+  return 30; // Default 30 minutes threshold
+}
+
+export function saveLatePenaltyThreshold(minutes: number): void {
+  localStorage.setItem('steak11_late_penalty_threshold', String(minutes));
+  window.dispatchEvent(new Event('late_penalty_threshold_updated'));
+  syncUserDataToFirestore('late_penalty_threshold', minutes);
+}
+
 // --- INVENTORY STORAGE ---
 export function getStoredInventory(): InventoryItem[] {
   const stored = localStorage.getItem('steak11_inventory');
