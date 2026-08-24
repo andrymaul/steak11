@@ -32,8 +32,8 @@ import {
   Store,
   ShoppingBag
 } from 'lucide-react';
-import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem } from '../types';
-import { formatRupiah, isRegisteredAdmin } from '../utils';
+import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
+import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans } from '../utils';
 import * as XLSX from 'xlsx';
 
 interface FinanceControlManagerProps {
@@ -50,6 +50,10 @@ interface FinanceControlManagerProps {
   currentUser?: { name: string; role: string } | null;
   locations?: LocationItem[];
   shiftTemplates?: WorkShiftTemplate[];
+  employees?: Employee[];
+  employeeLoans?: EmployeeLoan[];
+  setEmployeeLoans?: React.Dispatch<React.SetStateAction<EmployeeLoan[]>>;
+  saveEmployeeLoansData?: (data: EmployeeLoan[]) => void;
 }
 
 export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
@@ -65,9 +69,17 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   outletsList = [],
   currentUser,
   locations = [],
-  shiftTemplates = []
+  shiftTemplates = [],
+  employees: propEmployees = [],
+  employeeLoans: propEmployeeLoans = [],
+  setEmployeeLoans = (_: any) => {},
+  saveEmployeeLoansData = (_: any) => {}
 }) => {
   const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'monthly_net_profit' | 'payment_methods'>('closing_audit');
+
+  // Active Employees & Loans fallback
+  const activeEmployeesList = propEmployees && propEmployees.length > 0 ? propEmployees : getStoredEmployees();
+  const activeEmployeeLoans = propEmployeeLoans && propEmployeeLoans.length > 0 ? propEmployeeLoans : getStoredEmployeeLoans();
 
   // Timeframe Filters for Financial Statements (P&L & Payment Methods)
   const todayStr = new Date().toISOString().split('T')[0];
@@ -163,8 +175,17 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const [manualCashAdjustment, setManualCashAdjustment] = useState<number>(0);
   const [manualExpenseAdjustment, setManualExpenseAdjustment] = useState<number>(0);
   
-  // Itemized Operational Expenses State (Pengeluaran per Item)
-  const [manualExpenseItems, setManualExpenseItems] = useState<{ id: string; description: string; amount: number }[]>([]);
+  // Itemized Operational Expenses State (Pengeluaran per Item & Kasbon Karyawan)
+  const [manualExpenseItems, setManualExpenseItems] = useState<{
+    id: string;
+    category?: string;
+    description: string;
+    amount: number;
+    employeeId?: string;
+    employeeName?: string;
+  }[]>([]);
+  const [tempExpenseCategory, setTempExpenseCategory] = useState<string>('Operasional Toko');
+  const [tempExpenseEmployeeId, setTempExpenseEmployeeId] = useState<string>('');
   const [tempExpenseDesc, setTempExpenseDesc] = useState('');
   const [tempExpenseAmount, setTempExpenseAmount] = useState<number | ''>('');
 
@@ -174,18 +195,52 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const [notes, setNotes] = useState('');
 
   const handleAddManualExpenseItem = () => {
-    if (!tempExpenseDesc.trim()) {
-      showToast('⚠️ Masukkan deskripsi item pengeluaran!');
-      return;
-    }
     const amt = Number(tempExpenseAmount) || 0;
     if (amt <= 0) {
-      showToast('⚠️ Nominal pengeluaran harus lebih dari 0!');
+      showToast('⚠️ Nominal pengeluaran / kasbon harus lebih dari 0!');
+      return;
+    }
+
+    if (tempExpenseCategory === 'Kasbon Karyawan') {
+      if (!tempExpenseEmployeeId) {
+        showToast('⚠️ Silakan pilih nama karyawan penerima kasbon!');
+        return;
+      }
+      const selectedEmp = activeEmployeesList.find((e) => e.id === tempExpenseEmployeeId);
+      if (!selectedEmp) {
+        showToast('⚠️ Karyawan tidak ditemukan!');
+        return;
+      }
+
+      const itemDesc = tempExpenseDesc.trim()
+        ? `Kasbon ${selectedEmp.name} - ${tempExpenseDesc.trim()}`
+        : `Kasbon Karyawan - ${selectedEmp.name}`;
+
+      const newItem = {
+        id: `exp-item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        category: 'Kasbon Karyawan',
+        description: itemDesc,
+        amount: amt,
+        employeeId: selectedEmp.id,
+        employeeName: selectedEmp.name,
+      };
+
+      setManualExpenseItems([...manualExpenseItems, newItem]);
+      setTempExpenseDesc('');
+      setTempExpenseAmount('');
+      setTempExpenseEmployeeId('');
+      showToast(`🏷️ Kasbon "${selectedEmp.name}" (${formatRupiah(newItem.amount)}) berhasil ditambahkan & siap disinkronkan ke Menu Penggajian!`);
+      return;
+    }
+
+    if (!tempExpenseDesc.trim()) {
+      showToast('⚠️ Masukkan deskripsi item pengeluaran!');
       return;
     }
 
     const newItem = {
       id: `exp-item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      category: tempExpenseCategory || 'Operasional Toko',
       description: tempExpenseDesc.trim(),
       amount: amt,
     };
@@ -1693,7 +1748,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       outlet,
       cashierName: currentUser?.name || cashierName,
-      category: 'Pembelian Bahan Darurat',
+      category: itm.category === 'Kasbon Karyawan' ? 'Gaji & Bonus Harian' : (itm.category || 'Pembelian Bahan Darurat'),
       description: itm.description,
       amount: itm.amount,
       shiftId: newShift.id,
@@ -1710,8 +1765,69 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       } catch {}
     }
 
+    // 2. Sinkronisasi Otomatis Kasbon Karyawan ke Menu Penggajian (Employee Loan Ledger)
+    const kasbonItems = manualExpenseItems.filter(
+      (itm) => itm.category === 'Kasbon Karyawan' || Boolean(itm.employeeId)
+    );
+
+    if (kasbonItems.length > 0) {
+      let currentLoans: EmployeeLoan[] =
+        propEmployeeLoans && propEmployeeLoans.length > 0 ? [...propEmployeeLoans] : getStoredEmployeeLoans();
+
+      kasbonItems.forEach((itm, idx) => {
+        const empId = itm.employeeId || '';
+        const empName = itm.employeeName || activeEmployeesList.find((e) => e.id === empId)?.name || 'Karyawan';
+
+        const existingActiveLoanIndex = currentLoans.findIndex(
+          (l) => l.employeeId === empId && l.status === 'ACTIVE' && l.remainingAmount > 0
+        );
+
+        if (existingActiveLoanIndex >= 0) {
+          const existingLoan = currentLoans[existingActiveLoanIndex];
+          const updatedTotal = existingLoan.totalAmount + itm.amount;
+          const updatedRemaining = existingLoan.remainingAmount + itm.amount;
+          const updatedNotes = `${existingLoan.notes || ''} | +Kasbon Shift ${shiftName} (${todayStr}): ${formatRupiah(itm.amount)}`;
+
+          currentLoans[existingActiveLoanIndex] = {
+            ...existingLoan,
+            totalAmount: updatedTotal,
+            remainingAmount: updatedRemaining,
+            notes: updatedNotes,
+          };
+        } else {
+          const newLoan: EmployeeLoan = {
+            id: `LOAN-${todayStr.replace(/-/g, '')}-${Date.now().toString().slice(-4)}-${idx + 1}`,
+            employeeId: empId,
+            employeeName: empName,
+            outlet,
+            date: todayStr,
+            totalAmount: itm.amount,
+            monthlyInstallment: itm.amount,
+            remainingAmount: itm.amount,
+            status: 'ACTIVE',
+            notes: `Kasbon Shift Kasir ${shiftName} (${todayStr}) - ${itm.description}`,
+            history: [],
+          };
+          currentLoans = [newLoan, ...currentLoans];
+        }
+      });
+
+      saveEmployeeLoans(currentLoans);
+      saveEmployeeLoansData(currentLoans);
+      setEmployeeLoans(currentLoans);
+
+      try {
+        window.dispatchEvent(new CustomEvent('steak11_loans_updated', { detail: currentLoans }));
+      } catch {}
+    }
+
     setShowClosingModal(false);
-    showToast(`✅ Closing Shift Kasir ${newShift.id} (${outlet} - ${shiftName}) berhasil disimpan & disinkronkan ke Kas Kecil!`);
+    const kasbonCount = kasbonItems.length;
+    showToast(
+      `✅ Closing Shift Kasir ${newShift.id} berhasil disimpan!${
+        kasbonCount > 0 ? ` ${kasbonCount} Kasbon Karyawan otomatis disinkronkan ke Menu Penggajian.` : ''
+      }`
+    );
   };
 
   // Handle Save Expense
@@ -3730,11 +3846,69 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     </span>
                   </div>
 
-                  {/* Form Input Pengeluaran per Item */}
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-purple-900/80 border border-rose-200 dark:border-rose-900/60 space-y-2">
-                    <span className="font-extrabold text-[11px] text-rose-900 dark:text-rose-300 flex items-center gap-1">
-                      <Plus className="w-3.5 h-3.5 text-rose-500" /> Tambah Pengeluaran per Item:
-                    </span>
+                  {/* Form Input Pengeluaran per Item & Kasbon Karyawan */}
+                  <div className="p-3 rounded-xl bg-white dark:bg-purple-900/80 border border-rose-200 dark:border-rose-900/60 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-[11px] text-rose-900 dark:text-rose-300 flex items-center gap-1">
+                        <Plus className="w-3.5 h-3.5 text-rose-500" /> Tambah Kas Keluar / Kasbon Shift:
+                      </span>
+
+                      {/* Category Switcher */}
+                      <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-purple-950 border border-slate-200 dark:border-purple-800 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTempExpenseCategory('Operasional Toko');
+                            setTempExpenseEmployeeId('');
+                          }}
+                          className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                            tempExpenseCategory !== 'Kasbon Karyawan'
+                              ? 'bg-rose-500 text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                          }`}
+                        >
+                          🏢 Belanja / Operasional
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTempExpenseCategory('Kasbon Karyawan')}
+                          className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                            tempExpenseCategory === 'Kasbon Karyawan'
+                              ? 'bg-purple-700 dark:bg-amber-400 text-white dark:text-purple-950 shadow-xs'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                          }`}
+                        >
+                          🏷️ Kasbon Karyawan (Sync Gaji)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Kasbon Specific Employee Selector */}
+                    {tempExpenseCategory === 'Kasbon Karyawan' && (
+                      <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800 space-y-1.5">
+                        <label className="font-extrabold text-[11px] text-purple-900 dark:text-amber-300 flex items-center gap-1">
+                          <UserCheck className="w-3.5 h-3.5 text-purple-600 dark:text-amber-400" />
+                          Pilih Karyawan Penerima Kasbon *
+                        </label>
+                        <select
+                          value={tempExpenseEmployeeId}
+                          onChange={(e) => setTempExpenseEmployeeId(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-purple-300 dark:border-purple-700 bg-white dark:bg-purple-900 text-slate-800 dark:text-slate-100 font-bold text-xs"
+                        >
+                          <option value="">-- Pilih Nama Karyawan --</option>
+                          {activeEmployeesList.map((emp) => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.name} ({emp.position || 'Staff'} • {emp.outlet || 'Semua Outlet'})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-purple-700 dark:text-purple-300">
+                          💡 Kasbon ini akan memotong kas laci shift ini & otomatis tersinkronisasi sebagai potongan kasbon di Menu Penggajian.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Inputs Row */}
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5">
                       <div className="sm:col-span-7">
                         <input
@@ -3747,7 +3921,11 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                               handleAddManualExpenseItem();
                             }
                           }}
-                          placeholder="Nama item / keperluan (e.g. Beli Es Batu, Plastik, Gas, Galon)"
+                          placeholder={
+                            tempExpenseCategory === 'Kasbon Karyawan'
+                              ? 'Catatan kasbon (opsional, misal: Keperluan Darurat / Berobat)'
+                              : 'Nama item / keperluan (e.g. Beli Es Batu, Plastik, Gas, Galon)'
+                          }
                           className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-purple-700 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 text-xs font-medium"
                         />
                       </div>
@@ -3772,37 +3950,68 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                         <button
                           type="button"
                           onClick={handleAddManualExpenseItem}
-                          className="w-full h-full min-h-[30px] px-2 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs"
-                          title="Tambah item pengeluaran ini"
+                          className={`w-full h-full min-h-[30px] px-2 py-1 rounded-lg text-white font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs ${
+                            tempExpenseCategory === 'Kasbon Karyawan'
+                              ? 'bg-purple-700 hover:bg-purple-800'
+                              : 'bg-rose-500 hover:bg-rose-600'
+                          }`}
+                          title="Tambah item pengeluaran / kasbon ini"
                         >
-                          <Plus className="w-3 h-3" /> Tambah
+                          <Plus className="w-3 h-3" /> {tempExpenseCategory === 'Kasbon Karyawan' ? 'Kasbon' : 'Tambah'}
                         </button>
                       </div>
                     </div>
 
-                    {/* List of Added Itemized Expenses */}
+                    {/* List of Added Itemized Expenses & Kasbon */}
                     {manualExpenseItems.length > 0 ? (
                       <div className="mt-2 space-y-1.5 pt-2 border-t border-rose-100 dark:border-rose-900/40">
                         <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold px-1">
-                          <span>DAFTAR ITEM PENGELUARAN TAMBAHAN:</span>
-                          <span className="text-rose-600 dark:text-rose-400">{manualExpenseItems.length} Item ({formatRupiah(totalItemizedExpenses)})</span>
+                          <span>DAFTAR ITEM KAS KELUAR & KASBON:</span>
+                          <span className="text-rose-600 dark:text-rose-400">
+                            {manualExpenseItems.length} Item ({formatRupiah(totalItemizedExpenses)})
+                          </span>
                         </div>
                         <div className="max-h-36 overflow-y-auto space-y-1 pr-0.5">
                           {manualExpenseItems.map((item, idx) => (
                             <div
                               key={item.id}
-                              className="flex items-center justify-between gap-2 p-1.5 px-2 rounded-lg bg-rose-50 dark:bg-purple-950/80 border border-rose-200/80 dark:border-rose-900/40 text-xs"
+                              className={`flex items-center justify-between gap-2 p-1.5 px-2 rounded-lg border text-xs ${
+                                item.category === 'Kasbon Karyawan' || item.employeeId
+                                  ? 'bg-purple-50 dark:bg-purple-950/90 border-purple-300 dark:border-purple-800'
+                                  : 'bg-rose-50 dark:bg-purple-950/80 border-rose-200/80 dark:border-rose-900/40'
+                              }`}
                             >
                               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <span className="w-4 h-4 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 font-black text-[9px] flex items-center justify-center shrink-0">
+                                <span
+                                  className={`w-4 h-4 rounded-full font-black text-[9px] flex items-center justify-center shrink-0 ${
+                                    item.category === 'Kasbon Karyawan'
+                                      ? 'bg-purple-600 text-white'
+                                      : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                                  }`}
+                                >
                                   {idx + 1}
                                 </span>
-                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate" title={item.description}>
-                                  {item.description}
-                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    {item.category === 'Kasbon Karyawan' && (
+                                      <span className="px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-amber-300 text-[9px] font-black shrink-0">
+                                        🏷️ KASBON: {item.employeeName}
+                                      </span>
+                                    )}
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate" title={item.description}>
+                                      {item.description}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                <span className="font-black text-rose-600 dark:text-rose-400">
+                                <span
+                                  className={`font-black ${
+                                    item.category === 'Kasbon Karyawan'
+                                      ? 'text-purple-700 dark:text-amber-400'
+                                      : 'text-rose-600 dark:text-rose-400'
+                                  }`}
+                                >
                                   -{formatRupiah(item.amount)}
                                 </span>
                                 <button
@@ -3820,7 +4029,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                       </div>
                     ) : (
                       <p className="text-[10px] text-slate-400 italic pt-1">
-                        💡 Belum ada item pengeluaran manual. Ketik nama keperluan dan nominal di atas lalu klik tombol "+ Tambah".
+                        💡 Belum ada item pengeluaran atau kasbon. Ketik nama keperluan/pilih karyawan dan nominal di atas lalu klik tombol "+ Tambah".
                       </p>
                     )}
                   </div>

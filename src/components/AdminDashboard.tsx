@@ -9967,6 +9967,10 @@ function doPost(e) {
             currentUser={currentUser}
             locations={locations}
             shiftTemplates={shiftTemplates}
+            employees={employees}
+            employeeLoans={employeeLoans}
+            setEmployeeLoans={setEmployeeLoans}
+            saveEmployeeLoansData={saveEmployeeLoans}
           />
         )}
 
