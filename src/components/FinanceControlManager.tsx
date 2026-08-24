@@ -3894,33 +3894,6 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                 </div>
               </div>
 
-              {/* Row 2: Pilih Shift (Terintegrasi Menu Outlet & Shift Rules) */}
-              <div>
-                <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center justify-between gap-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-emerald-500" /> Pilih Shift Kerja (Outlet & Shift Rules) *
-                  </span>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                    ✓ Terintegrasi Shift Rules Cabang
-                  </span>
-                </label>
-                <select
-                  value={shiftName}
-                  onChange={(e) => setShiftName(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-emerald-300 dark:border-purple-800 bg-emerald-50/40 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-extrabold"
-                >
-                  {getShiftsForOutlet(outlet).map((s) => {
-                    const hasTime = s.name.includes(s.startTime || '') || s.name.includes(s.endTime || '');
-                    const label = hasTime ? s.name : `${s.name} (${s.startTime} - ${s.endTime})`;
-                    return (
-                      <option key={s.id} value={s.name}>
-                        {label} {s.outlet ? `• ${s.outlet}` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
               {/* Arus Kas Laci Kasir (Modal Awal + Tunai POS + Kas Keluar + Penyesuaian Manual) */}
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 space-y-2.5 text-xs">
                 <div className="flex items-center justify-between font-extrabold text-slate-700 dark:text-purple-200">
