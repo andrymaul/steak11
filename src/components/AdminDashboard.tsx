@@ -3562,6 +3562,60 @@ function doPost(e) {
 
   const handleGenerateMonthlySchedule = handleExecuteScheduleGeneration;
 
+  // Helper: Distinct badge styling per outlet location
+  const getOutletBadgeStyle = (outletName?: string, isOff?: boolean) => {
+    if (isOff) {
+      return 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-extrabold';
+    }
+
+    const clean = (outletName || '').toLowerCase().trim();
+
+    if (clean.includes('cibubur')) {
+      return 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-extrabold';
+    }
+    if (clean.includes('kalisari')) {
+      return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 font-extrabold';
+    }
+    if (clean.includes('kuningan')) {
+      return 'bg-sky-100 text-sky-900 dark:bg-sky-950/80 dark:text-sky-300 border-sky-300 dark:border-sky-700 font-extrabold';
+    }
+    if (clean.includes('jatisampurna') || clean.includes('sampurna')) {
+      return 'bg-purple-100 text-purple-900 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-extrabold';
+    }
+    if (clean.includes('cilangkap')) {
+      return 'bg-rose-100 text-rose-900 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300 dark:border-rose-700 font-extrabold';
+    }
+    if (clean.includes('duren') || clean.includes('sawit')) {
+      return 'bg-teal-100 text-teal-900 dark:bg-teal-950/80 dark:text-teal-300 border-teal-300 dark:border-teal-700 font-extrabold';
+    }
+    if (clean.includes('bekasi') || clean.includes('tambun')) {
+      return 'bg-indigo-100 text-indigo-900 dark:bg-indigo-950/80 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 font-extrabold';
+    }
+    if (clean.includes('depok') || clean.includes('bogor')) {
+      return 'bg-orange-100 text-orange-900 dark:bg-orange-950/80 dark:text-orange-300 border-orange-300 dark:border-orange-700 font-extrabold';
+    }
+
+    // Dynamic fallback for any additional outlets
+    const dynamicPalettes = [
+      'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 font-extrabold',
+      'bg-sky-100 text-sky-900 dark:bg-sky-950/80 dark:text-sky-300 border-sky-300 dark:border-sky-700 font-extrabold',
+      'bg-purple-100 text-purple-900 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-extrabold',
+      'bg-rose-100 text-rose-900 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300 dark:border-rose-700 font-extrabold',
+      'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-extrabold',
+      'bg-teal-100 text-teal-900 dark:bg-teal-950/80 dark:text-teal-300 border-teal-300 dark:border-teal-700 font-extrabold',
+      'bg-orange-100 text-orange-900 dark:bg-orange-950/80 dark:text-orange-300 border-orange-300 dark:border-orange-700 font-extrabold',
+      'bg-indigo-100 text-indigo-900 dark:bg-indigo-950/80 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 font-extrabold',
+    ];
+
+    let hash = 0;
+    for (let i = 0; i < clean.length; i++) {
+      hash = (hash << 5) - hash + clean.charCodeAt(i);
+      hash |= 0;
+    }
+    const idx = Math.abs(hash) % dynamicPalettes.length;
+    return dynamicPalettes[idx];
+  };
+
   // Helper badge style for shift color
   const getShiftBadgeStyle = (colorName?: string, isOff?: boolean) => {
     switch (colorName) {
@@ -3581,8 +3635,9 @@ function doPost(e) {
       case 'red':
         return 'bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800';
       case 'teal':
-      case 'orange':
         return 'bg-teal-100 text-teal-900 dark:bg-teal-950 dark:text-teal-300 border-teal-300 dark:border-teal-800';
+      case 'orange':
+        return 'bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-300 border-orange-300 dark:border-orange-800';
       case 'slate':
       default:
         return isOff
@@ -8725,26 +8780,25 @@ function doPost(e) {
               );
             })()}
 
-            {/* Shift Templates Legend Pill */}
-            <div className="flex items-center gap-3 flex-wrap p-3.5 bg-white dark:bg-[#1f0e30] rounded-2xl border border-slate-200 dark:border-purple-900/50 text-xs">
-              <span className="font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-amber-500" /> Master Shift Available:
+            {/* Outlet Color Coding Legend Pill */}
+            <div className="flex items-center gap-2 flex-wrap p-3 bg-white dark:bg-[#1f0e30] rounded-2xl border border-slate-200 dark:border-purple-900/50 text-xs">
+              <span className="font-extrabold text-slate-700 dark:text-amber-300 flex items-center gap-1.5 shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-amber-500" /> Kode Warna Outlet:
               </span>
-              {shiftTemplates.map((tpl) => (
-                <div key={tpl.id} className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 dark:bg-purple-950/80 border border-slate-200 dark:border-purple-800">
-                  <span className={`w-3 h-3 rounded-full shrink-0 ${
-                    tpl.color === 'emerald' ? 'bg-emerald-500' :
-                    tpl.color === 'blue' ? 'bg-blue-500' :
-                    tpl.color === 'purple' ? 'bg-purple-500' :
-                    tpl.color === 'amber' ? 'bg-amber-500' :
-                    tpl.color === 'rose' ? 'bg-rose-500' :
-                    tpl.color === 'orange' ? 'bg-orange-500' :
-                    tpl.color === 'teal' ? 'bg-teal-500' : 'bg-slate-400'
-                  }`} />
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{tpl.name}</span>
-                  <span className="text-[10px] text-slate-400">({tpl.isOff ? 'OFF' : `${tpl.startTime} - ${tpl.endTime}`})</span>
-                </div>
-              ))}
+              {locations.map((loc) => {
+                const badgeStyle = getOutletBadgeStyle(loc.name, false);
+                return (
+                  <div key={loc.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] shadow-2xs ${badgeStyle}`}>
+                    <span className="w-2 h-2 rounded-full bg-current opacity-80 shrink-0" />
+                    <span>{loc.name.replace(/^Steak\s*11,?\s*/i, '')}</span>
+                    <span className="text-[9.5px] opacity-75 font-mono font-normal">({loc.startWorkTime || '14:00'}-{loc.endWorkTime || '23:00'})</span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-extrabold shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                <span>OFF / Libur</span>
+              </div>
             </div>
 
             {/* Monthly Schedule Roster Grid Table */}
@@ -8833,19 +8887,14 @@ function doPost(e) {
                                 const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                                 const sch = schedules.find((s) => s.employeeId === emp.id && s.date === dateStr);
 
-                                let colorBg = 'bg-slate-100 dark:bg-purple-950/40 text-slate-400 border-slate-200';
-                                if (sch) {
-                                  const matchedTpl = shiftTemplates.find((t) => t.id === sch.shiftId || t.name.trim().toLowerCase() === sch.shiftName.trim().toLowerCase());
-                                  const isOff = Boolean(sch.isOff || matchedTpl?.isOff);
-                                  const colorName = matchedTpl?.color || (sch as any).color || (isOff ? 'slate' : 'emerald');
-                                  colorBg = getShiftBadgeStyle(colorName, isOff);
-                                }
-
                                 const rawOutlet = (sch?.outlet || emp.outlet || '').trim();
                                 const cleanOutlet = rawOutlet.replace(/^Steak\s*11,?\s*/i, '').trim();
+                                const isOff = Boolean(sch?.isOff || sch?.shiftName?.toLowerCase().includes('off') || sch?.shiftName?.toLowerCase().includes('libur'));
+
+                                const colorBg = getOutletBadgeStyle(cleanOutlet || rawOutlet, isOff);
                                 const displayText = !sch
                                   ? '+ Atur'
-                                  : (sch.isOff || sch.shiftName.toLowerCase().includes('off') || sch.shiftName.toLowerCase().includes('libur'))
+                                  : isOff
                                     ? 'OFF'
                                     : (cleanOutlet || sch.shiftName.replace('Shift ', '') || 'Masuk');
 
@@ -8856,11 +8905,11 @@ function doPost(e) {
                                     className="p-1 text-center border-l border-slate-100 dark:border-purple-900/40 cursor-pointer hover:scale-105 transition-all"
                                     title={
                                       sch
-                                        ? `${sch.employeeName} (${cleanOutlet || rawOutlet}): ${sch.isOff ? 'OFF / Libur' : `${sch.startTime || '14:00'} - ${sch.endTime || '23:00'}`}`
+                                        ? `${sch.employeeName} (${cleanOutlet || rawOutlet}): ${isOff ? 'OFF / Libur' : `${sch.startTime || '14:00'} - ${sch.endTime || '23:00'}`}`
                                         : `Klik untuk atur shift ${emp.name}`
                                     }
                                   >
-                                    <div className={`p-1 rounded-lg border font-bold text-[9.5px] truncate shadow-2xs ${colorBg}`}>
+                                    <div className={`p-1 rounded-lg border text-[9.5px] truncate shadow-2xs ${colorBg}`}>
                                       {displayText}
                                     </div>
                                   </td>
