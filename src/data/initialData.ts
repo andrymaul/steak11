@@ -1434,16 +1434,21 @@ export const DEFAULT_WA_GATEWAY_CONFIG: WaGatewayConfig = {
 };
 
 export const DEFAULT_SHIFT_TEMPLATES: WorkShiftTemplate[] = [
-  { id: 'shift-1', name: 'Shift Pagi', startTime: '09:00', endTime: '17:00', color: 'emerald', outlet: 'Semua Outlet', notes: 'Persiapan bumbu & operasional pagi' },
-  { id: 'shift-2', name: 'Shift Siang / Mid', startTime: '12:00', endTime: '20:00', color: 'blue', outlet: 'Semua Outlet', notes: 'Operasional jam makan siang ke malam' },
-  { id: 'shift-3', name: 'Shift Malam', startTime: '15:00', endTime: '23:00', color: 'purple', outlet: 'Semua Outlet', notes: 'Peak hour malam & closing outlet' },
-  { id: 'shift-4', name: 'OFF / Libur', startTime: '00:00', endTime: '00:00', color: 'slate', outlet: 'Semua Outlet', isOff: true, notes: 'Hari libur rutin harian' }
+  { id: 'shift-off', name: 'OFF / Libur', startTime: '00:00', endTime: '00:00', color: 'slate', outlet: 'Semua Outlet', isOff: true, notes: 'Hari libur rutin harian' }
 ];
 
 export const getStoredShiftTemplates = (): WorkShiftTemplate[] => {
   try {
     const raw = localStorage.getItem('steak11_shift_templates');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: WorkShiftTemplate[] = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (t) => !['shift-1', 'shift-2', 'shift-3'].includes(t.id) &&
+                 !['shift pagi', 'shift siang / mid', 'shift siang', 'shift malam'].includes((t.name || '').toLowerCase().trim())
+        );
+      }
+    }
   } catch (e) {
     console.error('Failed to parse shift templates from storage', e);
   }

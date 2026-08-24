@@ -3733,10 +3733,6 @@ function doPost(e) {
   };
 
   const handleDeleteShiftTemplate = (id: string) => {
-    if (shiftTemplates.length <= 1) {
-      showToast('Minimal harus ada 1 master shift!');
-      return;
-    }
     const updated = shiftTemplates.filter((s) => s.id !== id);
     setShiftTemplates(updated);
     saveShiftTemplates(updated);
@@ -13699,13 +13695,25 @@ function doPost(e) {
                   </button>
                 </div>
                 <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                  {shiftTemplates
-                    .filter((tpl) => {
+                  {(() => {
+                    const extraCustomList = shiftTemplates.filter((tpl) => {
+                      if (tpl.isOff) return false;
+                      if (['shift-1', 'shift-2', 'shift-3'].includes(tpl.id)) return false;
+                      if (['shift pagi', 'shift siang / mid', 'shift siang', 'shift malam'].includes((tpl.name || '').toLowerCase().trim())) return false;
                       if (shiftTemplateOutletFilter === 'ALL') return true;
                       if (!tpl.outlet || tpl.outlet === 'Semua Outlet') return true;
                       return tpl.outlet === shiftTemplateOutletFilter;
-                    })
-                    .map((tpl) => (
+                    });
+
+                    if (extraCustomList.length === 0) {
+                      return (
+                        <p className="text-[11px] text-slate-400 italic p-3 rounded-xl bg-slate-50 dark:bg-purple-950/40 text-center border border-dashed border-slate-200 dark:border-purple-800/80">
+                          Shift kerja telah otomatis mengacu 100% pada Aturan Shift Outlet di atas. (Tidak ada shift tambahan).
+                        </p>
+                      );
+                    }
+
+                    return extraCustomList.map((tpl) => (
                       <div key={tpl.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 flex justify-between items-center gap-2">
                         <div className="overflow-hidden">
                           <div className="flex items-center gap-1.5">
@@ -13737,7 +13745,8 @@ function doPost(e) {
                           </button>
                         </div>
                       </div>
-                    ))}
+                    ));
+                  })()}
                 </div>
               </div>
 

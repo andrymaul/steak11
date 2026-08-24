@@ -1099,7 +1099,12 @@ export function getStoredShiftTemplates(): WorkShiftTemplate[] {
   if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (t) => !['shift-1', 'shift-2', 'shift-3'].includes(t.id) &&
+                 !['shift pagi', 'shift siang / mid', 'shift siang', 'shift malam'].includes((t.name || '').toLowerCase().trim())
+        );
+      }
     } catch {
       return [];
     }
