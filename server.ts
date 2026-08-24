@@ -89,25 +89,28 @@ app.post('/api/attendance', async (req, res) => {
     const targetUid = 'shared_app_store';
     const attDocRef = doc(fbDb, 'users', targetUid, 'data', 'attendance');
     
-    // Merge with existing records on server
+    // Preserve existing selfie URLs on items that still exist in the posted attendance array
     const currentSnap = await getDoc(attDocRef);
     const existing = currentSnap.exists() && Array.isArray(currentSnap.data()?.payload) ? currentSnap.data().payload : [];
     
-    const map = new Map();
-    existing.forEach((item: any) => { if (item?.id) map.set(String(item.id), item); });
-    attendance.forEach((item: any) => {
-      if (item?.id) {
-        const prev = map.get(String(item.id));
-        map.set(String(item.id), {
-          ...(prev || {}),
-          ...item,
-          selfieUrl: item.selfieUrl || prev?.selfieUrl,
-          clockOutSelfieUrl: item.clockOutSelfieUrl || prev?.clockOutSelfieUrl
+    const photoMap = new Map();
+    existing.forEach((item: any) => {
+      if (item?.id && (item.selfieUrl || item.clockOutSelfieUrl)) {
+        photoMap.set(String(item.id), {
+          selfieUrl: item.selfieUrl,
+          clockOutSelfieUrl: item.clockOutSelfieUrl
         });
       }
     });
-    
-    const merged = Array.from(map.values()).sort((a: any, b: any) => {
+
+    const merged = attendance.map((item: any) => {
+      const prevPhotos = photoMap.get(String(item.id));
+      return {
+        ...item,
+        selfieUrl: item.selfieUrl || prevPhotos?.selfieUrl,
+        clockOutSelfieUrl: item.clockOutSelfieUrl || prevPhotos?.clockOutSelfieUrl
+      };
+    }).sort((a: any, b: any) => {
       const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;
       const dateB = `${b.date} ${b.clockInTime || '00:00:00'}`;
       return dateB.localeCompare(dateA);
@@ -126,7 +129,7 @@ app.post('/api/attendance', async (req, res) => {
     await setDoc(attDocRef, {
       payload: sanitized,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    });
 
     return res.json({ success: true, count: merged.length, attendance: merged });
   } catch (err: any) {

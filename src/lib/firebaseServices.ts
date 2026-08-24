@@ -793,7 +793,7 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
 
   try {
     const sharedDocRef = doc(db, 'users', targetUid, 'data', dataKey);
-    await setDoc(sharedDocRef, { payload: sanitizedPayload, updatedAt: new Date().toISOString() }, { merge: true });
+    await setDoc(sharedDocRef, { payload: sanitizedPayload, updatedAt: new Date().toISOString() });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
@@ -914,21 +914,15 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
       const sharedDocRef = doc(db, 'users', targetUid, 'data', key);
       const sharedSnap = await getDoc(sharedDocRef);
       if (sharedSnap.exists() && sharedSnap.data()?.payload !== undefined) {
-        const remoteData = sharedSnap.data().payload;
-        let finalData = remoteData;
-        const historyAppendKeys = [
-          'cashier_shifts', 'expenses', 'attendance', 'orders',
-          'stock_opnames', 'stock_transfers', 'audit_logs', 'stock_mutations',
-          'purchase_orders', 'promos', 'reviews', 'suppliers'
-        ];
-        if (historyAppendKeys.includes(key)) {
-          const rawLocal = localStorage.getItem('steak11_' + key);
+        let finalData = sharedSnap.data().payload;
+        if (key === 'attendance' && Array.isArray(finalData)) {
+          const rawLocal = localStorage.getItem('steak11_attendance');
           let localArr: any[] = [];
           if (rawLocal) {
             try { localArr = JSON.parse(rawLocal); } catch {}
           }
-          if (Array.isArray(localArr) && Array.isArray(remoteData)) {
-            finalData = mergeArrayById(localArr, remoteData);
+          if (Array.isArray(localArr)) {
+            finalData = mergeAttendancePhotos(finalData, localArr);
           }
         }
         localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
@@ -990,72 +984,32 @@ export const cleanUpLegacyUserDocs = async (): Promise<{ success: boolean; delet
   };
 };
 
-const getItemTimestamp = (item: any): number => {
-  if (!item) return 0;
-  if (item.updatedAt) {
-    const t = new Date(item.updatedAt).getTime();
-    if (!isNaN(t) && t > 0) return t;
-  }
-  if (item.createdAt) {
-    const t = new Date(item.createdAt).getTime();
-    if (!isNaN(t) && t > 0) return t;
-  }
-  // If id is ATT-1740000000000 or ORD-1740000000000 or contains a large millisecond timestamp
-  if (typeof item.id === 'string') {
-    const numMatch = item.id.match(/\d{12,14}/);
-    if (numMatch) {
-      const t = parseInt(numMatch[0], 10);
-      if (!isNaN(t) && t > 1000000000000) return t;
-    }
-  }
-  // If date + clockInTime/time is present (e.g. date: "2026-08-21", clockInTime: "18:55:00", closedAt: "23:00")
-  if (item.date) {
-    const timeStr = item.clockInTime || item.time || item.clockOutTime || item.closedAt || '';
-    if (timeStr) {
-      const fullStr = `${item.date}T${timeStr.length === 5 ? timeStr + ':00' : timeStr}`;
-      const t = new Date(fullStr).getTime();
-      if (!isNaN(t) && t > 0) return t;
-    }
-    const t = new Date(item.date).getTime();
-    if (!isNaN(t) && t > 0) return t;
-  }
-  return 0;
-};
+/**
+ * Helper to preserve high-res selfie photos on existing attendance records without resurrecting deleted ones
+ */
+export const mergeAttendancePhotos = (remoteRecords: AttendanceRecord[], localRecords: AttendanceRecord[]): AttendanceRecord[] => {
+  if (!Array.isArray(remoteRecords)) return [];
+  if (!Array.isArray(localRecords) || localRecords.length === 0) return remoteRecords;
 
-const mergeArrayById = (localArray: any[], remoteArray: any[], _remoteUpdatedAtStr?: string): any[] => {
-  if (!Array.isArray(localArray)) return Array.isArray(remoteArray) ? remoteArray : [];
-  if (!Array.isArray(remoteArray)) return Array.isArray(localArray) ? localArray : [];
-
-  const map = new Map<string, any>();
-
-  // 1. Remote items from Cloud Firestore
-  remoteArray.forEach((item) => {
-    if (item && item.id) {
-      map.set(String(item.id), item);
+  const photoMap = new Map<string, { selfieUrl?: string; clockOutSelfieUrl?: string }>();
+  localRecords.forEach((item) => {
+    if (item && item.id && (item.selfieUrl || item.clockOutSelfieUrl)) {
+      photoMap.set(String(item.id), {
+        selfieUrl: item.selfieUrl,
+        clockOutSelfieUrl: item.clockOutSelfieUrl
+      });
     }
   });
 
-  // 2. Retain & merge local items (ensuring offline and recent records are never lost)
-  localArray.forEach((item) => {
-    if (item && item.id) {
-      const existing = map.get(String(item.id));
-      if (!existing) {
-        map.set(String(item.id), item);
-      } else {
-        const localItemTime = getItemTimestamp(item);
-        const existingItemTime = getItemTimestamp(existing);
-        const mergedItem = {
-          ...existing,
-          ...(localItemTime >= existingItemTime ? item : {}),
-          selfieUrl: item.selfieUrl || existing.selfieUrl,
-          clockOutSelfieUrl: item.clockOutSelfieUrl || existing.clockOutSelfieUrl
-        };
-        map.set(String(item.id), mergedItem);
-      }
-    }
+  return remoteRecords.map((item) => {
+    const photos = photoMap.get(String(item.id));
+    if (!photos) return item;
+    return {
+      ...item,
+      selfieUrl: item.selfieUrl || photos.selfieUrl,
+      clockOutSelfieUrl: item.clockOutSelfieUrl || photos.clockOutSelfieUrl
+    };
   });
-
-  return Array.from(map.values()).filter((item) => !item.isDeleted);
 };
 
 /**
@@ -1107,7 +1061,6 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
         if (docSnap.exists() && docSnap.data()?.payload !== undefined) {
           const docData = docSnap.data();
           const remoteData = docData.payload;
-          const remoteUpdatedAt = docData.updatedAt;
           const currentLocal = localStorage.getItem('steak11_' + key);
 
           let localData: any = null;
@@ -1118,39 +1071,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
 
           let finalData = remoteData;
-          let needsRemotePush = false;
 
-          const historyAppendKeys = [
-            'cashier_shifts', 'expenses', 'attendance', 'orders',
-            'stock_opnames', 'stock_transfers', 'audit_logs', 'stock_mutations',
-            'purchase_orders', 'promos', 'reviews', 'suppliers'
-          ];
-
-          if (historyAppendKeys.includes(key)) {
-            if (Array.isArray(localData) && Array.isArray(remoteData)) {
-              finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
-              if (finalData.length > remoteData.length) {
-                needsRemotePush = true;
-              }
-            } else if (Array.isArray(localData) && localData.length > 0 && (!Array.isArray(remoteData) || remoteData.length === 0)) {
-              finalData = localData;
-              needsRemotePush = true;
-            } else {
-              finalData = remoteData;
-            }
-          } else if (Array.isArray(remoteData)) {
-            // For master data arrays (menu_items, locations, employees, etc)
-            if (Array.isArray(localData) && localData.length > remoteData.length) {
-              finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
-              needsRemotePush = true;
-            } else {
-              finalData = remoteData;
-            }
-          } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
-            // For configuration objects (branding, settings), remote is primary with local fallback
-            finalData = { ...localData, ...remoteData };
-          } else {
-            finalData = remoteData;
+          // For attendance, preserve local selfie URLs if remote doesn't have them
+          if (key === 'attendance' && Array.isArray(remoteData) && Array.isArray(localData)) {
+            finalData = mergeAttendancePhotos(remoteData, localData);
           }
 
           const finalJson = JSON.stringify(finalData);
@@ -1162,10 +1086,6 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
             if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
               window.dispatchEvent(new Event('racik_options_updated'));
             }
-          }
-
-          if (needsRemotePush) {
-            syncUserDataToFirestore(key, finalData).catch(() => {});
           }
         } else {
           // Document does not exist in Firestore yet: seed from initial / local data once
@@ -1180,7 +1100,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           } else {
             initialData = getInitialDataForKey(key);
           }
-          setDoc(sharedDocRef, { payload: sanitizePayloadForFirestore(initialData), updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+          setDoc(sharedDocRef, { payload: sanitizePayloadForFirestore(initialData), updatedAt: new Date().toISOString() }).catch(() => {});
         }
       }, (err) => {
         console.warn(`Error on listener for ${key}:`, err);

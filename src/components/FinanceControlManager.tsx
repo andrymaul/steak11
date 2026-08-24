@@ -767,18 +767,11 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     return matchesMonth && matchesOutlet;
   });
 
-  // 1. Penggajian & Bonus
-  const monthPayrollList = (payrolls || []).filter((p) => {
-    const pDate = p.periodMonth || p.period || '';
-    const matchesMonth = pDate.startsWith(monthlyPnlMonth);
-    const matchesOutlet = monthlyPnlOutlet === 'ALL' || p.outlet === monthlyPnlOutlet || !p.outlet;
-    return matchesMonth && matchesOutlet;
-  });
-  const autoPayrollAmount = monthPayrollList.reduce((acc, p) => acc + (p.netSalary || 0), 0);
+  // 1. Penggajian & Bonus (Dibuat Manual Saja dari Daftar Pos Beban Pengurang)
   const manualPayrollDeductions = filteredMonthDeductions
     .filter((d) => d.category === 'Penggajian & Bonus')
     .reduce((acc, d) => acc + (d.amount || 0), 0);
-  const totalMonthPayrollDeduction = autoPayrollAmount + manualPayrollDeductions;
+  const totalMonthPayrollDeduction = manualPayrollDeductions;
 
   // 2. Sewa Tempat & Gedung
   const totalMonthRentDeduction = filteredMonthDeductions
@@ -846,9 +839,6 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     const branchDeductions = (monthlyDeductions || []).filter(
       (d) => (d.outlet === outletName || d.outlet === 'Semua Cabang (Konsolidasi)') && d.month === monthlyPnlMonth
     );
-    const branchPayrolls = (payrolls || []).filter(
-      (p) => p.outlet === outletName && (p.periodMonth || p.period || '').startsWith(monthlyPnlMonth)
-    );
 
     const shiftRev = branchShifts.reduce(
       (acc, s) =>
@@ -878,9 +868,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           e.category !== 'Pembelian Bahan Darurat'
       )
       .reduce((acc, e) => acc + (e.amount || 0), 0);
-    const payExp = branchPayrolls.reduce((acc, p) => acc + (p.netSalary || 0), 0);
     const dedExp = branchDeductions.reduce((acc, d) => acc + (d.amount || 0), 0);
-    const totalDed = opExp + payExp + dedExp;
+    const totalDed = opExp + dedExp;
     const netProfit = gp - totalDed;
     const netMargin = shiftRev > 0 ? (netProfit / shiftRev) * 100 : 0;
 
@@ -977,7 +966,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
               <tr><th>Kategori Biaya Pengurang</th><th>Keterangan</th><th class="text-right">Nominal Pengurang (Rp)</th></tr>
             </thead>
             <tbody>
-              <tr><td>1. Penggajian & Bonus Karyawan</td><td>${monthPayrollList.length} Slip Gaji Otomatis + Bonus Manual</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthPayrollDeduction)}</td></tr>
+              <tr><td>1. Penggajian & Bonus Karyawan</td><td>Input Biaya Gaji & Bonus Manual</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthPayrollDeduction)}</td></tr>
               <tr><td>2. Sewa Tempat & Gedung</td><td>Sewa Ruko, Lapak, Booth Outlet</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthRentDeduction)}</td></tr>
               <tr><td>3. Utilitas & Operasional Toko</td><td>Listrik, Air, Gas LPG, Internet, Perlengkapan</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthOpDeduction)}</td></tr>
               <tr><td>4. Marketing, Promo & Iklan</td><td>Ads Medsos, Banner, Campaign Promosi</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthMarketingDeduction)}</td></tr>
@@ -1044,7 +1033,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       ['3. TOTAL GROSS PROFIT BULANAN', monthGrossProfit, `${monthGrossMarginPct.toFixed(2)}% Gross Margin`],
       [],
       ['4. BIAYA PENGURANG BEBAN USAHA BULANAN', -totalMonthlyAllDeductions, 'Total Beban Operasional, Gaji, Sewa, dll.'],
-      ['  • Penggajian & Bonus Karyawan', -totalMonthPayrollDeduction, `${monthPayrollList.length} Slip Gaji + Bonus`],
+      ['  • Penggajian & Bonus Karyawan', -totalMonthPayrollDeduction, 'Input Beban Gaji & Bonus Manual'],
       ['  • Sewa Tempat & Gedung Outlet', -totalMonthRentDeduction, 'Sewa Ruko / Lapak Cabang'],
       ['  • Listrik, Air, Gas & Operasional Toko', -totalMonthOpDeduction, 'Utilitas & Belanja Toko'],
       ['  • Marketing, Iklan & Promo', -totalMonthMarketingDeduction, 'Ads & Campaign'],
@@ -3168,7 +3157,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
                     <div>
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">1. Penggajian & Bonus Karyawan</span>
-                      <span className="text-[10px] text-slate-400">{monthPayrollList.length} Slip Gaji Otomatis + Penyesuaian</span>
+                      <span className="text-[10px] text-slate-400">Input Manual Beban Gaji & Bonus</span>
                     </div>
                     <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthPayrollDeduction)}</span>
                   </div>
