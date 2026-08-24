@@ -182,6 +182,11 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   };
 
   const [showClosingModal, setShowClosingModal] = useState(false);
+  const [closingDate, setClosingDate] = useState<string>(todayStr);
+  const [auditDateFilterMode, setAuditDateFilterMode] = useState<'semua' | 'harian' | 'bulanan'>('semua');
+  const [auditFilterDate, setAuditFilterDate] = useState<string>(todayStr);
+  const [auditFilterMonth, setAuditFilterMonth] = useState<string>(todayStr.substring(0, 7));
+  const [auditSearchQuery, setAuditSearchQuery] = useState<string>('');
   const [outlet, setOutlet] = useState((locations && locations[0]?.name) || (outletsList && outletsList[0]) || 'Steak 11, Cibubur');
   const [shiftName, setShiftName] = useState<string>('Shift Operasional');
   const [cashierName, setCashierName] = useState(currentUser?.name || 'Kasir (Admin)');
@@ -387,9 +392,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   );
   const totalOperationalExpenses = todayExpenses.reduce((acc, c) => acc + (c.amount || 0), 0);
 
-  // Compute live POS numbers for the Modal's selected outlet
+  // Compute live POS numbers for the Modal's selected outlet and selected audit date
+  const effectiveClosingDate = closingDate || todayStr;
   const modalOrders = (orders || []).filter(
-    (o) => o.status === 'Selesai' && o.date === todayStr && (outlet === 'ALL' || o.outlet === outlet)
+    (o) => o.status === 'Selesai' && o.date === effectiveClosingDate && (outlet === 'ALL' || o.outlet === outlet)
   );
 
   const modalPosCash = modalOrders
@@ -406,7 +412,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   // Modal Kas Keluar Laci Kasir: Sinkron dari Kas Kecil & Operasional (TANPA beban manual cash flow)
   const modalExpenses = (expenses || []).filter(
-    (e) => e.date === todayStr && (outlet === 'ALL' || e.outlet === outlet) && e.source !== 'cash_flow'
+    (e) => e.date === effectiveClosingDate && (outlet === 'ALL' || e.outlet === outlet) && e.source !== 'cash_flow'
   ).reduce((acc, c) => acc + (c.amount || 0), 0);
 
   // Denominations Total
@@ -431,9 +437,26 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   if (cashDifference > 0) auditStatus = 'Surplus (Lebih Kas)';
   if (cashDifference < 0) auditStatus = 'Defisit (Kurang Kas)';
 
+  // Audit Closing Shift Filtered List for Table
+  const filteredAuditShifts = (shifts || []).filter((s) => {
+    if (selectedOutletFilter !== 'ALL' && s.outlet !== selectedOutletFilter) return false;
+    if (auditDateFilterMode === 'harian' && s.date !== auditFilterDate) return false;
+    if (auditDateFilterMode === 'bulanan' && (s.date || '').substring(0, 7) !== auditFilterMonth) return false;
+    if (auditSearchQuery.trim()) {
+      const q = auditSearchQuery.toLowerCase();
+      const matchId = (s.id || '').toLowerCase().includes(q);
+      const matchCashier = (s.cashierName || '').toLowerCase().includes(q);
+      const matchShift = (s.shiftName || '').toLowerCase().includes(q);
+      const matchOutlet = (s.outlet || '').toLowerCase().includes(q);
+      if (!matchId && !matchCashier && !matchShift && !matchOutlet) return false;
+    }
+    return true;
+  });
+
   const handleOpenInputClosingShift = () => {
     const initialOutlet = (locations && locations[0]?.name) || (outletsList && outletsList[0]) || 'Steak 11, Cibubur';
     const availableShifts = getShiftsForOutlet(initialOutlet);
+    setClosingDate(todayStr);
     setOutlet(initialOutlet);
     setShiftName(availableShifts[0]?.name || 'Shift Operasional');
     setCashierName(currentUser?.name || 'Kasir (Admin)');
@@ -1710,7 +1733,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const handleSaveClosingShift = () => {
     if (checkReadOnlyPermission()) return;
 
-    const datePrefix = `SHF-${todayStr.replace(/-/g, '')}`;
+    const effectiveDate = closingDate || todayStr;
+    const datePrefix = `SHF-${effectiveDate.replace(/-/g, '')}`;
     const nextSeq = String((shifts || []).filter(s => s.id && s.id.startsWith(datePrefix)).length + 1).padStart(2, '0');
     let generatedId = `${datePrefix}-${nextSeq}`;
     if ((shifts || []).some(s => s.id === generatedId)) {
@@ -1719,7 +1743,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
     const newShift: CashierShiftRecord = {
       id: generatedId,
-      date: todayStr,
+      date: effectiveDate,
       shiftName,
       cashierName: currentUser?.name || cashierName,
       outlet,
@@ -1757,8 +1781,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
     // 1. Sinkronisasi Otomatis Pengeluaran per Item Closing Kasir ke Daftar Kas Kecil & Operasional
     const newPettyExpenses: PettyCashExpense[] = manualExpenseItems.map((itm, idx) => ({
-      id: `EXP-${todayStr.replace(/-/g, '')}-${Date.now().toString().slice(-4)}-${idx + 1}`,
-      date: todayStr,
+      id: `EXP-${effectiveDate.replace(/-/g, '')}-${Date.now().toString().slice(-4)}-${idx + 1}`,
+      date: effectiveDate,
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       outlet,
       cashierName: currentUser?.name || cashierName,
@@ -1800,7 +1824,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           const existingLoan = currentLoans[existingActiveLoanIndex];
           const updatedTotal = existingLoan.totalAmount + itm.amount;
           const updatedRemaining = existingLoan.remainingAmount + itm.amount;
-          const updatedNotes = `${existingLoan.notes || ''} | +Kasbon Shift ${shiftName} (${todayStr}): ${formatRupiah(itm.amount)}`;
+          const updatedNotes = `${existingLoan.notes || ''} | +Kasbon Shift ${shiftName} (${effectiveDate}): ${formatRupiah(itm.amount)}`;
 
           currentLoans[existingActiveLoanIndex] = {
             ...existingLoan,
@@ -1810,16 +1834,16 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           };
         } else {
           const newLoan: EmployeeLoan = {
-            id: `LOAN-${todayStr.replace(/-/g, '')}-${Date.now().toString().slice(-4)}-${idx + 1}`,
+            id: `LOAN-${effectiveDate.replace(/-/g, '')}-${Date.now().toString().slice(-4)}-${idx + 1}`,
             employeeId: empId,
             employeeName: empName,
             outlet,
-            date: todayStr,
+            date: effectiveDate,
             totalAmount: itm.amount,
             monthlyInstallment: itm.amount,
             remainingAmount: itm.amount,
             status: 'ACTIVE',
-            notes: `Kasbon Shift Kasir ${shiftName} (${todayStr}) - ${itm.description}`,
+            notes: `Kasbon Shift Kasir ${shiftName} (${effectiveDate}) - ${itm.description}`,
             history: [],
           };
           currentLoans = [newLoan, ...currentLoans];
@@ -2185,10 +2209,92 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           </div>
 
           <div className="p-4 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-3">
-            <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
-              <Banknote className="w-4 h-4 text-emerald-500" />
-              Riwayat Closing Shift & Audit Selisih Kas
-            </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-purple-900/40">
+              <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
+                <Banknote className="w-4 h-4 text-emerald-500" />
+                Riwayat Closing Shift & Audit Selisih Kas ({filteredAuditShifts.length} Shift)
+              </h4>
+
+              {/* Date Filter & Search Bar */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-purple-950 border border-slate-200 dark:border-purple-800 text-[11px] font-extrabold">
+                  <button
+                    type="button"
+                    onClick={() => setAuditDateFilterMode('semua')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      auditDateFilterMode === 'semua'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    Semua
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuditDateFilterMode('harian')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      auditDateFilterMode === 'harian'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    Harian
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuditDateFilterMode('bulanan')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      auditDateFilterMode === 'bulanan'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    Bulanan
+                  </button>
+                </div>
+
+                {auditDateFilterMode === 'harian' && (
+                  <input
+                    type="date"
+                    value={auditFilterDate}
+                    onChange={(e) => setAuditFilterDate(e.target.value)}
+                    className="px-2.5 py-1 rounded-xl border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                    title="Pilih Tanggal Audit"
+                  />
+                )}
+
+                {auditDateFilterMode === 'bulanan' && (
+                  <input
+                    type="month"
+                    value={auditFilterMonth}
+                    onChange={(e) => setAuditFilterMonth(e.target.value)}
+                    className="px-2.5 py-1 rounded-xl border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                    title="Pilih Bulan Audit"
+                  />
+                )}
+
+                <select
+                  value={selectedOutletFilter}
+                  onChange={(e) => setSelectedOutletFilter(e.target.value)}
+                  className="px-2.5 py-1 rounded-xl border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                >
+                  <option value="ALL">Semua Cabang</option>
+                  {allKnownOutlets.map((out) => (
+                    <option key={out} value={out}>
+                      {out}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="text"
+                  value={auditSearchQuery}
+                  onChange={(e) => setAuditSearchQuery(e.target.value)}
+                  placeholder="Cari ID / Kasir..."
+                  className="w-32 sm:w-36 px-2.5 py-1 rounded-xl border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 text-xs placeholder:text-slate-400"
+                />
+              </div>
+            </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -2208,64 +2314,72 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
-                  {shifts.map((shf) => {
-                    const diff = shf.cashDifference;
-                    const nonCashTotal = (shf.actualQrisRevenue ?? shf.qrisRevenue ?? 0) + (shf.actualTransferRevenue ?? shf.transferRevenue ?? 0);
-                    const onlineFood = shf.actualOnlineFoodRevenue ?? shf.onlineFoodRevenue ?? 0;
-                    return (
-                      <tr key={shf.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
-                        <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100">
-                          {shf.id}
-                          <span className="block text-[10px] text-slate-400">{shf.date} ({shf.shiftName})</span>
-                        </td>
-                        <td className="p-2.5">
-                          <span className="font-bold text-slate-800 dark:text-slate-200">{shf.cashierName}</span>
-                          <span className="block text-[10px] text-slate-400">{shf.outlet}</span>
-                        </td>
-                        <td className="p-2.5 text-slate-600 dark:text-slate-300">{formatRupiah(shf.startingCash)}</td>
-                        <td className="p-2.5 font-bold text-emerald-600 dark:text-emerald-400">+{formatRupiah(shf.cashRevenue)}</td>
-                        <td className="p-2.5 font-bold text-blue-600 dark:text-blue-400">{formatRupiah(nonCashTotal)}</td>
-                        <td className="p-2.5 font-bold text-orange-600 dark:text-orange-400">{formatRupiah(onlineFood)}</td>
-                        <td className="p-2.5 text-rose-500 font-bold">-{formatRupiah(shf.operationalExpenses || 0)}</td>
-                        <td className="p-2.5 font-black text-purple-900 dark:text-amber-300">
-                          {formatRupiah(shf.expectedCashInDrawer || shf.systemCashTotal)}
-                        </td>
-                        <td className="p-2.5 font-black text-slate-900 dark:text-slate-100">
-                          {formatRupiah(shf.actualCashInDrawer || shf.actualCashTotal)}
-                        </td>
-                        <td className="p-2.5">
-                          <span
-                            className={`px-2 py-0.5 rounded font-black text-[10px] inline-flex items-center gap-1 ${
-                              diff === 0
-                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                                : diff > 0
-                                ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                                : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
-                            }`}
-                          >
-                            {diff === 0 ? '✓ Sesuai (0)' : diff > 0 ? `+${formatRupiah(diff)}` : formatRupiah(diff)}
-                          </span>
-                        </td>
-                        <td className="p-2.5 text-right flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handlePrintClosingSummary(shf)}
-                            className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-950 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
-                            title="Cetak Struk Audit Closing Shift"
-                          >
-                            <Printer className="w-3 h-3" />
-                            Cetak Audit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteShift(shf.id, `${shf.id} - ${shf.date} (${shf.shiftName})`)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/80 hover:text-rose-700 transition-all cursor-pointer"
-                            title="Hapus Record Closing Shift Ini"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {filteredAuditShifts.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="p-6 text-center text-slate-400 italic">
+                        Tidak ada riwayat closing shift pada periode / filter tanggal yang dipilih.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAuditShifts.map((shf) => {
+                      const diff = shf.cashDifference;
+                      const nonCashTotal = (shf.actualQrisRevenue ?? shf.qrisRevenue ?? 0) + (shf.actualTransferRevenue ?? shf.transferRevenue ?? 0);
+                      const onlineFood = shf.actualOnlineFoodRevenue ?? shf.onlineFoodRevenue ?? 0;
+                      return (
+                        <tr key={shf.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                          <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100">
+                            {shf.id}
+                            <span className="block text-[10px] text-slate-400">{shf.date} ({shf.shiftName})</span>
+                          </td>
+                          <td className="p-2.5">
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{shf.cashierName}</span>
+                            <span className="block text-[10px] text-slate-400">{shf.outlet}</span>
+                          </td>
+                          <td className="p-2.5 text-slate-600 dark:text-slate-300">{formatRupiah(shf.startingCash)}</td>
+                          <td className="p-2.5 font-bold text-emerald-600 dark:text-emerald-400">+{formatRupiah(shf.cashRevenue)}</td>
+                          <td className="p-2.5 font-bold text-blue-600 dark:text-blue-400">{formatRupiah(nonCashTotal)}</td>
+                          <td className="p-2.5 font-bold text-orange-600 dark:text-orange-400">{formatRupiah(onlineFood)}</td>
+                          <td className="p-2.5 text-rose-500 font-bold">-{formatRupiah(shf.operationalExpenses || 0)}</td>
+                          <td className="p-2.5 font-black text-purple-900 dark:text-amber-300">
+                            {formatRupiah(shf.expectedCashInDrawer || shf.systemCashTotal)}
+                          </td>
+                          <td className="p-2.5 font-black text-slate-900 dark:text-slate-100">
+                            {formatRupiah(shf.actualCashInDrawer || shf.actualCashTotal)}
+                          </td>
+                          <td className="p-2.5">
+                            <span
+                              className={`px-2 py-0.5 rounded font-black text-[10px] inline-flex items-center gap-1 ${
+                                diff === 0
+                                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                  : diff > 0
+                                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                                  : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                              }`}
+                            >
+                              {diff === 0 ? '✓ Sesuai (0)' : diff > 0 ? `+${formatRupiah(diff)}` : formatRupiah(diff)}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-right flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handlePrintClosingSummary(shf)}
+                              className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-950 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                              title="Cetak Struk Audit Closing Shift"
+                            >
+                              <Printer className="w-3 h-3" />
+                              Cetak Audit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteShift(shf.id, `${shf.id} - ${shf.date} (${shf.shiftName})`)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/80 hover:text-rose-700 transition-all cursor-pointer"
+                              title="Hapus Record Closing Shift Ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -3712,8 +3826,24 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             </div>
 
             <div className="space-y-3.5 text-xs">
-              {/* Row 1: Kasir (Terkunci) & Lokasi Outlet */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Row 1: Tanggal Audit, Kasir (Terkunci) & Lokasi Outlet */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-blue-500" /> Tanggal Audit Shift *
+                  </label>
+                  <input
+                    type="date"
+                    value={closingDate}
+                    onChange={(e) => setClosingDate(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                    title="Pilih tanggal transaksi yang ingin diaudit"
+                  />
+                  <span className="text-[10px] text-blue-500 font-medium block mt-0.5">
+                    ✓ Sinkron data POS {closingDate}
+                  </span>
+                </div>
+
                 <div>
                   <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-amber-500" /> Nama Kasir (Terkunci) *
@@ -3797,7 +3927,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   <span className="flex items-center gap-1.5">
                     <Wallet className="w-4 h-4 text-emerald-500" /> Rekonsiliasi Arus Kas Laci Kasir:
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Hari ini: {todayStr}</span>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-300 font-mono font-bold">
+                    📅 Tanggal Audit: {effectiveClosingDate}
+                  </span>
                 </div>
 
                 {/* Modal Saldo Awal */}
