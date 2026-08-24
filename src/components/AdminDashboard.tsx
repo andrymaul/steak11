@@ -9965,6 +9965,8 @@ function doPost(e) {
             showToast={showToast}
             outletsList={locations.map(l => l.name)}
             currentUser={currentUser}
+            locations={locations}
+            shiftTemplates={shiftTemplates}
           />
         )}
 

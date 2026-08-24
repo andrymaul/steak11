@@ -24,9 +24,14 @@ import {
   Wallet,
   Calendar,
   ArrowUpRight,
-  BarChart3
+  BarChart3,
+  Lock,
+  Smartphone,
+  Layers,
+  Sparkles,
+  Store
 } from 'lucide-react';
-import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip } from '../types';
+import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate } from '../types';
 import { formatRupiah, isRegisteredAdmin } from '../utils';
 import * as XLSX from 'xlsx';
 
@@ -42,6 +47,8 @@ interface FinanceControlManagerProps {
   showToast: (msg: string) => void;
   outletsList: string[];
   currentUser?: { name: string; role: string } | null;
+  locations?: LocationItem[];
+  shiftTemplates?: WorkShiftTemplate[];
 }
 
 export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
@@ -55,7 +62,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   payrolls = [],
   showToast = (_: any) => {},
   outletsList = [],
-  currentUser
+  currentUser,
+  locations = [],
+  shiftTemplates = []
 }) => {
   const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'profit_loss' | 'payment_methods'>('closing_audit');
 
@@ -67,6 +76,55 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   // Payment Method Filter Tab inside Payment Method Breakdown
   const [selectedPayMethodFilter, setSelectedPayMethodFilter] = useState<'ALL' | 'QRIS' | 'Cash' | 'Transfer' | 'Debit'>('ALL');
+
+  // Helper: Get master shift templates tailored per outlet based on Outlet & Shift Rules
+  const getShiftsForOutlet = (outletName?: string): WorkShiftTemplate[] => {
+    const matchedLoc = (locations || []).find(
+      (l) => l.name.toLowerCase() === (outletName || '').trim().toLowerCase()
+    );
+
+    // 1. Shift Operasional Resmi dari Menu Outlet & Shift Rules
+    const outletShift: WorkShiftTemplate | null = matchedLoc
+      ? {
+          id: `loc-shift-${matchedLoc.id}`,
+          name: `Shift Operasional (${matchedLoc.startWorkTime || '14:00'} - ${matchedLoc.endWorkTime || '23:00'})`,
+          startTime: matchedLoc.startWorkTime || '14:00',
+          endTime: matchedLoc.endWorkTime || '23:00',
+          color: 'emerald',
+          outlet: matchedLoc.name,
+          notes: `Shift resmi dari Aturan Shift Outlet ${matchedLoc.name}`
+        }
+      : null;
+
+    // 2. Custom shift templates assigned specifically to this outlet or 'Semua Outlet'
+    const customList = (shiftTemplates || []).filter((tpl) => {
+      if (tpl.isOff) return false;
+      if (!tpl.outlet || tpl.outlet === 'Semua Outlet') return true;
+      if (outletName && tpl.outlet.toLowerCase() === outletName.toLowerCase()) return true;
+      return false;
+    });
+
+    const result: WorkShiftTemplate[] = [];
+    if (outletShift) result.push(outletShift);
+    customList.forEach((s) => {
+      if (!result.some((r) => r.id === s.id || (r.startTime === s.startTime && r.endTime === s.endTime && r.name === s.name))) {
+        result.push(s);
+      }
+    });
+
+    if (result.length === 0) {
+      result.push({
+        id: 'shift-operasional-default',
+        name: 'Shift Operasional (14:00 - 23:00)',
+        startTime: '14:00',
+        endTime: '23:00',
+        color: 'emerald',
+        outlet: 'Semua Outlet'
+      });
+    }
+
+    return result;
+  };
 
   // New Shift Closing State
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
@@ -97,10 +155,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   };
 
   const [showClosingModal, setShowClosingModal] = useState(false);
-  const [shiftName, setShiftName] = useState<'Shift Pagi' | 'Shift Siang' | 'Shift Malam'>('Shift Malam');
-  const [cashierName, setCashierName] = useState(currentUser?.name || 'Rina Kurnia');
-  const [outlet, setOutlet] = useState((outletsList && outletsList[0]) || 'Steak 11, Cibubur');
+  const [outlet, setOutlet] = useState((locations && locations[0]?.name) || (outletsList && outletsList[0]) || 'Steak 11, Cibubur');
+  const [shiftName, setShiftName] = useState<string>('Shift Operasional');
+  const [cashierName, setCashierName] = useState(currentUser?.name || 'Kasir (Admin)');
   const [startingCash, setStartingCash] = useState<number>(200000);
+  const [manualCashAdjustment, setManualCashAdjustment] = useState<number>(0);
+  const [manualExpenseAdjustment, setManualExpenseAdjustment] = useState<number>(0);
+  const [actualQrisRevenue, setActualQrisRevenue] = useState<number>(0);
+  const [actualTransferRevenue, setActualTransferRevenue] = useState<number>(0);
+  const [onlineFoodRevenue, setOnlineFoodRevenue] = useState<number>(0);
   const [notes, setNotes] = useState('');
 
   // Money Denominations Breakdown (Calculator)
@@ -129,30 +192,51 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   // Filters
   const [selectedOutletFilter, setSelectedOutletFilter] = useState('ALL');
 
-  // Compute live POS revenue for chosen outlet today
+  // Compute live POS revenue for chosen outlet today (in table / overall filter)
   const todayOrders = (orders || []).filter(
     (o) => o.status === 'Selesai' && o.date === todayStr && (selectedOutletFilter === 'ALL' || o.outlet === selectedOutletFilter)
   );
 
   const posCashRevenue = todayOrders
-    .filter((o) => o.paymentMethod === 'Cash')
-    .reduce((acc, c) => acc + c.total, 0);
+    .filter((o) => (o.paymentMethod || 'Cash') === 'Cash')
+    .reduce((acc, c) => acc + (c.total || 0), 0);
 
   const posQrisRevenue = todayOrders
     .filter((o) => o.paymentMethod === 'QRIS')
-    .reduce((acc, c) => acc + c.total, 0);
+    .reduce((acc, c) => acc + (c.total || 0), 0);
 
   const posTransferRevenue = todayOrders
     .filter((o) => o.paymentMethod === 'Transfer')
-    .reduce((acc, c) => acc + c.total, 0);
+    .reduce((acc, c) => acc + (c.total || 0), 0);
 
   const posTotalRevenue = posCashRevenue + posQrisRevenue + posTransferRevenue;
 
-  // Expenses for today
+  // Expenses for today (in overall filter)
   const todayExpenses = (expenses || []).filter(
     (e) => e.date === todayStr && (selectedOutletFilter === 'ALL' || e.outlet === selectedOutletFilter)
   );
-  const totalOperationalExpenses = todayExpenses.reduce((acc, c) => acc + c.amount, 0);
+  const totalOperationalExpenses = todayExpenses.reduce((acc, c) => acc + (c.amount || 0), 0);
+
+  // Compute live POS numbers for the Modal's selected outlet
+  const modalOrders = (orders || []).filter(
+    (o) => o.status === 'Selesai' && o.date === todayStr && (outlet === 'ALL' || o.outlet === outlet)
+  );
+
+  const modalPosCash = modalOrders
+    .filter((o) => (o.paymentMethod || 'Cash') === 'Cash')
+    .reduce((acc, c) => acc + (c.total || 0), 0);
+
+  const modalPosQris = modalOrders
+    .filter((o) => o.paymentMethod === 'QRIS')
+    .reduce((acc, c) => acc + (c.total || 0), 0);
+
+  const modalPosTransfer = modalOrders
+    .filter((o) => o.paymentMethod === 'Transfer')
+    .reduce((acc, c) => acc + (c.total || 0), 0);
+
+  const modalExpenses = (expenses || []).filter(
+    (e) => e.date === todayStr && (outlet === 'ALL' || e.outlet === outlet)
+  ).reduce((acc, c) => acc + (c.amount || 0), 0);
 
   // Denominations Total
   const denomTotal = Object.entries(denominations).reduce((acc: number, [denom, count]) => {
@@ -162,12 +246,46 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   }, 0);
 
   const calculatedActualCash = useDenominationCalc ? denomTotal : manualActualCash;
-  const expectedCashInDrawer = startingCash + posCashRevenue - totalOperationalExpenses;
+  const effectiveCashRevenue = modalPosCash + Number(manualCashAdjustment || 0);
+  const effectiveOperationalExpenses = modalExpenses + Number(manualExpenseAdjustment || 0);
+  const expectedCashInDrawer = startingCash + effectiveCashRevenue - effectiveOperationalExpenses;
   const cashDifference = calculatedActualCash - expectedCashInDrawer;
+
+  const effectiveQris = actualQrisRevenue > 0 ? actualQrisRevenue : modalPosQris;
+  const effectiveTransfer = actualTransferRevenue > 0 ? actualTransferRevenue : modalPosTransfer;
+  const totalShiftRevenue = effectiveCashRevenue + effectiveQris + effectiveTransfer + Number(onlineFoodRevenue || 0);
 
   let auditStatus: 'Sesuai (Balance)' | 'Surplus (Lebih Kas)' | 'Defisit (Kurang Kas)' = 'Sesuai (Balance)';
   if (cashDifference > 0) auditStatus = 'Surplus (Lebih Kas)';
   if (cashDifference < 0) auditStatus = 'Defisit (Kurang Kas)';
+
+  const handleOpenInputClosingShift = () => {
+    const initialOutlet = (locations && locations[0]?.name) || (outletsList && outletsList[0]) || 'Steak 11, Cibubur';
+    const availableShifts = getShiftsForOutlet(initialOutlet);
+    setOutlet(initialOutlet);
+    setShiftName(availableShifts[0]?.name || 'Shift Operasional');
+    setCashierName(currentUser?.name || 'Kasir (Admin)');
+    setStartingCash(200000);
+    setManualCashAdjustment(0);
+    setManualExpenseAdjustment(0);
+    setActualQrisRevenue(0);
+    setActualTransferRevenue(0);
+    setOnlineFoodRevenue(0);
+    setNotes('');
+    setDenominations({
+      '100000': 0,
+      '50000': 0,
+      '20000': 0,
+      '10000': 0,
+      '5000': 0,
+      '2000': 0,
+      '1000': 0,
+      'koin': 0,
+    });
+    setManualActualCash(0);
+    setUseDenominationCalc(true);
+    setShowClosingModal(true);
+  };
 
   // Helper date checker for P&L and Payment Breakdown
   const isDateInPnlFilter = (dateStr: string) => {
@@ -527,17 +645,23 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       id: `SHF-${todayStr.replace(/-/g, '')}-${String((shifts || []).length + 1).padStart(2, '0')}`,
       date: todayStr,
       shiftName,
-      cashierName,
+      cashierName: currentUser?.name || cashierName,
       outlet,
       startingCash,
-      cashRevenue: posCashRevenue,
-      qrisRevenue: posQrisRevenue,
-      transferRevenue: posTransferRevenue,
-      totalRevenue: posTotalRevenue,
-      operationalExpenses: totalOperationalExpenses,
+      cashRevenue: effectiveCashRevenue,
+      qrisRevenue: effectiveQris,
+      transferRevenue: effectiveTransfer,
+      onlineFoodRevenue: Number(onlineFoodRevenue || 0),
+      actualQrisRevenue: effectiveQris,
+      actualTransferRevenue: effectiveTransfer,
+      actualOnlineFoodRevenue: Number(onlineFoodRevenue || 0),
+      totalRevenue: totalShiftRevenue,
+      operationalExpenses: effectiveOperationalExpenses,
+      manualCashAdjustment: Number(manualCashAdjustment || 0),
+      manualExpenseAdjustment: Number(manualExpenseAdjustment || 0),
       expectedCashInDrawer,
       actualCashInDrawer: calculatedActualCash,
-      systemCashTotal: startingCash + posCashRevenue,
+      systemCashTotal: startingCash + effectiveCashRevenue,
       actualCashTotal: calculatedActualCash,
       cashDifference,
       auditStatus,
@@ -551,7 +675,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     setShifts(updated);
     saveShiftsData(updated);
     setShowClosingModal(false);
-    showToast(`✅ Closing Shift Kasir ${newShift.id} berhasil disimpan & diaudit!`);
+    showToast(`✅ Closing Shift Kasir ${newShift.id} (${outlet} - ${shiftName}) berhasil disimpan & diaudit!`);
   };
 
   // Handle Save Expense
@@ -617,27 +741,32 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           </div>
           <div class="row"><span>ID Shift:</span><span class="bold">${shift.id}</span></div>
           <div class="row"><span>Tanggal / Jam:</span><span>${shift.date} ${shift.closedAt || ''}</span></div>
-          <div class="row"><span>Kasir:</span><span class="bold">${shift.cashierName}</span></div>
+          <div class="row"><span>Kasir:</span><span class="bold">${shift.cashierName} (Terkunci)</span></div>
           <div class="row"><span>Shift:</span><span>${shift.shiftName}</span></div>
           <div class="line"></div>
 
           <div class="row"><span>1. Modal Awal Laci:</span><span>${formatRupiah(shift.startingCash)}</span></div>
-          <div class="row"><span>2. Penjualan Tunai:</span><span>+${formatRupiah(shift.cashRevenue)}</span></div>
-          <div class="row"><span>3. Pengeluaran Operasional:</span><span>-${formatRupiah(shift.operationalExpenses || 0)}</span></div>
+          <div class="row"><span>2. Penjualan Tunai POS:</span><span>+${formatRupiah(shift.cashRevenue)}</span></div>
+          ${shift.manualCashAdjustment ? `<div class="row" style="padding-left:10px;font-size:11px;color:#555;"><span>• Penyesuaian Tunai:</span><span>${shift.manualCashAdjustment > 0 ? '+' : ''}${formatRupiah(shift.manualCashAdjustment)}</span></div>` : ''}
+          <div class="row"><span>3. Kas Keluar Operasional:</span><span>-${formatRupiah(shift.operationalExpenses || 0)}</span></div>
+          ${shift.manualExpenseAdjustment ? `<div class="row" style="padding-left:10px;font-size:11px;color:#555;"><span>• Penyesuaian Kas Keluar:</span><span>+${formatRupiah(shift.manualExpenseAdjustment)}</span></div>` : ''}
           <div class="line"></div>
           <div class="row highlight"><span>KAS TEORETIS SEHARUSNYA:</span><span>${formatRupiah(shift.expectedCashInDrawer || shift.systemCashTotal)}</span></div>
           <div class="row highlight"><span>HASIL HITUNG FISIK LACI:</span><span>${formatRupiah(shift.actualCashInDrawer || shift.actualCashTotal)}</span></div>
           <div class="line"></div>
 
           <div class="row bold">
-            <span>SELISIH AUDIT:</span>
+            <span>SELISIH AUDIT KAS:</span>
             <span>${formatRupiah(shift.cashDifference)} (${shift.auditStatus || 'Sesuai'})</span>
           </div>
 
           <div class="line"></div>
-          <div class="row"><span>Omset QRIS:</span><span>${formatRupiah(shift.qrisRevenue)}</span></div>
-          <div class="row"><span>Omset Transfer:</span><span>${formatRupiah(shift.transferRevenue)}</span></div>
-          <div class="row bold"><span>TOTAL OMSET POS:</span><span>${formatRupiah(shift.totalRevenue)}</span></div>
+          <p class="bold" style="margin-bottom:4px;">RINCIAN NONTUNAI & ONLINE FOOD:</p>
+          <div class="row"><span>• Uang QRIS:</span><span>${formatRupiah(shift.actualQrisRevenue ?? shift.qrisRevenue)}</span></div>
+          <div class="row"><span>• Uang Transfer:</span><span>${formatRupiah(shift.actualTransferRevenue ?? shift.transferRevenue)}</span></div>
+          <div class="row"><span>• Online Food (Grab/GoFood):</span><span>${formatRupiah(shift.actualOnlineFoodRevenue ?? shift.onlineFoodRevenue ?? 0)}</span></div>
+          <div class="line"></div>
+          <div class="row bold highlight"><span>TOTAL OMSET SHIFT:</span><span>${formatRupiah(shift.totalRevenue)}</span></div>
 
           <div class="line"></div>
           <p><strong>Catatan Kasir:</strong> ${shift.notes || '-'}</p>
@@ -735,7 +864,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
         {subTab === 'closing_audit' && (
           <button
-            onClick={() => setShowClosingModal(true)}
+            onClick={handleOpenInputClosingShift}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
           >
             <Calculator className="w-4 h-4" />
@@ -797,6 +926,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     <th className="p-2.5">Kasir & Outlet</th>
                     <th className="p-2.5">Modal Awal</th>
                     <th className="p-2.5">Tunai POS</th>
+                    <th className="p-2.5">QRIS & Trf</th>
+                    <th className="p-2.5">Online Food</th>
                     <th className="p-2.5">Kas Keluar</th>
                     <th className="p-2.5">Teoretis System</th>
                     <th className="p-2.5">Fisik Laci Hitung</th>
@@ -807,6 +938,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                 <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
                   {shifts.map((shf) => {
                     const diff = shf.cashDifference;
+                    const nonCashTotal = (shf.actualQrisRevenue ?? shf.qrisRevenue ?? 0) + (shf.actualTransferRevenue ?? shf.transferRevenue ?? 0);
+                    const onlineFood = shf.actualOnlineFoodRevenue ?? shf.onlineFoodRevenue ?? 0;
                     return (
                       <tr key={shf.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
                         <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100">
@@ -819,6 +952,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                         </td>
                         <td className="p-2.5 text-slate-600 dark:text-slate-300">{formatRupiah(shf.startingCash)}</td>
                         <td className="p-2.5 font-bold text-emerald-600 dark:text-emerald-400">+{formatRupiah(shf.cashRevenue)}</td>
+                        <td className="p-2.5 font-bold text-blue-600 dark:text-blue-400">{formatRupiah(nonCashTotal)}</td>
+                        <td className="p-2.5 font-bold text-orange-600 dark:text-orange-400">{formatRupiah(onlineFood)}</td>
                         <td className="p-2.5 text-rose-500 font-bold">-{formatRupiah(shf.operationalExpenses || 0)}</td>
                         <td className="p-2.5 font-black text-purple-900 dark:text-amber-300">
                           {formatRupiah(shf.expectedCashInDrawer || shf.systemCashTotal)}
@@ -1603,76 +1738,193 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
         </div>
       )}
 
-      {/* MODAL INPUT CLOSING SHIFT KASIR WITH DENOMINATION CALCULATOR */}
+      {/* MODAL INPUT CLOSING SHIFT KASIR WITH MULTI-CHANNEL & DENOMINATION CALCULATOR */}
       {showClosingModal && (
         <div className="fixed inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-[#1a0c28] border border-purple-900/50 rounded-2xl p-5 sm:p-6 max-w-xl w-full my-auto max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
-            <h3 className="font-extrabold text-lg text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-emerald-500" />
-              Audit & Closing Shift Kasir
-            </h3>
+          <div className="bg-white dark:bg-[#1a0c28] border border-purple-900/50 rounded-2xl p-5 sm:p-6 max-w-2xl w-full my-auto max-h-[92vh] overflow-y-auto shadow-2xl space-y-4">
+            <div>
+              <h3 className="font-extrabold text-lg text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-emerald-500" />
+                Audit & Closing Shift Kasir Terpadu
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Rekonsiliasi kas laci fisik, arus modal, penjualan tunai/nontunai, online food, serta pengeluaran operasional per outlet.
+              </p>
+            </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3.5 text-xs">
+              {/* Row 1: Kasir (Terkunci) & Lokasi Outlet */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="font-extrabold text-slate-700 dark:text-purple-300">Nama Kasir *</label>
-                  <input
-                    type="text"
-                    required
-                    value={cashierName}
-                    onChange={(e) => setCashierName(e.target.value)}
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
-                  />
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-500" /> Nama Kasir (Terkunci) *
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      value={currentUser?.name || cashierName}
+                      readOnly
+                      disabled
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-100 dark:bg-purple-950/70 text-slate-600 dark:text-slate-300 font-extrabold cursor-not-allowed select-none shadow-inner"
+                      title="Nama kasir terkunci otomatis sesuai akun login aktif"
+                    />
+                    <span className="absolute right-3 top-2.5 text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-0.5">
+                      🔒 Akun Login
+                    </span>
+                  </div>
                 </div>
+
                 <div>
-                  <label className="font-extrabold text-slate-700 dark:text-purple-300">Pilih Shift *</label>
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center gap-1.5">
+                    <Store className="w-3.5 h-3.5 text-amber-500" /> Lokasi Outlet Cabang *
+                  </label>
                   <select
-                    value={shiftName}
-                    onChange={(e) => setShiftName(e.target.value as any)}
+                    value={outlet}
+                    onChange={(e) => {
+                      const newOutlet = e.target.value;
+                      setOutlet(newOutlet);
+                      const shiftsForLoc = getShiftsForOutlet(newOutlet);
+                      if (shiftsForLoc.length > 0) {
+                        setShiftName(shiftsForLoc[0].name);
+                      }
+                    }}
                     className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
                   >
-                    <option value="Shift Pagi">Shift Pagi (10.00 - 15.00)</option>
-                    <option value="Shift Siang">Shift Siang (12.00 - 18.00)</option>
-                    <option value="Shift Malam">Shift Malam (15.00 - 22.00)</option>
+                    {locations.length > 0 ? (
+                      locations.map((loc) => (
+                        <option key={loc.id} value={loc.name}>
+                          {loc.name} ({loc.startWorkTime || '14:00'} - {loc.endWorkTime || '23:00'})
+                        </option>
+                      ))
+                    ) : (
+                      outletsList.map((out) => (
+                        <option key={out} value={out}>{out}</option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>
 
-              {/* Shift Summary Metrics */}
-              <div className="p-3 rounded-xl bg-slate-100 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Modal Awal Laci Kasir:</span>
-                  <input
-                    type="number"
-                    value={startingCash}
-                    onChange={(e) => setStartingCash(Number(e.target.value))}
-                    className="w-32 px-2 py-0.5 rounded border border-slate-300 dark:border-purple-700 text-right font-bold text-xs"
-                  />
+              {/* Row 2: Pilih Shift (Terintegrasi Menu Outlet & Shift Rules) */}
+              <div>
+                <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center justify-between gap-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-emerald-500" /> Pilih Shift Kerja (Outlet & Shift Rules) *
+                  </span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    ✓ Terintegrasi Shift Rules Cabang
+                  </span>
+                </label>
+                <select
+                  value={shiftName}
+                  onChange={(e) => setShiftName(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-emerald-300 dark:border-purple-800 bg-emerald-50/40 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-extrabold"
+                >
+                  {getShiftsForOutlet(outlet).map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name} ({s.startTime} - {s.endTime}) {s.outlet ? `• ${s.outlet}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Arus Kas Laci Kasir (Modal Awal + Tunai POS + Kas Keluar + Penyesuaian Manual) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between font-extrabold text-slate-700 dark:text-purple-200">
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-emerald-500" /> Rekonsiliasi Arus Kas Laci Kasir:
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Hari ini: {todayStr}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Penjualan Tunai POS (System):</span>
-                  <span className="font-bold text-emerald-600">+{formatRupiah(posCashRevenue)}</span>
+
+                {/* Modal Saldo Awal */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-purple-900/60 border border-slate-200 dark:border-purple-800">
+                  <span className="text-slate-600 dark:text-slate-300 font-bold">1. Modal Saldo Awal Laci:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-slate-400 font-mono">Rp</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={startingCash}
+                      onChange={(e) => setStartingCash(Number(e.target.value))}
+                      className="w-36 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-950 text-right font-bold text-xs"
+                    />
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Kas Keluar Operasional (Petty Cash):</span>
-                  <span className="font-bold text-rose-500">-{formatRupiah(totalOperationalExpenses)}</span>
+
+                {/* 2. Penjualan Tunai POS Sistem + Penyesuaian Manual */}
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-extrabold text-emerald-800 dark:text-emerald-300 block">2. Penjualan Tunai POS:</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Otomatis Sistem: +{formatRupiah(modalPosCash)} {manualCashAdjustment ? `(+ Tambahan Manual: ${formatRupiah(manualCashAdjustment)})` : ''}
+                      </span>
+                    </div>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">+{formatRupiah(effectiveCashRevenue)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-emerald-500/20">
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-bold flex items-center gap-1">
+                      <Plus className="w-3 h-3 text-emerald-500" /> Tambah / Koreksi Manual Tunai POS:
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400 font-mono">Rp</span>
+                      <input
+                        type="number"
+                        value={manualCashAdjustment}
+                        onChange={(e) => setManualCashAdjustment(Number(e.target.value))}
+                        placeholder="0"
+                        className="w-32 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-purple-900 text-right font-bold text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-purple-800">
+
+                {/* 3. Kas Keluar Operasional Sistem + Penyesuaian Manual */}
+                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-extrabold text-rose-800 dark:text-rose-300 block">3. Kas Keluar Operasional (Petty Cash):</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Otomatis Kas Kecil: -{formatRupiah(modalExpenses)} {manualExpenseAdjustment ? `(+ Tambahan Manual: ${formatRupiah(manualExpenseAdjustment)})` : ''}
+                      </span>
+                    </div>
+                    <span className="font-black text-rose-600 dark:text-rose-400 text-sm">-{formatRupiah(effectiveOperationalExpenses)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-rose-500/20">
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-bold flex items-center gap-1">
+                      <Plus className="w-3 h-3 text-rose-500" /> Tambah / Koreksi Manual Kas Keluar:
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400 font-mono">Rp</span>
+                      <input
+                        type="number"
+                        value={manualExpenseAdjustment}
+                        onChange={(e) => setManualExpenseAdjustment(Number(e.target.value))}
+                        placeholder="0"
+                        className="w-32 px-2 py-0.5 rounded-lg border border-rose-300 dark:border-rose-700 bg-white dark:bg-purple-900 text-right font-bold text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Saldo Laci Kas Teoretis Seharusnya */}
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-purple-800">
                   <span className="font-black text-purple-900 dark:text-amber-300">LACI KAS TEORETIS SEHARUSNYA:</span>
-                  <span className="font-black text-purple-900 dark:text-amber-300">{formatRupiah(expectedCashInDrawer)}</span>
+                  <span className="font-black text-purple-900 dark:text-amber-300 text-sm">{formatRupiah(expectedCashInDrawer)}</span>
                 </div>
               </div>
 
-              {/* Physical Cash Calculation Section */}
+              {/* Hitung Fisik Kas Laci (Pecahan Koin & Kertas) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="font-extrabold text-slate-700 dark:text-purple-300">
-                    Hitung Fisik Kas Laci (Pecahan Uang):
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300 flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 text-amber-500" /> Hitung Fisik Kas Laci Kasir:
                   </label>
                   <button
                     type="button"
                     onClick={() => setUseDenominationCalc(!useDenominationCalc)}
-                    className="text-[11px] text-amber-500 font-bold underline cursor-pointer"
+                    className="text-[11px] text-amber-600 dark:text-amber-400 font-bold underline cursor-pointer hover:text-amber-500"
                   >
                     {useDenominationCalc ? 'Ganti Input Langsung' : 'Gunakan Kalkulator Pecahan'}
                   </button>
@@ -1717,16 +1969,88 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                 )}
               </div>
 
+              {/* Realisasi Uang QRIS / Transfer Bank & Online Food */}
+              <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between font-extrabold text-blue-900 dark:text-blue-300">
+                  <span className="flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-blue-500" /> Realisasi Nontunai & Penjualan Online Food:
+                  </span>
+                  <span className="text-[10px] text-slate-400">QRIS / Transfer / Ojek Online</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* QRIS */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-purple-900 border border-blue-200 dark:border-blue-800 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                        <QrCode className="w-3 h-3" /> Uang QRIS
+                      </span>
+                      <span className="text-[10px] text-slate-400">Sistem: {formatRupiah(modalPosQris)}</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      value={actualQrisRevenue || (actualQrisRevenue === 0 && modalPosQris > 0 ? modalPosQris : actualQrisRevenue)}
+                      onChange={(e) => setActualQrisRevenue(Number(e.target.value))}
+                      placeholder={String(modalPosQris)}
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-purple-700 bg-slate-50 dark:bg-purple-950 font-bold text-xs text-right text-blue-600"
+                    />
+                  </div>
+
+                  {/* Transfer Bank */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-purple-900 border border-indigo-200 dark:border-indigo-800 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                        <CreditCard className="w-3 h-3" /> Transfer Bank
+                      </span>
+                      <span className="text-[10px] text-slate-400">Sistem: {formatRupiah(modalPosTransfer)}</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      value={actualTransferRevenue || (actualTransferRevenue === 0 && modalPosTransfer > 0 ? modalPosTransfer : actualTransferRevenue)}
+                      onChange={(e) => setActualTransferRevenue(Number(e.target.value))}
+                      placeholder={String(modalPosTransfer)}
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-purple-700 bg-slate-50 dark:bg-purple-950 font-bold text-xs text-right text-indigo-600"
+                    />
+                  </div>
+
+                  {/* Online Food */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-purple-900 border border-orange-200 dark:border-orange-800 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-orange-700 dark:text-orange-300 flex items-center gap-1">
+                        <Smartphone className="w-3 h-3" /> Online Food
+                      </span>
+                      <span className="text-[10px] text-slate-400">Grab/Go/Shopee</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      value={onlineFoodRevenue}
+                      onChange={(e) => setOnlineFoodRevenue(Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-purple-700 bg-slate-50 dark:bg-purple-950 font-bold text-xs text-right text-orange-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Total Omset Keseluruhan Shift */}
+                <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-900/60">
+                  <span className="font-black text-blue-900 dark:text-blue-300">TOTAL OMSET SHIFT (TUNAI + QRIS + TRF + ONLINE):</span>
+                  <span className="font-black text-blue-950 dark:text-amber-300 text-sm">{formatRupiah(totalShiftRevenue)}</span>
+                </div>
+              </div>
+
               {/* Audit Result Display */}
-              <div className="p-3 rounded-xl bg-purple-900 text-white space-y-1">
+              <div className="p-3.5 rounded-2xl bg-purple-900 text-white space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span>Hasil Hitung Fisik Laci Kasir:</span>
                   <span className="font-black text-amber-400 text-sm">{formatRupiah(calculatedActualCash)}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs pt-1 border-t border-purple-800">
-                  <span>Selisih Kas Audit:</span>
+                <div className="flex justify-between items-center text-xs pt-1.5 border-t border-purple-800">
+                  <span>Selisih Kas Laci Audit:</span>
                   <span
-                    className={`font-black text-sm px-2 py-0.5 rounded ${
+                    className={`font-black text-sm px-2.5 py-0.5 rounded-lg ${
                       cashDifference === 0
                         ? 'bg-emerald-500 text-white'
                         : cashDifference > 0
@@ -1734,34 +2058,36 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                         : 'bg-rose-500 text-white'
                     }`}
                   >
-                    {cashDifference === 0 ? '✓ PAS / SEIMBANG' : formatRupiah(cashDifference)}
+                    {cashDifference === 0 ? '✓ PAS / SEIMBANG' : cashDifference > 0 ? `+${formatRupiah(cashDifference)} (LEBIH)` : `${formatRupiah(cashDifference)} (KURANG)`}
                   </span>
                 </div>
               </div>
 
+              {/* Catatan Kasir / Manager */}
               <div>
                 <label className="font-extrabold text-slate-700 dark:text-purple-300">Catatan Kasir / Manager</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Uang fisik sesuai, uang kembalian utuh"
+                  placeholder="e.g. Uang fisik sesuai, uang kembalian utuh, QRIS match EDC"
                   className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100"
                 />
               </div>
 
+              {/* Tombol Simpan / Batal */}
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-purple-900">
                 <button
                   type="button"
                   onClick={() => setShowClosingModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveClosingShift}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black cursor-pointer shadow-lg hover:shadow-emerald-500/20 transition-all"
                 >
                   Simpan Closing Shift
                 </button>

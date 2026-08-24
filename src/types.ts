@@ -398,8 +398,14 @@ export interface CashierShiftRecord {
   cashRevenue: number;
   qrisRevenue: number;
   transferRevenue: number;
+  onlineFoodRevenue?: number; // GoFood, GrabFood, ShopeeFood, etc.
+  actualQrisRevenue?: number; // Hasil Realisasi Uang QRIS
+  actualTransferRevenue?: number; // Hasil Realisasi Uang Transfer Bank
+  actualOnlineFoodRevenue?: number; // Hasil Realisasi Omset Online Food
   totalRevenue: number;
   operationalExpenses?: number; // Total Kas Keluar Operasional (Petty Cash)
+  manualCashAdjustment?: number; // Tambahan Manual Penjualan Tunai POS
+  manualExpenseAdjustment?: number; // Tambahan Manual Kas Keluar Operasional
   expectedCashInDrawer?: number; // Modal Awal + Kas Masuk POS - Operasional
   actualCashInDrawer?: number; // Hasil Hitung Fisik Kasir di Laci
   systemCashTotal: number;
