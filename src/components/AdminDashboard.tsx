@@ -842,6 +842,7 @@ function doPost(e) {
   const [empDailyAllowance, setEmpDailyAllowance] = useState(25000);
   const [empPunctualityAllowance, setEmpPunctualityAllowance] = useState(15000);
   const [empLatePenaltyPerDay, setEmpLatePenaltyPerDay] = useState(15000);
+  const [empOutletBonus, setEmpOutletBonus] = useState(0);
   const [empPin, setEmpPin] = useState('1101');
   const [empStatus, setEmpStatus] = useState<'Aktif' | 'Non-Aktif'>('Aktif');
 
@@ -878,6 +879,7 @@ function doPost(e) {
   const [editAllowance, setEditAllowance] = useState(0);
   const [editPunctualityAllowance, setEditPunctualityAllowance] = useState(0);
   const [editOvertimePay, setEditOvertimePay] = useState(0);
+  const [editOutletBonus, setEditOutletBonus] = useState(0);
   const [editBonus, setEditBonus] = useState(0);
   const [editDeductions, setEditDeductions] = useState(0);
   const [editNote, setEditNote] = useState('');
@@ -1932,6 +1934,7 @@ function doPost(e) {
     setEmpDailyAllowance(25000);
     setEmpPunctualityAllowance(15000);
     setEmpLatePenaltyPerDay(15000);
+    setEmpOutletBonus(0);
     setEmpPin(Math.floor(1000 + Math.random() * 9000).toString());
     setEmpStatus('Aktif');
     setEmpAllowedTabs(initialRole && initialRole.allowedTabs && initialRole.allowedTabs.length > 0 ? initialRole.allowedTabs : ['kasir', 'pesanan', 'shifts', 'inventory', 'absensi']);
@@ -1952,6 +1955,7 @@ function doPost(e) {
     setEmpDailyAllowance(emp.dailyAllowance);
     setEmpPunctualityAllowance(emp.punctualityAllowancePerDay ?? 15000);
     setEmpLatePenaltyPerDay(emp.latePenaltyPerDay ?? 15000);
+    setEmpOutletBonus(emp.outletBonus || 0);
     setEmpPin(emp.password || emp.pin);
     setEmpStatus(emp.status);
     setEmpAllowedTabs(emp.allowedTabs || ['kasir', 'pesanan', 'shifts', 'inventory', 'absensi']);
@@ -1966,6 +1970,66 @@ function doPost(e) {
     }
 
     const finalEmpId = empCustomId.trim() || `EMP-${Date.now().toString().slice(-4)}`;
+
+    const syncPayrollForEmployee = (savedEmp: Employee) => {
+      const updatedSlips = (payrollSlips || []).map((s) => {
+        if (
+          s.employeeId === savedEmp.id ||
+          (editingEmpId && s.employeeId === editingEmpId) ||
+          (savedEmp.name && (s.employeeName || '').trim().toLowerCase() === savedEmp.name.trim().toLowerCase())
+        ) {
+          const daysPresent = s.totalDaysPresent || 0;
+          const daysLate = s.totalDaysLate || 0;
+          const daysOnTime = s.totalDaysOnTime ?? Math.max(0, daysPresent - daysLate);
+          const totalOvertime = s.totalOvertimeHours || 0;
+
+          const base = daysPresent * savedEmp.dailyRate;
+          const allowance = daysPresent * savedEmp.dailyAllowance;
+          const punctualityRate = savedEmp.punctualityAllowancePerDay ?? 15000;
+          const punctualityAllowance = daysOnTime * punctualityRate;
+          const hourlyRate = savedEmp.hourlyRate || 15000;
+          const overtimePay = Math.round(totalOvertime * hourlyRate);
+          const outletBonus = savedEmp.outletBonus || 0;
+
+          const lateRate = savedEmp.latePenaltyPerDay ?? 15000;
+          const latePenalty = daysLate * lateRate;
+
+          const activeLoan = employeeLoans.find(
+            (l) => l.employeeId === savedEmp.id && l.status === 'ACTIVE' && l.remainingAmount > 0
+          );
+          const loanDeduction = activeLoan ? Math.min(activeLoan.monthlyInstallment, activeLoan.remainingAmount) : 0;
+
+          const existingEmp = employees.find((e) => e.id === savedEmp.id || e.id === editingEmpId);
+          const oldLateRate = existingEmp?.latePenaltyPerDay ?? 15000;
+          const oldLateDed = daysLate * oldLateRate;
+          const otherDed = Math.max(0, (s.deductions || 0) - (oldLateDed + loanDeduction));
+          const totalDeductions = latePenalty + loanDeduction + otherDed;
+
+          const performanceBonus = s.bonus || 0;
+          const net = base + allowance + punctualityAllowance + overtimePay + outletBonus + performanceBonus - totalDeductions;
+
+          return {
+            ...s,
+            employeeId: savedEmp.id,
+            employeeName: savedEmp.name,
+            employeeRole: savedEmp.role,
+            outlet: savedEmp.outlet,
+            hourlyRate: hourlyRate,
+            overtimePay: overtimePay,
+            baseSalary: base,
+            totalAllowance: allowance,
+            punctualityAllowance: punctualityAllowance,
+            outletBonus: outletBonus,
+            deductions: totalDeductions,
+            netSalary: net > 0 ? net : 0,
+          };
+        }
+        return s;
+      });
+
+      setPayrollSlips(updatedSlips);
+      savePayroll(updatedSlips);
+    };
 
     if (editingEmpId) {
       const existing = employees.find((e) => e.id === editingEmpId);
@@ -1985,10 +2049,14 @@ function doPost(e) {
         dailyAllowance: empDailyAllowance,
         punctualityAllowancePerDay: empPunctualityAllowance,
         latePenaltyPerDay: empLatePenaltyPerDay,
+        outletBonus: empOutletBonus,
         status: empStatus,
         allowedTabs: empAllowedTabs,
       };
-      updateEmployeeInCloud(updatedEmp).then((updated) => setEmployees(updated));
+      updateEmployeeInCloud(updatedEmp).then((updated) => {
+        setEmployees(updated);
+        syncPayrollForEmployee(updatedEmp);
+      });
     } else {
       const newEmp: Employee = {
         id: finalEmpId,
@@ -2005,14 +2073,18 @@ function doPost(e) {
         dailyAllowance: empDailyAllowance,
         punctualityAllowancePerDay: empPunctualityAllowance,
         latePenaltyPerDay: empLatePenaltyPerDay,
+        outletBonus: empOutletBonus,
         status: empStatus,
         allowedTabs: empAllowedTabs,
       };
-      saveEmployeeDirectToCloud(newEmp).then((updated) => setEmployees(updated));
+      saveEmployeeDirectToCloud(newEmp).then((updated) => {
+        setEmployees(updated);
+        syncPayrollForEmployee(newEmp);
+      });
     }
 
     setShowAddEmpModal(false);
-    showToast(`✅ Data Karyawan "${empName.trim()}" berhasil disimpan ke Cloud Firestore & tersinkronisasi realtime!`);
+    showToast(`✅ Data Karyawan "${empName.trim()}" & sinkronisasi Penggajian berhasil diperbarui realtime!`);
   };
 
   const handleDeleteEmp = (id: string) => {
@@ -2041,6 +2113,8 @@ function doPost(e) {
         'Rate Lembur / Jam (Rp)': 15000,
         'Uang Makan & Transpor (Rp)': 25000,
         'Tunjangan Tepat Waktu (Rp)': 15000,
+        'Denda Potongan Telat (Rp)': 15000,
+        'Bonus Outlet (Rp)': 100000,
         'PIN / Password': '1234',
         'Status': 'Aktif'
       },
@@ -2056,6 +2130,8 @@ function doPost(e) {
         'Rate Lembur / Jam (Rp)': 15000,
         'Uang Makan & Transpor (Rp)': 25000,
         'Tunjangan Tepat Waktu (Rp)': 15000,
+        'Denda Potongan Telat (Rp)': 15000,
+        'Bonus Outlet (Rp)': 100000,
         'PIN / Password': '5678',
         'Status': 'Aktif'
       }
@@ -2074,6 +2150,8 @@ function doPost(e) {
       { wch: 22 },
       { wch: 26 },
       { wch: 26 },
+      { wch: 26 },
+      { wch: 20 },
       { wch: 16 },
       { wch: 12 },
     ];
@@ -2120,6 +2198,8 @@ function doPost(e) {
           const hourlyRate = Number(row['Rate Lembur / Jam (Rp)'] || row['hourlyRate'] || 15000);
           const dailyAllowance = Number(row['Uang Makan & Transpor (Rp)'] || row['dailyAllowance'] || 25000);
           const punctualityAllowance = Number(row['Tunjangan Tepat Waktu (Rp)'] || row['punctualityAllowancePerDay'] || 15000);
+          const latePenalty = Number(row['Denda Potongan Telat (Rp)'] || row['latePenaltyPerDay'] || 15000);
+          const outletBonus = Number(row['Bonus Outlet (Rp)'] || row['outletBonus'] || 0);
           const pin = String(row['PIN / Password'] || row['pin'] || row['password'] || '1234').trim();
           const statusRaw = String(row['Status'] || row['status'] || 'Aktif').trim();
           const status: 'Aktif' | 'Non-Aktif' = statusRaw.toLowerCase().includes('non') ? 'Non-Aktif' : 'Aktif';
@@ -2140,6 +2220,8 @@ function doPost(e) {
             hourlyRate: isNaN(hourlyRate) ? 15000 : hourlyRate,
             dailyAllowance: isNaN(dailyAllowance) ? 25000 : dailyAllowance,
             punctualityAllowancePerDay: isNaN(punctualityAllowance) ? 15000 : punctualityAllowance,
+            latePenaltyPerDay: isNaN(latePenalty) ? 15000 : latePenalty,
+            outletBonus: isNaN(outletBonus) ? 0 : outletBonus,
             status,
             allowedTabs: ['kasir', 'pesanan', 'shifts', 'inventory', 'absensi']
           };
@@ -2207,6 +2289,8 @@ function doPost(e) {
       'Rate Lembur / Jam (Rp)': emp.hourlyRate,
       'Uang Makan & Transpor (Rp)': emp.dailyAllowance,
       'Tunjangan Tepat Waktu (Rp)': emp.punctualityAllowancePerDay || 0,
+      'Denda Potongan Telat (Rp)': emp.latePenaltyPerDay || 0,
+      'Bonus Outlet (Rp)': emp.outletBonus || 0,
       'PIN / Password': emp.password || emp.pin || '-',
       'Status': emp.status
     }));
@@ -2225,6 +2309,8 @@ function doPost(e) {
       { wch: 22 },
       { wch: 26 },
       { wch: 26 },
+      { wch: 26 },
+      { wch: 20 },
       { wch: 16 },
       { wch: 12 },
     ];
@@ -2509,6 +2595,7 @@ function doPost(e) {
         const punctualityAllowance = daysOnTime * punctualityRate;
         const latePenaltyRateForEmp = emp.latePenaltyPerDay ?? 15000;
         const latePenalty = daysLate * latePenaltyRateForEmp;
+        const outletBonus = emp.outletBonus || 0;
 
         // Check if existing slip preserved custom bonus
         const existingSlip = payrollSlips.find(
@@ -2522,7 +2609,7 @@ function doPost(e) {
         // Perfect integration of deductions: Late Penalty + Active Kasbon Loan Deduction
         const deductions = latePenalty + loanDeduction;
 
-        const net = base + allowance + punctualityAllowance + overtimePay + bonus - deductions;
+        const net = base + allowance + punctualityAllowance + overtimePay + outletBonus + bonus - deductions;
 
         return {
           id: `PAY-${payrollPeriod.replace('-', '')}-${emp.id}`,
@@ -2542,12 +2629,13 @@ function doPost(e) {
           baseSalary: base,
           totalAllowance: allowance,
           punctualityAllowance: punctualityAllowance,
+          outletBonus: outletBonus,
           bonus: bonus,
           deductions: deductions,
           netSalary: net > 0 ? net : 0,
           paymentStatus: existingSlip ? existingSlip.paymentStatus : 'Draft',
           paymentDate: existingSlip?.paymentDate || new Date().toISOString().split('T')[0],
-          note: existingSlip?.note || 'Gaji Pokok + Uang Makan + Upah Lembur + Tunjangan Tepat Waktu + Bonus',
+          note: existingSlip?.note || 'Gaji Pokok + Uang Makan + Upah Lembur + Tunjangan Tepat Waktu + Bonus Outlet + Bonus Kinerja',
         };
       });
 
@@ -2691,7 +2779,8 @@ function doPost(e) {
       'Tunj. Makan',
       'Upah Lembur',
       'Tunj. Hadir',
-      'Bonus',
+      'Bonus Outlet',
+      'Bonus Kinerja',
       'Potongan',
       'Gaji Bersih',
       'Status'
@@ -2709,6 +2798,7 @@ function doPost(e) {
       formatRupiah(rec.totalAllowance),
       formatRupiah(rec.overtimePay || 0),
       formatRupiah(rec.punctualityAllowance || 0),
+      formatRupiah(rec.outletBonus || 0),
       formatRupiah(rec.bonus),
       formatRupiah(rec.deductions),
       formatRupiah(rec.netSalary),
@@ -2719,25 +2809,26 @@ function doPost(e) {
       head: [tableColumn],
       body: tableRows,
       startY: 60,
-      styles: { fontSize: 7.5, cellPadding: 2.2, overflow: 'linebreak' },
+      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
       headStyles: { fillColor: [61, 18, 89], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
       alternateRowStyles: { fillColor: [250, 247, 253] },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 9 },
-        1: { fontStyle: 'bold', cellWidth: 28 },
-        2: { cellWidth: 28 },
-        3: { halign: 'center', cellWidth: 13 },
-        4: { halign: 'center', cellWidth: 14 },
-        5: { halign: 'center', cellWidth: 13 },
-        6: { halign: 'center', cellWidth: 14 },
-        7: { halign: 'right', cellWidth: 20 },
-        8: { halign: 'right', cellWidth: 18 },
-        9: { halign: 'right', cellWidth: 18 },
-        10: { halign: 'right', cellWidth: 18 },
-        11: { halign: 'right', cellWidth: 18 },
-        12: { halign: 'right', cellWidth: 18 },
-        13: { halign: 'right', fontStyle: 'bold', cellWidth: 23 },
-        14: { halign: 'center', cellWidth: 20 }
+        0: { halign: 'center', cellWidth: 8 },
+        1: { fontStyle: 'bold', cellWidth: 26 },
+        2: { cellWidth: 26 },
+        3: { halign: 'center', cellWidth: 12 },
+        4: { halign: 'center', cellWidth: 12 },
+        5: { halign: 'center', cellWidth: 12 },
+        6: { halign: 'center', cellWidth: 12 },
+        7: { halign: 'right', cellWidth: 18 },
+        8: { halign: 'right', cellWidth: 16 },
+        9: { halign: 'right', cellWidth: 16 },
+        10: { halign: 'right', cellWidth: 16 },
+        11: { halign: 'right', cellWidth: 16 },
+        12: { halign: 'right', cellWidth: 16 },
+        13: { halign: 'right', cellWidth: 16 },
+        14: { halign: 'right', fontStyle: 'bold', cellWidth: 21 },
+        15: { halign: 'center', cellWidth: 18 }
       }
     });
 
@@ -2793,6 +2884,7 @@ function doPost(e) {
       'Tunjangan Makan': rec.totalAllowance,
       'Upah Lembur': rec.overtimePay || 0,
       'Tunjangan Tepat Waktu': rec.punctualityAllowance || 0,
+      'Bonus Outlet': rec.outletBonus || 0,
       'Bonus Kinerja': rec.bonus,
       'Potongan / Denda': rec.deductions,
       'Gaji Bersih': rec.netSalary,
@@ -2888,6 +2980,7 @@ function doPost(e) {
     setEditAllowance(slip.totalAllowance);
     setEditPunctualityAllowance(slip.punctualityAllowance || 0);
     setEditOvertimePay(slip.overtimePay || 0);
+    setEditOutletBonus(slip.outletBonus ?? (emp?.outletBonus || 0));
     setEditBonus(slip.bonus);
     setEditLatePenalty(lateDed);
     setEditLoanDeduction(loanDed);
@@ -2903,13 +2996,14 @@ function doPost(e) {
 
     const updated = payrollSlips.map((s) => {
       if (s.id === editingSlipId) {
-        const net = Number(editBaseSalary) + Number(editAllowance) + Number(editPunctualityAllowance) + Number(editOvertimePay) + Number(editBonus) - Number(editDeductions);
+        const net = Number(editBaseSalary) + Number(editAllowance) + Number(editPunctualityAllowance) + Number(editOvertimePay) + Number(editOutletBonus) + Number(editBonus) - Number(editDeductions);
         return {
           ...s,
           baseSalary: Number(editBaseSalary),
           totalAllowance: Number(editAllowance),
           punctualityAllowance: Number(editPunctualityAllowance),
           overtimePay: Number(editOvertimePay),
+          outletBonus: Number(editOutletBonus),
           bonus: Number(editBonus),
           deductions: Number(editDeductions),
           netSalary: net > 0 ? net : 0,
@@ -2921,24 +3015,34 @@ function doPost(e) {
 
     // Sync edited rates back to Employee Master Data if enabled
     if (targetSlip && syncToEmployeeMaster) {
+      let targetEmpToUpdate: Employee | null = null;
       const updatedEmps = employees.map((emp) => {
         if (emp.id === targetSlip.employeeId) {
           const newDailyRate = targetSlip.totalDaysPresent > 0 ? Math.round(Number(editBaseSalary) / targetSlip.totalDaysPresent) : emp.dailyRate;
           const newAllowance = targetSlip.totalDaysPresent > 0 ? Math.round(Number(editAllowance) / targetSlip.totalDaysPresent) : emp.dailyAllowance;
           const newHourlyRate = (targetSlip.totalOvertimeHours && targetSlip.totalOvertimeHours > 0) ? Math.round(Number(editOvertimePay) / targetSlip.totalOvertimeHours) : emp.hourlyRate;
           const newPunctuality = (targetSlip.totalDaysOnTime && targetSlip.totalDaysOnTime > 0) ? Math.round(Number(editPunctualityAllowance) / targetSlip.totalDaysOnTime) : (emp.punctualityAllowancePerDay || 15000);
-          return {
+          const newLatePenalty = targetSlip.totalDaysLate > 0 ? Math.round(Number(editLatePenalty) / targetSlip.totalDaysLate) : (emp.latePenaltyPerDay || 15000);
+          const newOutletBonus = Number(editOutletBonus);
+          const updatedTarget: Employee = {
             ...emp,
             dailyRate: newDailyRate,
             dailyAllowance: newAllowance,
             hourlyRate: newHourlyRate,
-            punctualityAllowancePerDay: newPunctuality
+            punctualityAllowancePerDay: newPunctuality,
+            latePenaltyPerDay: newLatePenalty,
+            outletBonus: newOutletBonus
           };
+          targetEmpToUpdate = updatedTarget;
+          return updatedTarget;
         }
         return emp;
       });
       setEmployees(updatedEmps);
       saveEmployees(updatedEmps);
+      if (targetEmpToUpdate) {
+        updateEmployeeInCloud(targetEmpToUpdate);
+      }
     }
 
     setPayrollSlips(updated);
@@ -3018,6 +3122,7 @@ function doPost(e) {
       ['[ PENDAPATAN ] Gaji Pokok Kehadiran', '-', formatRupiah(slip.baseSalary)],
       ['[ PENDAPATAN ] Tunjangan Makan & Transpor', '-', formatRupiah(slip.totalAllowance)],
       ['[ PENDAPATAN ] Tunjangan Hadir Tepat Waktu', '-', formatRupiah(slip.punctualityAllowance || 0)],
+      ['[ PENDAPATAN ] Bonus Target Omset Outlet', '-', formatRupiah(slip.outletBonus || 0)],
       ['[ PENDAPATAN ] Bonus Kinerja & Insentif', '-', formatRupiah(slip.bonus)],
       ['[ POTONGAN ] Potongan Kasbon / Keterlambatan', '-', `- ${formatRupiah(slip.deductions)}`],
       ['TOTAL GAJI BERSIH (TAKE HOME PAY)', '-', formatRupiah(slip.netSalary)],
@@ -3107,6 +3212,9 @@ function doPost(e) {
       return;
     }
 
+    const overtimeText = Number(slip.overtimePay || 0) > 0 ? `⏱️ *Upah Lembur (${slip.totalOvertimeHours || 0}j):* ${formatRupiah(slip.overtimePay || 0)}\n` : '';
+    const outletBonusText = Number(slip.outletBonus || 0) > 0 ? `🏪 *Bonus Outlet:* ${formatRupiah(slip.outletBonus || 0)}\n` : '';
+
     const message =
       `Halo *${slip.employeeName}*,\n\n` +
       `Berikut adalah rincian *SLIP GAJI RESMI STEAK 11* periode *${slip.periodLabel}*:\n\n` +
@@ -3116,7 +3224,9 @@ function doPost(e) {
       `💵 *Gaji Pokok:* ${formatRupiah(slip.baseSalary)}\n` +
       `🍱 *Tunjangan Makan:* ${formatRupiah(slip.totalAllowance)}\n` +
       `⏰ *Tunj. Hadir Tepat Waktu:* ${formatRupiah(slip.punctualityAllowance || 0)}\n` +
-      `⭐ *Bonus/Lembur:* ${formatRupiah(slip.bonus)}\n` +
+      overtimeText +
+      outletBonusText +
+      `⭐ *Bonus Kinerja:* ${formatRupiah(slip.bonus)}\n` +
       `🔻 *Potongan:* ${formatRupiah(slip.deductions)}\n` +
       `----------------------------------------\n` +
       `💰 *TOTAL GAJI BERSIH:* *${formatRupiah(slip.netSalary)}*\n` +
@@ -7325,6 +7435,24 @@ function doPost(e) {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Tunj. Hadir Tepat Waktu:</span>
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-300">
+                        +{formatRupiah(emp.punctualityAllowancePerDay ?? 15000)} / hari
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Denda Potongan Telat:</span>
+                      <span className="font-extrabold text-rose-600 dark:text-rose-400">
+                        -{formatRupiah(emp.latePenaltyPerDay ?? 15000)} / hari
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 font-bold text-purple-700 dark:text-purple-300">Bonus Outlet:</span>
+                      <span className="font-extrabold text-purple-700 dark:text-amber-300">
+                        +{formatRupiah(emp.outletBonus || 0)} / bln
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span className="text-slate-400">Password / PIN:</span>
                       <span className="font-mono font-bold bg-slate-100 dark:bg-purple-950 px-2 py-0.5 rounded text-amber-500">
                         {emp.password || emp.pin}
@@ -8025,6 +8153,7 @@ function doPost(e) {
               const totalNetSalary = filteredPayroll.reduce((acc, c) => acc + (c.netSalary || 0), 0);
               const totalAllowance = filteredPayroll.reduce((acc, c) => acc + (c.totalAllowance || 0), 0);
               const totalPunctualityAllowance = filteredPayroll.reduce((acc, c) => acc + (c.punctualityAllowance || 0), 0);
+              const totalOutletBonus = filteredPayroll.reduce((acc, c) => acc + (c.outletBonus || 0), 0);
               const totalBonus = filteredPayroll.reduce((acc, c) => acc + (c.bonus || 0), 0);
               const totalDeductions = filteredPayroll.reduce((acc, c) => acc + (c.deductions || 0), 0);
 
@@ -8077,10 +8206,10 @@ function doPost(e) {
                         </div>
                       </div>
                       <p className="text-xl font-black text-amber-600 dark:text-amber-400">
-                        {formatRupiah(totalAllowance + totalPunctualityAllowance + totalBonus)}
+                        {formatRupiah(totalAllowance + totalPunctualityAllowance + totalOutletBonus + totalBonus)}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                        Makan + Hadir Tepat Waktu + Bonus
+                        Makan + Hadir Tepat Waktu + Outlet + Kinerja
                       </p>
                     </div>
 
@@ -8213,8 +8342,13 @@ function doPost(e) {
                             )}
                           </td>
                           <td className="p-4 align-top space-y-0.5">
+                            {Number(slip.outletBonus || 0) > 0 && (
+                              <div className="text-purple-700 dark:text-amber-300 font-bold text-xs">
+                                🏪 Bonus Outlet: +{formatRupiah(slip.outletBonus || 0)}
+                              </div>
+                            )}
                             <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
-                              Bonus: +{formatRupiah(slip.bonus)}
+                              ⭐ Bonus Kinerja: +{formatRupiah(slip.bonus)}
                             </div>
                             <div className="text-rose-600 dark:text-rose-400 font-extrabold text-xs">
                               Potongan: -{formatRupiah(slip.deductions)}
@@ -10607,6 +10741,20 @@ function doPost(e) {
               </div>
 
               <div>
+                <label className="font-bold text-purple-700 dark:text-purple-300 block mb-1 flex items-center justify-between">
+                  <span>Bonus Outlet / Bulan (Rp):</span>
+                  <span className="text-[10px] font-normal text-slate-400">Insentif Omset</span>
+                </label>
+                <input
+                  type="number"
+                  value={empOutletBonus}
+                  onChange={(e) => setEmpOutletBonus(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-full px-3 py-2 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50/60 dark:bg-purple-950 font-bold text-purple-700 dark:text-amber-300"
+                />
+              </div>
+
+              <div>
                 <label className="font-bold block mb-1">Password Staff:</label>
                 <input
                   type="text"
@@ -10734,7 +10882,7 @@ function doPost(e) {
               const currentSlip = payrollSlips.find((s) => s.id === editingSlipId);
               if (!currentSlip) return null;
               const matchedEmp = employees.find((e) => e.id === currentSlip.employeeId);
-              const previewNet = Number(editBaseSalary) + Number(editAllowance) + Number(editPunctualityAllowance) + Number(editOvertimePay) + Number(editBonus) - Number(editDeductions);
+              const previewNet = Number(editBaseSalary) + Number(editAllowance) + Number(editPunctualityAllowance) + Number(editOvertimePay) + Number(editOutletBonus) + Number(editBonus) - Number(editDeductions);
 
               return (
                 <div className="space-y-4 text-xs">
@@ -10764,6 +10912,7 @@ function doPost(e) {
                         <span>Gaji Harian: <strong className="text-emerald-600">{formatRupiah(matchedEmp.dailyRate)}</strong></span>
                         <span>• Rate Lembur: <strong className="text-blue-600">{formatRupiah(matchedEmp.hourlyRate || 15000)}/jam</strong></span>
                         <span>• Uang Makan: <strong className="text-amber-600">{formatRupiah(matchedEmp.dailyAllowance)}</strong></span>
+                        <span>• Bonus Outlet: <strong className="text-purple-600">{formatRupiah(matchedEmp.outletBonus || 0)}</strong></span>
                       </div>
                     </div>
                   )}
@@ -10807,6 +10956,18 @@ function doPost(e) {
                         value={editOvertimePay}
                         onChange={(e) => setEditOvertimePay(Number(e.target.value))}
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-blue-600 dark:text-blue-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-purple-700 dark:text-purple-300 block mb-1">
+                        Bonus Outlet / Omset (Rp):
+                      </label>
+                      <input
+                        type="number"
+                        value={editOutletBonus}
+                        onChange={(e) => setEditOutletBonus(Number(e.target.value))}
+                        className="w-full px-3 py-2 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50/60 dark:bg-purple-950 font-bold text-purple-700 dark:text-amber-300"
                       />
                     </div>
 
