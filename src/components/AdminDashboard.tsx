@@ -878,9 +878,9 @@ function doPost(e) {
   const [otEmployeeId, setOtEmployeeId] = useState('');
   const [otDate, setOtDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [otOutlet, setOtOutlet] = useState('');
-  const [otStartTime, setOtStartTime] = useState('22:00');
-  const [otEndTime, setOtEndTime] = useState('01:00');
-  const [otHours, setOtHours] = useState<number>(3);
+  const [otStartTime, setOtStartTime] = useState('23:00');
+  const [otEndTime, setOtEndTime] = useState('00:00');
+  const [otHours, setOtHours] = useState<number>(1);
   const [otCustomRate, setOtCustomRate] = useState<number>(0);
   const [otReason, setOtReason] = useState('Persiapan Event / Bumbu Marinasi / Stok Opname');
   const [otNotes, setOtNotes] = useState('');
@@ -2567,9 +2567,9 @@ function doPost(e) {
     setOtEmployeeId(firstEmp ? firstEmp.id : '');
     setOtDate(attDateFilter || new Date().toISOString().split('T')[0]);
     setOtOutlet(firstEmp?.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
-    setOtStartTime('22:00');
-    setOtEndTime('01:00');
-    setOtHours(3);
+    setOtStartTime('23:00');
+    setOtEndTime('00:00');
+    setOtHours(1);
     setOtCustomRate(firstEmp?.hourlyRate || 15000);
     setOtReason('Persiapan Event / Bumbu Marinasi / Stok Opname');
     setOtNotes('');
@@ -2600,8 +2600,8 @@ function doPost(e) {
       employeeId: selectedEmp.id,
       employeeName: selectedEmp.name,
       date: otDate,
-      clockInTime: otStartTime || '22:00',
-      clockOutTime: otEndTime || '01:00',
+      clockInTime: otStartTime || '23:00',
+      clockOutTime: otEndTime || '00:00',
       hoursWorked: Number(otHours),
       outlet: otOutlet || selectedEmp.outlet || 'Steak 11, Cibubur',
       status: 'Lembur',
