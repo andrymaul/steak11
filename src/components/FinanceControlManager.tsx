@@ -1011,10 +1011,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }, 250);
   };
 
-  const isReadOnlyVisitor = !isRegisteredAdmin(currentUser);
+  const isReadOnlyVisitor = currentUser?.role?.toLowerCase() === 'pengunjung' || currentUser?.role?.toLowerCase().includes('visitor');
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
-      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
+      showToast('🔒 Akses Ditolak: Hanya Pengguna Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;
@@ -1023,8 +1023,16 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   // Handle Save Closing Shift
   const handleSaveClosingShift = () => {
     if (checkReadOnlyPermission()) return;
+
+    const datePrefix = `SHF-${todayStr.replace(/-/g, '')}`;
+    const nextSeq = String((shifts || []).filter(s => s.id && s.id.startsWith(datePrefix)).length + 1).padStart(2, '0');
+    let generatedId = `${datePrefix}-${nextSeq}`;
+    if ((shifts || []).some(s => s.id === generatedId)) {
+      generatedId = `${datePrefix}-${Date.now().toString().slice(-4)}`;
+    }
+
     const newShift: CashierShiftRecord = {
-      id: `SHF-${todayStr.replace(/-/g, '')}-${String((shifts || []).length + 1).padStart(2, '0')}`,
+      id: generatedId,
       date: todayStr,
       shiftName,
       cashierName: currentUser?.name || cashierName,
@@ -1054,9 +1062,12 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       denominations,
     };
 
-    const updated = [newShift, ...shifts];
+    const updated = [newShift, ...shifts.filter(s => s.id !== generatedId)];
     setShifts(updated);
     saveShiftsData(updated);
+    try {
+      localStorage.setItem('steak11_cashier_shifts', JSON.stringify(updated));
+    } catch {}
 
     // 1. Sinkronisasi Otomatis Pengeluaran per Item Closing Kasir ke Daftar Kas Kecil & Operasional
     const newPettyExpenses: PettyCashExpense[] = manualExpenseItems.map((itm, idx) => ({
@@ -1077,6 +1088,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       const updatedExpenses = [...newPettyExpenses, ...expenses];
       setExpenses(updatedExpenses);
       saveExpensesData(updatedExpenses);
+      try {
+        localStorage.setItem('steak11_expenses', JSON.stringify(updatedExpenses));
+      } catch {}
     }
 
     setShowClosingModal(false);
