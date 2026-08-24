@@ -931,6 +931,8 @@ function doPost(e) {
   const [loanEmployeeId, setLoanEmployeeId] = useState<string>('');
   const [loanTotalAmount, setLoanTotalAmount] = useState<number>(500000);
   const [loanMonthlyInstallment, setLoanMonthlyInstallment] = useState<number>(100000);
+  const [loanRemainingAmount, setLoanRemainingAmount] = useState<number>(500000);
+  const [loanStatus, setLoanStatus] = useState<'ACTIVE' | 'PAID_OFF'>('ACTIVE');
   const [loanDate, setLoanDate] = useState<string>('2026-08-01');
   const [loanNotes, setLoanNotes] = useState<string>('');
   const [selectedLoanForHistory, setSelectedLoanForHistory] = useState<EmployeeLoan | null>(null);
@@ -4148,6 +4150,8 @@ function doPost(e) {
 
     setLoanTotalAmount(500000);
     setLoanMonthlyInstallment(100000);
+    setLoanRemainingAmount(500000);
+    setLoanStatus('ACTIVE');
     setLoanDate(new Date().toISOString().split('T')[0]);
     setLoanNotes('');
     setShowLoanModal(true);
@@ -4158,6 +4162,8 @@ function doPost(e) {
     setLoanEmployeeId(loan.employeeId);
     setLoanTotalAmount(loan.totalAmount);
     setLoanMonthlyInstallment(loan.monthlyInstallment);
+    setLoanRemainingAmount(loan.remainingAmount);
+    setLoanStatus(loan.status);
     setLoanDate(loan.date);
     setLoanNotes(loan.notes || '');
     setShowLoanModal(true);
@@ -4183,14 +4189,15 @@ function doPost(e) {
               date: loanDate,
               totalAmount: loanTotalAmount,
               monthlyInstallment: loanMonthlyInstallment,
-              remainingAmount: Math.min(l.remainingAmount, loanTotalAmount),
+              remainingAmount: loanStatus === 'PAID_OFF' ? 0 : Math.min(loanRemainingAmount, loanTotalAmount),
+              status: loanStatus,
               notes: loanNotes
             }
           : l
       );
       setEmployeeLoans(updated);
       saveEmployeeLoans(updated);
-      showToast(`Pinjaman Kasbon ${emp.name} berhasil diperbarui!`);
+      showToast(`Pinjaman Kasbon ${emp.name} berhasil diperbarui (Status: ${loanStatus === 'ACTIVE' ? 'Aktif' : 'LUNAS'})!`);
     } else {
       const newLoan: EmployeeLoan = {
         id: `LOAN-${Date.now().toString().slice(-4)}`,
@@ -4200,8 +4207,8 @@ function doPost(e) {
         date: loanDate,
         totalAmount: loanTotalAmount,
         monthlyInstallment: loanMonthlyInstallment,
-        remainingAmount: loanTotalAmount,
-        status: 'ACTIVE',
+        remainingAmount: loanStatus === 'PAID_OFF' ? 0 : loanTotalAmount,
+        status: loanStatus,
         notes: loanNotes,
         history: []
       };
@@ -4212,6 +4219,27 @@ function doPost(e) {
     }
 
     setShowLoanModal(false);
+  };
+
+  const handleUpdateLoanStatus = (loanId: string, newStatus: 'ACTIVE' | 'PAID_OFF') => {
+    if (checkReadOnlyPermission()) return;
+    const target = employeeLoans.find((l) => l.id === loanId);
+    if (!target) return;
+
+    const updated = employeeLoans.map((l) => {
+      if (l.id === loanId) {
+        return {
+          ...l,
+          status: newStatus,
+          remainingAmount: newStatus === 'PAID_OFF' ? 0 : (l.remainingAmount === 0 ? l.totalAmount : l.remainingAmount)
+        };
+      }
+      return l;
+    });
+
+    setEmployeeLoans(updated);
+    saveEmployeeLoans(updated);
+    showToast(`✅ Status kasbon ${target.employeeName} diubah menjadi ${newStatus === 'ACTIVE' ? 'Aktif Berjalan' : 'LUNAS'}!`);
   };
 
   const handleDeleteLoan = (loanId: string) => {
@@ -14513,13 +14541,19 @@ function doPost(e) {
                               </div>
                             </td>
                             <td className="p-3 align-top text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                                loan.status === 'ACTIVE'
-                                  ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
-                                  : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300'
-                              }`}>
-                                {loan.status === 'ACTIVE' ? 'Aktif Berjalan' : 'LUNAS'}
-                              </span>
+                              <select
+                                value={loan.status}
+                                onChange={(e) => handleUpdateLoanStatus(loan.id, e.target.value as 'ACTIVE' | 'PAID_OFF')}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border cursor-pointer transition-all shadow-xs ${
+                                  loan.status === 'ACTIVE'
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                                    : 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                                }`}
+                                title="Klik untuk mengubah status kasbon (Aktif Berjalan / LUNAS)"
+                              >
+                                <option value="ACTIVE">⏳ Aktif Berjalan</option>
+                                <option value="PAID_OFF">✅ LUNAS</option>
+                              </select>
                             </td>
                             <td className="p-3 align-top text-center">
                               <div className="flex items-center justify-center gap-1 flex-wrap">
@@ -14633,6 +14667,47 @@ function doPost(e) {
                     onChange={(e) => setLoanMonthlyInstallment(Number(e.target.value))}
                     step={25000}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 font-bold text-purple-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold block mb-1">Status Pinjaman:</label>
+                  <select
+                    value={loanStatus}
+                    onChange={(e) => {
+                      const newStatus = e.target.value as 'ACTIVE' | 'PAID_OFF';
+                      setLoanStatus(newStatus);
+                      if (newStatus === 'PAID_OFF') {
+                        setLoanRemainingAmount(0);
+                      } else if (loanRemainingAmount === 0) {
+                        setLoanRemainingAmount(loanTotalAmount);
+                      }
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl border font-extrabold cursor-pointer ${
+                      loanStatus === 'ACTIVE'
+                        ? 'border-amber-300 bg-amber-50 dark:bg-purple-950 text-amber-900 dark:text-amber-300'
+                        : 'border-emerald-300 bg-emerald-50 dark:bg-purple-950 text-emerald-900 dark:text-emerald-300'
+                    }`}
+                  >
+                    <option value="ACTIVE">⏳ Aktif Berjalan</option>
+                    <option value="PAID_OFF">✅ Lunas Terbayar</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold block mb-1">Sisa Kasbon (Rp):</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={loanRemainingAmount}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value));
+                      setLoanRemainingAmount(val);
+                      if (val === 0) setLoanStatus('PAID_OFF');
+                      else setLoanStatus('ACTIVE');
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 font-bold text-rose-600"
                   />
                 </div>
               </div>
