@@ -1951,11 +1951,11 @@ function doPost(e) {
     setEmpOutlet(emp.outlet);
     setEmpPhone(emp.phone);
     setEmpDailyRate(emp.dailyRate);
-    setEmpHourlyRate(emp.hourlyRate);
+    setEmpHourlyRate(emp.hourlyRate ?? 0);
     setEmpDailyAllowance(emp.dailyAllowance);
     setEmpPunctualityAllowance(emp.punctualityAllowancePerDay ?? 15000);
     setEmpLatePenaltyPerDay(emp.latePenaltyPerDay ?? 15000);
-    setEmpOutletBonus(emp.outletBonus || 0);
+    setEmpOutletBonus(emp.outletBonus ?? 0);
     setEmpPin(emp.password || emp.pin);
     setEmpStatus(emp.status);
     setEmpAllowedTabs(emp.allowedTabs || ['kasir', 'pesanan', 'shifts', 'inventory', 'absensi']);
@@ -1987,7 +1987,7 @@ function doPost(e) {
           const allowance = daysPresent * savedEmp.dailyAllowance;
           const punctualityRate = savedEmp.punctualityAllowancePerDay ?? 15000;
           const punctualityAllowance = daysOnTime * punctualityRate;
-          const hourlyRate = savedEmp.hourlyRate || 15000;
+          const hourlyRate = savedEmp.hourlyRate ?? 0;
           const overtimePay = Math.round(totalOvertime * hourlyRate);
           const outletBonus = savedEmp.outletBonus || 0;
 
@@ -2194,12 +2194,12 @@ function doPost(e) {
           const outlet = String(row['Outlet'] || row['outlet'] || (locations[0]?.name || 'Steak 11, Kalisari')).trim();
           const phone = String(row['No. WhatsApp'] || row['phone'] || row['No HP'] || '0812345678').trim();
           const joinDate = String(row['Tanggal Bergabung'] || row['joinDate'] || new Date().toISOString().split('T')[0]).trim();
-          const dailyRate = Number(row['Gaji Pokok Harian (Rp)'] || row['dailyRate'] || 120000);
-          const hourlyRate = Number(row['Rate Lembur / Jam (Rp)'] || row['hourlyRate'] || 15000);
-          const dailyAllowance = Number(row['Uang Makan & Transpor (Rp)'] || row['dailyAllowance'] || 25000);
-          const punctualityAllowance = Number(row['Tunjangan Tepat Waktu (Rp)'] || row['punctualityAllowancePerDay'] || 15000);
-          const latePenalty = Number(row['Denda Potongan Telat (Rp)'] || row['latePenaltyPerDay'] || 15000);
-          const outletBonus = Number(row['Bonus Outlet (Rp)'] || row['outletBonus'] || 0);
+          const dailyRate = row['Gaji Pokok Harian (Rp)'] !== undefined ? Number(row['Gaji Pokok Harian (Rp)']) : (row['dailyRate'] !== undefined ? Number(row['dailyRate']) : 120000);
+          const hourlyRate = row['Rate Lembur / Jam (Rp)'] !== undefined ? Number(row['Rate Lembur / Jam (Rp)']) : (row['hourlyRate'] !== undefined ? Number(row['hourlyRate']) : 0);
+          const dailyAllowance = row['Uang Makan & Transpor (Rp)'] !== undefined ? Number(row['Uang Makan & Transpor (Rp)']) : (row['dailyAllowance'] !== undefined ? Number(row['dailyAllowance']) : 25000);
+          const punctualityAllowance = row['Tunjangan Tepat Waktu (Rp)'] !== undefined ? Number(row['Tunjangan Tepat Waktu (Rp)']) : (row['punctualityAllowancePerDay'] !== undefined ? Number(row['punctualityAllowancePerDay']) : 15000);
+          const latePenalty = row['Denda Potongan Telat (Rp)'] !== undefined ? Number(row['Denda Potongan Telat (Rp)']) : (row['latePenaltyPerDay'] !== undefined ? Number(row['latePenaltyPerDay']) : 15000);
+          const outletBonus = row['Bonus Outlet (Rp)'] !== undefined ? Number(row['Bonus Outlet (Rp)']) : (row['outletBonus'] !== undefined ? Number(row['outletBonus']) : 0);
           const pin = String(row['PIN / Password'] || row['pin'] || row['password'] || '1234').trim();
           const statusRaw = String(row['Status'] || row['status'] || 'Aktif').trim();
           const status: 'Aktif' | 'Non-Aktif' = statusRaw.toLowerCase().includes('non') ? 'Non-Aktif' : 'Aktif';
@@ -2217,7 +2217,7 @@ function doPost(e) {
             phone,
             joinDate,
             dailyRate: isNaN(dailyRate) ? 120000 : dailyRate,
-            hourlyRate: isNaN(hourlyRate) ? 15000 : hourlyRate,
+            hourlyRate: isNaN(hourlyRate) ? 0 : hourlyRate,
             dailyAllowance: isNaN(dailyAllowance) ? 25000 : dailyAllowance,
             punctualityAllowancePerDay: isNaN(punctualityAllowance) ? 15000 : punctualityAllowance,
             latePenaltyPerDay: isNaN(latePenalty) ? 15000 : latePenalty,
@@ -2585,7 +2585,7 @@ function doPost(e) {
           const shiftHrs = a.hoursWorked || 8;
           return acc + (shiftHrs > 8 ? Math.round(shiftHrs - 8) : 0);
         }, 0);
-        const hourlyRate = emp.hourlyRate || 15000;
+        const hourlyRate = emp.hourlyRate ?? 0;
         const overtimePay = Math.round(totalOvertimeHours * hourlyRate);
 
         // Standard calculation
@@ -2878,7 +2878,7 @@ function doPost(e) {
       'Hari Telat': rec.totalDaysLate,
       'Total Menit Telat': rec.totalLateMinutes || 0,
       'Total Jam Kerja': rec.totalHoursWorked,
-      'Rate Lembur / Jam': rec.hourlyRate || 15000,
+      'Rate Lembur / Jam': rec.hourlyRate ?? 0,
       'Jam Lembur': rec.totalOvertimeHours || 0,
       'Gaji Pokok': rec.baseSalary,
       'Tunjangan Makan': rec.totalAllowance,
@@ -3020,9 +3020,9 @@ function doPost(e) {
         if (emp.id === targetSlip.employeeId) {
           const newDailyRate = targetSlip.totalDaysPresent > 0 ? Math.round(Number(editBaseSalary) / targetSlip.totalDaysPresent) : emp.dailyRate;
           const newAllowance = targetSlip.totalDaysPresent > 0 ? Math.round(Number(editAllowance) / targetSlip.totalDaysPresent) : emp.dailyAllowance;
-          const newHourlyRate = (targetSlip.totalOvertimeHours && targetSlip.totalOvertimeHours > 0) ? Math.round(Number(editOvertimePay) / targetSlip.totalOvertimeHours) : emp.hourlyRate;
-          const newPunctuality = (targetSlip.totalDaysOnTime && targetSlip.totalDaysOnTime > 0) ? Math.round(Number(editPunctualityAllowance) / targetSlip.totalDaysOnTime) : (emp.punctualityAllowancePerDay || 15000);
-          const newLatePenalty = targetSlip.totalDaysLate > 0 ? Math.round(Number(editLatePenalty) / targetSlip.totalDaysLate) : (emp.latePenaltyPerDay || 15000);
+          const newHourlyRate = (targetSlip.totalOvertimeHours && targetSlip.totalOvertimeHours > 0) ? Math.round(Number(editOvertimePay) / targetSlip.totalOvertimeHours) : (emp.hourlyRate ?? 0);
+          const newPunctuality = (targetSlip.totalDaysOnTime && targetSlip.totalDaysOnTime > 0) ? Math.round(Number(editPunctualityAllowance) / targetSlip.totalDaysOnTime) : (emp.punctualityAllowancePerDay ?? 15000);
+          const newLatePenalty = targetSlip.totalDaysLate > 0 ? Math.round(Number(editLatePenalty) / targetSlip.totalDaysLate) : (emp.latePenaltyPerDay ?? 15000);
           const newOutletBonus = Number(editOutletBonus);
           const updatedTarget: Employee = {
             ...emp,
@@ -7425,7 +7425,7 @@ function doPost(e) {
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400">Rate Lembur / Jam:</span>
                       <span className="font-extrabold text-blue-600 dark:text-blue-400">
-                        {formatRupiah(emp.hourlyRate || 15000)} / jam
+                        {formatRupiah(emp.hourlyRate ?? 0)} / jam
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -10910,7 +10910,7 @@ function doPost(e) {
                       </span>
                       <div className="flex flex-wrap gap-2 text-[10px] text-slate-600 dark:text-slate-300 font-semibold">
                         <span>Gaji Harian: <strong className="text-emerald-600">{formatRupiah(matchedEmp.dailyRate)}</strong></span>
-                        <span>• Rate Lembur: <strong className="text-blue-600">{formatRupiah(matchedEmp.hourlyRate || 15000)}/jam</strong></span>
+                        <span>• Rate Lembur: <strong className="text-blue-600">{formatRupiah(matchedEmp.hourlyRate ?? 0)}/jam</strong></span>
                         <span>• Uang Makan: <strong className="text-amber-600">{formatRupiah(matchedEmp.dailyAllowance)}</strong></span>
                         <span>• Bonus Outlet: <strong className="text-purple-600">{formatRupiah(matchedEmp.outletBonus || 0)}</strong></span>
                       </div>
