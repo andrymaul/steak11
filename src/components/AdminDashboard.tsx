@@ -3263,14 +3263,14 @@ function doPost(e) {
   const getGenModelName = (modelKey: string) => {
     switch (modelKey) {
       case 'single_person_outlet':
-        return '👤 1 Orang per Outlet (Solo Stand)';
+        return '👤 1 Orang 1 Outlet (Solo Stand)';
       case 'equal_two_shifts':
-        return '⚖️ Rotasi 2 Shift (Pagi & Malam)';
+        return '⚖️ Rotasi Master Shift Cabang';
       case 'fixed_role_shift':
-        return '📌 Shift Tetap Sesuai Jabatan';
+        return '📌 Shift Sesuai Divisi & Jam Outlet';
       case 'rotasi_standar':
       default:
-        return '🔄 Rotasi Standar Berimbang';
+        return '🏬 Shift Rules Resmi Tiap Outlet';
     }
   };
 
@@ -14156,7 +14156,7 @@ function doPost(e) {
                 Pilih Model Penjadwalan Roster:
               </label>
 
-              {/* Model 1: Rotasi Standar */}
+              {/* Model 1: Shift Rules Resmi Tiap Outlet */}
               <div
                 onClick={() => setScheduleGenModel('rotasi_standar')}
                 className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
@@ -14173,11 +14173,14 @@ function doPost(e) {
                     className="mt-1 accent-amber-500"
                   />
                   <div>
-                    <div className="font-extrabold text-xs flex items-center gap-1.5">
-                      <span>🔄 Rotasi Standar Berimbang (Pagi, Siang, Malam & OFF)</span>
+                    <div className="font-extrabold text-xs flex items-center gap-1.5 flex-wrap">
+                      <span>🏬 Shift Rules Resmi Tiap Outlet (Sesuai Jam Operasional Cabang &amp; Libur OFF)</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-800 dark:text-emerald-300 text-[9px] font-black uppercase">
+                        REKOMENDASI OUTLET
+                      </span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Menggilir shift Pagi, Siang, Malam & Libur (OFF) secara seimbang untuk outlet dengan tim lengkap.
+                      Menugaskan shift operasional resmi sesuai jam kerja cabang masing-masing staf (Menu Outlet &amp; Shift Rules) dengan rotasi libur mingguan (OFF) yang teratur.
                     </p>
                   </div>
                 </div>
@@ -14200,20 +14203,20 @@ function doPost(e) {
                     className="mt-1 accent-amber-500"
                   />
                   <div>
-                    <div className="font-extrabold text-xs flex items-center gap-1.5">
-                      <span>👤 1 Orang 1 Outlet (Bergiliran Solo Stand)</span>
+                    <div className="font-extrabold text-xs flex items-center gap-1.5 flex-wrap">
+                      <span>👤 1 Orang 1 Outlet (Solo Stand Sesuai Shift Rules Outlet)</span>
                       <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-purple-900 dark:text-amber-300 text-[9px] font-black uppercase">
                         KHUSUS CABANG STAND
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Menugaskan 1 karyawan per hari secara bergantian per outlet. Anggota lain otomatis OFF di hari tersebut.
+                      Menugaskan 1 staf per hari secara bergantian memakai aturan jam kerja resmi cabang terkait. Staf lainnya di cabang tersebut otomatis OFF di hari tersebut.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Model 3: Rotasi 2 Shift */}
+              {/* Model 3: Rotasi Master Shift Cabang */}
               <div
                 onClick={() => setScheduleGenModel('equal_two_shifts')}
                 className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
@@ -14231,16 +14234,16 @@ function doPost(e) {
                   />
                   <div>
                     <div className="font-extrabold text-xs flex items-center gap-1.5">
-                      <span>⚖️ Rotasi 2 Shift (Pagi & Malam)</span>
+                      <span>⚖️ Rotasi Master Shift Cabang (Menggilir Shift Master per Outlet)</span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Distribusi 2 shift utama (Shift Pagi & Shift Malam) dengan rotasi libur tetap per minggu.
+                      Menggilir seluruh master shift yang terdaftar khusus pada cabang outlet karyawan secara bergantian dengan hari libur (OFF) terjadwal.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Model 4: Shift Tetap Sesuai Jabatan */}
+              {/* Model 4: Shift Sesuai Divisi & Jam Outlet */}
               <div
                 onClick={() => setScheduleGenModel('fixed_role_shift')}
                 className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
@@ -14258,10 +14261,10 @@ function doPost(e) {
                   />
                   <div>
                     <div className="font-extrabold text-xs flex items-center gap-1.5">
-                      <span>📌 Shift Tetap Sesuai Jabatan (Role-Based)</span>
+                      <span>📌 Shift Sesuai Divisi/Role &amp; Jam Outlet</span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Shift konsisten berdasarkan divisi karyawan (Chef, Kasir, Waitress, Barista).
+                      Shift kerja disesuaikan dengan divisi staf (Kitchen/Dapur, Kasir, Service, Barista) yang berlaku pada cabang outlet penugasan.
                     </p>
                   </div>
                 </div>
