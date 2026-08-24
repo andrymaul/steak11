@@ -846,7 +846,7 @@ export const getInitialDataForKey = (key: string): any => {
     case 'wa_gateway_config': return DEFAULT_WA_GATEWAY_CONFIG;
     case 'shift_templates': return DEFAULT_SHIFT_TEMPLATES;
     case 'schedules': return [];
-    case 'employee_loans': return DEFAULT_EMPLOYEE_LOANS;
+    case 'employee_loans': return [];
     default: return [];
   }
 };
@@ -919,7 +919,7 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
         const historyAppendKeys = [
           'cashier_shifts', 'expenses', 'attendance', 'orders',
           'stock_opnames', 'stock_transfers', 'audit_logs', 'stock_mutations',
-          'purchase_orders', 'employee_loans', 'promos', 'reviews', 'suppliers'
+          'purchase_orders', 'promos', 'reviews', 'suppliers'
         ];
         if (historyAppendKeys.includes(key)) {
           const rawLocal = localStorage.getItem('steak11_' + key);
@@ -1123,7 +1123,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           const historyAppendKeys = [
             'cashier_shifts', 'expenses', 'attendance', 'orders',
             'stock_opnames', 'stock_transfers', 'audit_logs', 'stock_mutations',
-            'purchase_orders', 'employee_loans', 'promos', 'reviews', 'suppliers'
+            'purchase_orders', 'promos', 'reviews', 'suppliers'
           ];
 
           if (historyAppendKeys.includes(key)) {

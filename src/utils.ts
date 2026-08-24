@@ -1163,16 +1163,21 @@ export function getStoredEmployeeLoans(): EmployeeLoan[] {
   if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((l: any) => l.id !== 'LOAN-1001' && l.id !== 'LOAN-1002');
+      }
     } catch {
       return [];
     }
   }
-  return DEFAULT_EMPLOYEE_LOANS;
+  return [];
 }
 
 export function saveEmployeeLoans(data: EmployeeLoan[]): void {
-  localStorage.setItem('steak11_employee_loans', JSON.stringify(data));
+  const cleanData = (data || []).filter((l) => l.id !== 'LOAN-1001' && l.id !== 'LOAN-1002');
+  localStorage.setItem('steak11_employee_loans', JSON.stringify(cleanData));
+  window.dispatchEvent(new Event('employee_loans_updated'));
+  syncUserDataToFirestore('employee_loans', cleanData);
 }
 
 // --- CURRENT USER SESSION STORAGE ---

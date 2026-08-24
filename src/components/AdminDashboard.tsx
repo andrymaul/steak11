@@ -4243,7 +4243,8 @@ function doPost(e) {
   };
 
   const handleDeleteLoan = (loanId: string) => {
-    const updated = employeeLoans.filter((l) => l.id !== loanId);
+    if (checkReadOnlyPermission()) return;
+    const updated = employeeLoans.filter((l) => l.id !== loanId && l.id !== 'LOAN-1001' && l.id !== 'LOAN-1002');
     setEmployeeLoans(updated);
     saveEmployeeLoans(updated);
     showToast('Data kasbon berhasil dihapus.');

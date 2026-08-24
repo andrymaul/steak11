@@ -1432,63 +1432,27 @@ export const saveSchedules = (data: EmployeeSchedule[]) => {
   }
 };
 
-export const DEFAULT_EMPLOYEE_LOANS: EmployeeLoan[] = [
-  {
-    id: 'LOAN-1001',
-    employeeId: 'EMP-001',
-    employeeName: 'Budi Santoso',
-    outlet: 'Steak 11 Central',
-    date: '2026-07-15',
-    totalAmount: 1000000,
-    monthlyInstallment: 250000,
-    remainingAmount: 500000,
-    status: 'ACTIVE',
-    notes: 'Pinjaman mendesak biaya servis motor',
-    history: [
-      {
-        id: 'PAY-1001-1',
-        period: '2026-07',
-        amountPaid: 250000,
-        datePaid: '2026-07-28',
-        notes: 'Potongan otomatis payroll Juli 2026'
-      },
-      {
-        id: 'PAY-1001-2',
-        period: '2026-08',
-        amountPaid: 250000,
-        datePaid: '2026-08-01',
-        notes: 'Potongan otomatis payroll Agustus 2026'
-      }
-    ]
-  },
-  {
-    id: 'LOAN-1002',
-    employeeId: 'EMP-003',
-    employeeName: 'Doni Setiawan',
-    outlet: 'Steak 11, Kalisari',
-    date: '2026-08-01',
-    totalAmount: 600000,
-    monthlyInstallment: 200000,
-    remainingAmount: 600000,
-    status: 'ACTIVE',
-    notes: 'Pinjaman keperluan keluarga',
-    history: []
-  }
-];
+export const DEFAULT_EMPLOYEE_LOANS: EmployeeLoan[] = [];
 
 export const getStoredEmployeeLoans = (): EmployeeLoan[] => {
   try {
     const raw = localStorage.getItem('steak11_employee_loans');
-    if (raw) return JSON.parse(raw);
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((l: any) => l.id !== 'LOAN-1001' && l.id !== 'LOAN-1002');
+      }
+    }
   } catch (e) {
     console.error('Failed to parse employee loans from storage', e);
   }
-  return DEFAULT_EMPLOYEE_LOANS;
+  return [];
 };
 
 export const saveEmployeeLoans = (data: EmployeeLoan[]) => {
   try {
-    localStorage.setItem('steak11_employee_loans', JSON.stringify(data));
+    const cleanData = (data || []).filter((l) => l.id !== 'LOAN-1001' && l.id !== 'LOAN-1002');
+    localStorage.setItem('steak11_employee_loans', JSON.stringify(cleanData));
   } catch (e) {
     console.error('Failed to save employee loans to storage', e);
   }
