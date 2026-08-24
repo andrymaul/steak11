@@ -31,7 +31,7 @@ import {
   Sparkles,
   Store
 } from 'lucide-react';
-import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate } from '../types';
+import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem } from '../types';
 import { formatRupiah, isRegisteredAdmin } from '../utils';
 import * as XLSX from 'xlsx';
 
@@ -66,7 +66,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   locations = [],
   shiftTemplates = []
 }) => {
-  const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'profit_loss' | 'payment_methods'>('closing_audit');
+  const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'monthly_net_profit' | 'profit_loss' | 'payment_methods'>('closing_audit');
 
   // Timeframe Filters for Financial Statements (P&L & Payment Methods)
   const todayStr = new Date().toISOString().split('T')[0];
@@ -229,6 +229,68 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   // Filters
   const [selectedOutletFilter, setSelectedOutletFilter] = useState('ALL');
+
+  // Monthly Net Profit & Deductions State
+  const [monthlyPnlMonth, setMonthlyPnlMonth] = useState<string>(todayStr.substring(0, 7));
+  const [monthlyPnlOutlet, setMonthlyPnlOutlet] = useState<string>('ALL');
+
+  // Deduction Modal State
+  const [showDeductionModal, setShowDeductionModal] = useState(false);
+  const [dedCategory, setDedCategory] = useState<MonthlyDeductionItem['category']>('Sewa Tempat & Gedung');
+  const [dedName, setDedName] = useState('');
+  const [dedAmount, setDedAmount] = useState<number>(3500000);
+  const [dedOutlet, setDedOutlet] = useState<string>('Semua Cabang (Konsolidasi)');
+  const [dedMonth, setDedMonth] = useState<string>(todayStr.substring(0, 7));
+  const [dedNotes, setDedNotes] = useState('');
+
+  // Stored Monthly Deductions
+  const [monthlyDeductions, setMonthlyDeductions] = useState<MonthlyDeductionItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('steak11_monthly_deductions');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {}
+      }
+    }
+    return [
+      {
+        id: 'DED-202608-01',
+        month: todayStr.substring(0, 7),
+        outlet: 'Steak 11, Cibubur',
+        category: 'Sewa Tempat & Gedung',
+        name: 'Biaya Sewa Ruko & Lokasi Cabang Cibubur',
+        amount: 3500000,
+        notes: 'Sewa bulanan ruko operasional',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'DED-202608-02',
+        month: todayStr.substring(0, 7),
+        outlet: 'Semua Cabang (Konsolidasi)',
+        category: 'Marketing & Promo',
+        name: 'Biaya Marketing, Iklan Ads & Konten Medsos',
+        amount: 500000,
+        notes: 'Budget promosi bulanan',
+        createdAt: new Date().toISOString()
+      }
+    ];
+  });
+
+  const saveMonthlyDeductionsData = (data: MonthlyDeductionItem[]) => {
+    setMonthlyDeductions(data);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('steak11_monthly_deductions', JSON.stringify(data));
+      window.dispatchEvent(new Event('monthly_deductions_updated'));
+    }
+  };
+
+  const handleDeleteDeduction = (id: string, name: string) => {
+    const updated = monthlyDeductions.filter((d) => d.id !== id);
+    saveMonthlyDeductionsData(updated);
+    showToast(`🗑️ Biaya pengurang "${name}" berhasil dihapus.`);
+  };
 
   // Compute live POS revenue for chosen outlet today (in table / overall filter)
   const todayOrders = (orders || []).filter(
@@ -540,6 +602,381 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       margin,
     };
   });
+
+  // --- MONTHLY NET PROFIT REPORT CALCULATIONS ---
+  const monthShifts = (shifts || []).filter((s) => {
+    const shiftDate = s.date || '';
+    const matchesMonth = shiftDate.startsWith(monthlyPnlMonth);
+    const matchesOutlet = monthlyPnlOutlet === 'ALL' || s.outlet === monthlyPnlOutlet;
+    return matchesMonth && matchesOutlet;
+  });
+
+  const totalMonthShiftRevenue = monthShifts.reduce(
+    (acc, s) =>
+      acc +
+      (s.totalRevenue ||
+        (s.cashRevenue || 0) +
+          (s.actualQrisRevenue ?? s.qrisRevenue ?? 0) +
+          (s.actualTransferRevenue ?? s.transferRevenue ?? 0) +
+          (s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0)),
+    0
+  );
+  const monthCashRev = monthShifts.reduce((acc, s) => acc + (s.cashRevenue || 0), 0);
+  const monthQrisRev = monthShifts.reduce((acc, s) => acc + (s.actualQrisRevenue ?? s.qrisRevenue ?? 0), 0);
+  const monthTransferRev = monthShifts.reduce((acc, s) => acc + (s.actualTransferRevenue ?? s.transferRevenue ?? 0), 0);
+  const monthOnlineFoodRev = monthShifts.reduce((acc, s) => acc + (s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0), 0);
+
+  // Month Expenses (COGS & Harian)
+  const monthExpensesList = (expenses || []).filter((e) => {
+    const expDate = e.date || '';
+    const matchesMonth = expDate.startsWith(monthlyPnlMonth);
+    const matchesOutlet = monthlyPnlOutlet === 'ALL' || e.outlet === monthlyPnlOutlet;
+    return matchesMonth && matchesOutlet;
+  });
+
+  const monthCogsExpenses = monthExpensesList
+    .filter(
+      (e) =>
+        e.category === 'Bahan Baku & HPP' ||
+        e.category === 'Belanja Pasar & Sayur' ||
+        e.category === 'Pembelian Bahan Darurat'
+    )
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+
+  const monthGrossProfit = totalMonthShiftRevenue - monthCogsExpenses;
+  const monthGrossMarginPct = totalMonthShiftRevenue > 0 ? (monthGrossProfit / totalMonthShiftRevenue) * 100 : 0;
+
+  // Month Deductions List
+  const filteredMonthDeductions = (monthlyDeductions || []).filter((d) => {
+    const matchesMonth = d.month === monthlyPnlMonth;
+    const matchesOutlet = monthlyPnlOutlet === 'ALL' || d.outlet === monthlyPnlOutlet || d.outlet === 'Semua Cabang (Konsolidasi)';
+    return matchesMonth && matchesOutlet;
+  });
+
+  // 1. Penggajian & Bonus
+  const monthPayrollList = (payrolls || []).filter((p) => {
+    const pDate = p.period || p.date || '';
+    const matchesMonth = pDate.startsWith(monthlyPnlMonth);
+    const matchesOutlet = monthlyPnlOutlet === 'ALL' || p.outlet === monthlyPnlOutlet || !p.outlet;
+    return matchesMonth && matchesOutlet;
+  });
+  const autoPayrollAmount = monthPayrollList.reduce((acc, p) => acc + (p.netSalary || p.totalSalary || 0), 0);
+  const manualPayrollDeductions = filteredMonthDeductions
+    .filter((d) => d.category === 'Penggajian & Bonus')
+    .reduce((acc, d) => acc + (d.amount || 0), 0);
+  const totalMonthPayrollDeduction = autoPayrollAmount + manualPayrollDeductions;
+
+  // 2. Sewa Tempat & Gedung
+  const totalMonthRentDeduction = filteredMonthDeductions
+    .filter((d) => d.category === 'Sewa Tempat & Gedung')
+    .reduce((acc, d) => acc + (d.amount || 0), 0);
+
+  // 3. Utilitas & Operasional Toko
+  const dailyOpExpensesNonCogs = monthExpensesList
+    .filter(
+      (e) =>
+        e.category !== 'Bahan Baku & HPP' &&
+        e.category !== 'Belanja Pasar & Sayur' &&
+        e.category !== 'Pembelian Bahan Darurat'
+    )
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+  const manualOpDeductions = filteredMonthDeductions
+    .filter((d) => d.category === 'Operasional & Perlengkapan' || d.category === 'Listrik, Air & Utilitas')
+    .reduce((acc, d) => acc + (d.amount || 0), 0);
+  const totalMonthOpDeduction = dailyOpExpensesNonCogs + manualOpDeductions;
+
+  // 4. Marketing & Promo
+  const totalMonthMarketingDeduction = filteredMonthDeductions
+    .filter((d) => d.category === 'Marketing & Promo')
+    .reduce((acc, d) => acc + (d.amount || 0), 0);
+
+  // 5. Maintenance & Servis Alat
+  const totalMonthMaintenanceDeduction = filteredMonthDeductions
+    .filter((d) => d.category === 'Maintenance & Perbaikan')
+    .reduce((acc, d) => acc + (d.amount || 0), 0);
+
+  // 6. Beban Lain-lain & Pajak
+  const totalMonthOtherDeduction = filteredMonthDeductions
+    .filter(
+      (d) =>
+        d.category !== 'Penggajian & Bonus' &&
+        d.category !== 'Sewa Tempat & Gedung' &&
+        d.category !== 'Operasional & Perlengkapan' &&
+        d.category !== 'Listrik, Air & Utilitas' &&
+        d.category !== 'Marketing & Promo' &&
+        d.category !== 'Maintenance & Perbaikan'
+    )
+    .reduce((acc, d) => acc + (d.amount || 0), 0);
+
+  // TOTAL DEDUCTIONS
+  const totalMonthlyAllDeductions =
+    totalMonthPayrollDeduction +
+    totalMonthRentDeduction +
+    totalMonthOpDeduction +
+    totalMonthMarketingDeduction +
+    totalMonthMaintenanceDeduction +
+    totalMonthOtherDeduction;
+
+  // HASIL AKHIR: NET PROFIT / LABA BERSIH BULANAN
+  const monthlyNetProfit = monthGrossProfit - totalMonthlyAllDeductions;
+  const monthlyNetMarginPct = totalMonthShiftRevenue > 0 ? (monthlyNetProfit / totalMonthShiftRevenue) * 100 : 0;
+
+  // Per Branch Monthly Summary
+  const perBranchMonthlyNetProfit = allKnownOutlets.map((outletName) => {
+    const branchShifts = (shifts || []).filter(
+      (s) => s.outlet === outletName && (s.date || '').startsWith(monthlyPnlMonth)
+    );
+    const branchExpenses = (expenses || []).filter(
+      (e) => e.outlet === outletName && (e.date || '').startsWith(monthlyPnlMonth)
+    );
+    const branchDeductions = (monthlyDeductions || []).filter(
+      (d) => (d.outlet === outletName || d.outlet === 'Semua Cabang (Konsolidasi)') && d.month === monthlyPnlMonth
+    );
+    const branchPayrolls = (payrolls || []).filter(
+      (p) => p.outlet === outletName && (p.period || p.date || '').startsWith(monthlyPnlMonth)
+    );
+
+    const shiftRev = branchShifts.reduce(
+      (acc, s) =>
+        acc +
+        (s.totalRevenue ||
+          (s.cashRevenue || 0) +
+            (s.actualQrisRevenue ?? s.qrisRevenue ?? 0) +
+            (s.actualTransferRevenue ?? s.transferRevenue ?? 0) +
+            (s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0)),
+      0
+    );
+    const cogsExp = branchExpenses
+      .filter(
+        (e) =>
+          e.category === 'Bahan Baku & HPP' ||
+          e.category === 'Belanja Pasar & Sayur' ||
+          e.category === 'Pembelian Bahan Darurat'
+      )
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+    const gp = shiftRev - cogsExp;
+
+    const opExp = branchExpenses
+      .filter(
+        (e) =>
+          e.category !== 'Bahan Baku & HPP' &&
+          e.category !== 'Belanja Pasar & Sayur' &&
+          e.category !== 'Pembelian Bahan Darurat'
+      )
+      .reduce((acc, e) => acc + (e.amount || 0), 0);
+    const payExp = branchPayrolls.reduce((acc, p) => acc + (p.netSalary || p.totalSalary || 0), 0);
+    const dedExp = branchDeductions.reduce((acc, d) => acc + (d.amount || 0), 0);
+    const totalDed = opExp + payExp + dedExp;
+    const netProfit = gp - totalDed;
+    const netMargin = shiftRev > 0 ? (netProfit / shiftRev) * 100 : 0;
+
+    return {
+      outletName,
+      shiftCount: branchShifts.length,
+      shiftRev,
+      cogsExp,
+      gp,
+      totalDed,
+      netProfit,
+      netMargin,
+    };
+  });
+
+  // Print Monthly Net Profit Statement
+  const handlePrintMonthlyNetProfitReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const content = `
+      <html>
+        <head>
+          <title>Laporan Laba Rugi Bulanan (Net Profit) - Steak 11</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #1e293b; max-width: 840px; margin: 0 auto; font-size: 12px; }
+            .header { text-align: center; border-bottom: 2px solid #3D1259; padding-bottom: 12px; margin-bottom: 16px; }
+            .header h2 { margin: 0; color: #3D1259; font-size: 20px; }
+            .header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+            .meta-bar { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 16px; font-weight: bold; font-size: 11px; }
+            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+            .card { padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; }
+            .card .label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
+            .card .val { font-size: 16px; font-weight: 800; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+            th { background: #f1f5f9; font-weight: bold; color: #334155; }
+            .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+            .footer { margin-top: 30px; display: flex; justify-content: space-between; text-align: center; font-size: 11px; }
+            .sign { margin-top: 45px; border-top: 1px solid #000; width: 140px; padding-top: 4px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>STEAK 11 — MYTHIC CHICKEN TASTE</h2>
+            <h4 style="margin:4px 0; color:#475569;">LAPORAN LABA / RUGI BERSIH BULANAN (MONTHLY NET PROFIT STATEMENT)</h4>
+          </div>
+
+          <div class="meta-bar">
+            <span>PERIODE BULAN: ${monthlyPnlMonth}</span>
+            <span>OUTLET: ${monthlyPnlOutlet === 'ALL' ? 'Semua Cabang (Konsolidasi)' : monthlyPnlOutlet}</span>
+            <span>TANGGAL CETAK: ${new Date().toLocaleString('id-ID')}</span>
+          </div>
+
+          <div class="grid">
+            <div class="card" style="border-left: 4px solid #3b82f6;">
+              <div class="label">Total Omset Bulanan</div>
+              <div class="val" style="color: #1d4ed8;">${formatRupiah(totalMonthShiftRevenue)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #10b981;">
+              <div class="label">Total Gross Profit</div>
+              <div class="val" style="color: #047857;">${formatRupiah(monthGrossProfit)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #ef4444;">
+              <div class="label">Total Biaya Pengurang</div>
+              <div class="val" style="color: #b91c1c;">-${formatRupiah(totalMonthlyAllDeductions)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid ${monthlyNetProfit >= 0 ? '#10b981' : '#ef4444'};">
+              <div class="label">Laba / Rugi Bersih</div>
+              <div class="val" style="color: ${monthlyNetProfit >= 0 ? '#047857' : '#b91c1c'};">${formatRupiah(monthlyNetProfit)}</div>
+            </div>
+          </div>
+
+          <h4 style="margin: 15px 0 6px; color: #3D1259;">1. Rincian Laba Kotor (Gross Profit)</h4>
+          <table>
+            <thead>
+              <tr><th>Komponen Pendapatan & HPP</th><th class="text-right">Nominal (Rp)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>• Penjualan Tunai POS</td><td class="text-right bold text-emerald-600">+${formatRupiah(monthCashRev)}</td></tr>
+              <tr><td>• Penerimaan QRIS</td><td class="text-right bold text-blue-600">+${formatRupiah(monthQrisRev)}</td></tr>
+              <tr><td>• Penerimaan Transfer Bank</td><td class="text-right bold text-blue-600">+${formatRupiah(monthTransferRev)}</td></tr>
+              <tr><td>• Penjualan Online Food (GoFood/Grab/Shopee)</td><td class="text-right bold text-orange-600">+${formatRupiah(monthOnlineFoodRev)}</td></tr>
+              <tr style="background:#f8fafc; font-weight:bold;"><td>TOTAL OMSET BULANAN (LOCKED SHIFT REVENUE)</td><td class="text-right">${formatRupiah(totalMonthShiftRevenue)}</td></tr>
+              <tr><td>• Beban HPP, Daging Ayam & Belanja Pasar</td><td class="text-right text-rose-600">-${formatRupiah(monthCogsExpenses)}</td></tr>
+              <tr style="background:#ecfdf5; font-weight:bold; color:#065f46;"><td>TOTAL GROSS PROFIT BULANAN (MARGIN: ${monthGrossMarginPct.toFixed(1)}%)</td><td class="text-right">${formatRupiah(monthGrossProfit)}</td></tr>
+            </tbody>
+          </table>
+
+          <h4 style="margin: 20px 0 6px; color: #3D1259;">2. Rincian Biaya Pengurang Beban Usaha Bulanan</h4>
+          <table>
+            <thead>
+              <tr><th>Kategori Biaya Pengurang</th><th>Keterangan</th><th class="text-right">Nominal Pengurang (Rp)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1. Penggajian & Bonus Karyawan</td><td>${monthPayrollList.length} Slip Gaji Otomatis + Bonus Manual</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthPayrollDeduction)}</td></tr>
+              <tr><td>2. Sewa Tempat & Gedung</td><td>Sewa Ruko, Lapak, Booth Outlet</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthRentDeduction)}</td></tr>
+              <tr><td>3. Utilitas & Operasional Toko</td><td>Listrik, Air, Gas LPG, Internet, Perlengkapan</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthOpDeduction)}</td></tr>
+              <tr><td>4. Marketing, Promo & Iklan</td><td>Ads Medsos, Banner, Campaign Promosi</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthMarketingDeduction)}</td></tr>
+              <tr><td>5. Maintenance & Perbaikan Alat</td><td>Servis Kompor Grill, Freezer, Kulkas, POS, AC</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthMaintenanceDeduction)}</td></tr>
+              <tr><td>6. Beban Lain-lain & Pajak</td><td>Pajak Restoran, Retribusi & Beban Lain</td><td class="text-right text-rose-600">-${formatRupiah(totalMonthOtherDeduction)}</td></tr>
+              <tr style="background:#fee2e2; font-weight:bold; color:#991b1b;"><td colspan="2">TOTAL BIAYA PENGURANG BULANAN</td><td class="text-right">-${formatRupiah(totalMonthlyAllDeductions)}</td></tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top: 20px; padding: 14px; background: ${monthlyNetProfit >= 0 ? '#ecfdf5' : '#fef2f2'}; border: 2px solid ${monthlyNetProfit >= 0 ? '#10b981' : '#ef4444'}; border-radius: 8px; text-align: center;">
+            <div style="font-size: 12px; font-weight: bold; color: ${monthlyNetProfit >= 0 ? '#065f46' : '#991b1b'}; text-transform: uppercase;">
+              HASIL AKHIR: ${monthlyNetProfit >= 0 ? 'LABA BERSIH BULANAN (NET SURPLUS)' : 'RUGI OPERASIONAL BULANAN (NET DEFICIT)'}
+            </div>
+            <div style="font-size: 24px; font-weight: 900; color: ${monthlyNetProfit >= 0 ? '#047857' : '#b91c1c'}; margin: 4px 0;">
+              ${formatRupiah(monthlyNetProfit)}
+            </div>
+            <div style="font-size: 11px; color: #64748b;">
+              Margin Laba Bersih terhadap Omset Bulanan: <strong>${monthlyNetMarginPct.toFixed(2)}%</strong>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div>
+              <p>Dibuat Oleh,</p>
+              <div class="sign">${currentUser?.name || 'Staff Finance'}</div>
+            </div>
+            <div>
+              <p>Diperiksa Oleh,</p>
+              <div class="sign">Accounting Manager</div>
+            </div>
+            <div>
+              <p>Disetujui Oleh,</p>
+              <div class="sign">Owner / Direktur Utama</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
+  // Export Monthly Net Profit to Excel
+  const handleExportMonthlyNetProfitExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const summaryData = [
+      ['STEAK 11 - LAPORAN LABA / RUGI BERSIH BULANAN (NET PROFIT STATEMENT)'],
+      ['Periode Bulan', monthlyPnlMonth],
+      ['Filter Outlet', monthlyPnlOutlet === 'ALL' ? 'Semua Cabang (Konsolidasi)' : monthlyPnlOutlet],
+      ['Tanggal Unduh', todayStr],
+      [],
+      ['1. TOTAL OMSET BULANAN (LOCKED SHIFT REVENUE)', totalMonthShiftRevenue, 'Rekapitulasi Seluruh Shift Kasir Terkunci'],
+      ['  • Penjualan Tunai POS', monthCashRev, ''],
+      ['  • Penerimaan QRIS', monthQrisRev, ''],
+      ['  • Penerimaan Transfer Bank', monthTransferRev, ''],
+      ['  • Penjualan Kanal Online Food', monthOnlineFoodRev, ''],
+      ['2. HARGA POKOK PENJUALAN (HPP & BAHAN BAKU)', -monthCogsExpenses, 'Daging Ayam, Sosis, Telur & Belanja Pasar'],
+      ['3. TOTAL GROSS PROFIT BULANAN', monthGrossProfit, `${monthGrossMarginPct.toFixed(2)}% Gross Margin`],
+      [],
+      ['4. BIAYA PENGURANG BEBAN USAHA BULANAN', -totalMonthlyAllDeductions, 'Total Beban Operasional, Gaji, Sewa, dll.'],
+      ['  • Penggajian & Bonus Karyawan', -totalMonthPayrollDeduction, `${monthPayrollList.length} Slip Gaji + Bonus`],
+      ['  • Sewa Tempat & Gedung Outlet', -totalMonthRentDeduction, 'Sewa Ruko / Lapak Cabang'],
+      ['  • Listrik, Air, Gas & Operasional Toko', -totalMonthOpDeduction, 'Utilitas & Belanja Toko'],
+      ['  • Marketing, Iklan & Promo', -totalMonthMarketingDeduction, 'Ads & Campaign'],
+      ['  • Maintenance & Servis Peralatan', -totalMonthMaintenanceDeduction, 'Grill, Kulkas, Freezer, dll.'],
+      ['  • Beban Pajak & Lain-lain', -totalMonthOtherDeduction, ''],
+      [],
+      ['5. LABA / RUGI BERSIH BULANAN (NET PROFIT)', monthlyNetProfit, monthlyNetProfit >= 0 ? 'SURPLUS LABA' : 'DEFISIT RUGI'],
+      ['NET PROFIT MARGIN (%)', `${monthlyNetMarginPct.toFixed(2)}%`, 'Margin Bersih terhadap Omset Bulanan'],
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan Laba Rugi');
+
+    const dedData = [
+      ['ID Beban', 'Bulan', 'Kategori', 'Nama Biaya Pengurang', 'Alokasi Outlet Cabang', 'Nominal (Rp)', 'Catatan'],
+      ...filteredMonthDeductions.map((d) => [
+        d.id,
+        d.month,
+        d.category,
+        d.name,
+        d.outlet,
+        d.amount,
+        d.notes || '-',
+      ]),
+    ];
+    const wsDed = XLSX.utils.aoa_to_sheet(dedData);
+    XLSX.utils.book_append_sheet(wb, wsDed, 'Rincian Biaya Pengurang');
+
+    const branchData = [
+      ['Nama Outlet Cabang', 'Jumlah Shift', 'Omset Shift Bulanan (Rp)', 'Beban HPP (Rp)', 'Gross Profit (Rp)', 'Total Beban Pengurang (Rp)', 'Laba / Rugi Bersih (Rp)', 'Net Margin (%)'],
+      ...perBranchMonthlyNetProfit.map((b) => [
+        b.outletName,
+        b.shiftCount,
+        b.shiftRev,
+        b.cogsExp,
+        b.gp,
+        b.totalDed,
+        b.netProfit,
+        `${b.netMargin.toFixed(2)}%`,
+      ]),
+    ];
+    const wsBranch = XLSX.utils.aoa_to_sheet(branchData);
+    XLSX.utils.book_append_sheet(wb, wsBranch, 'Performa Cabang Bulanan');
+
+    XLSX.writeFile(wb, `Laporan_Laba_Rugi_Bulanan_${monthlyPnlMonth}_Steak11.xlsx`);
+    showToast('📊 File Excel Laporan Laba/Rugi Bulanan berhasil diunduh!');
+  };
 
   // Print Cash Flow & Gross Profit Statement
   const handlePrintCashFlowReport = () => {
@@ -1281,6 +1718,18 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           </button>
 
           <button
+            onClick={() => setSubTab('monthly_net_profit')}
+            className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+              subTab === 'monthly_net_profit'
+                ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-purple-900/40'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4 text-purple-400" />
+            <span>Laba / Rugi Bulanan (Net Profit)</span>
+          </button>
+
+          <button
             onClick={() => setSubTab('profit_loss')}
             className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               subTab === 'profit_loss'
@@ -1349,6 +1798,36 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             </button>
             <button
               onClick={handleExportCashFlowExcel}
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
+            </button>
+          </div>
+        )}
+
+        {subTab === 'monthly_net_profit' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setDedMonth(monthlyPnlMonth);
+                setDedOutlet(monthlyPnlOutlet === 'ALL' ? 'Semua Cabang (Konsolidasi)' : monthlyPnlOutlet);
+                setShowDeductionModal(true);
+              }}
+              className="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Tambah Biaya Pengurang</span>
+            </button>
+            <button
+              onClick={handlePrintMonthlyNetProfitReport}
+              className="px-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-[#3D1259] dark:text-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Cetak</span>
+            </button>
+            <button
+              onClick={handleExportMonthlyNetProfitExcel}
               className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
@@ -2035,6 +2514,429 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                       </td>
                       <td className="p-2.5 text-center text-sm text-blue-600 dark:text-blue-400">
                         {cashFlowMarginPct.toFixed(1)}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB: REKAP BULANAN GROSS TO NET PROFIT (LABA / RUGI BERSIH) */}
+      {subTab === 'monthly_net_profit' && (
+        <div className="space-y-4">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-5">
+            {/* Header & Filter Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-purple-900/50 pb-4">
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                  Laporan Laba / Rugi Bulanan (Gross to Net Profit)
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Perhitungan komprehensif dari Total Gross Profit dikurangi pos penggajian, operasional, sewa, marketing, dan beban usaha bulanan.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Month Picker */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-purple-950 border border-slate-200 dark:border-purple-800 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-purple-500" />
+                  <span className="font-bold text-slate-500">Pilih Bulan:</span>
+                  <input
+                    type="month"
+                    value={monthlyPnlMonth}
+                    onChange={(e) => setMonthlyPnlMonth(e.target.value)}
+                    className="bg-transparent font-black text-[#3D1259] dark:text-amber-300 focus:outline-hidden cursor-pointer"
+                  />
+                </div>
+
+                {/* Outlet Selector */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-purple-950 border border-slate-200 dark:border-purple-800 text-xs">
+                  <Store className="w-3.5 h-3.5 text-purple-500" />
+                  <select
+                    value={monthlyPnlOutlet}
+                    onChange={(e) => setMonthlyPnlOutlet(e.target.value)}
+                    className="bg-transparent font-black text-[#3D1259] dark:text-amber-300 focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="ALL">Semua Cabang (Konsolidasi)</option>
+                    {allKnownOutlets.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 KPI CARDS: OMSET -> GROSS PROFIT -> DEDUCTIONS -> NET PROFIT */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Card 1: Total Omset Bulanan */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-900/50 space-y-1.5">
+                <div className="flex items-center justify-between text-blue-700 dark:text-blue-300">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-blue-500" />
+                    1. Omset Shift Bulanan
+                  </span>
+                  <span className="p-1 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                    <DollarSign className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <p className="font-black text-xl text-blue-700 dark:text-blue-300">
+                  {formatRupiah(totalMonthShiftRevenue)}
+                </p>
+                <p className="text-[10px] text-blue-600/80 dark:text-blue-400/80">
+                  {monthShifts.length} Shift Terverifikasi (Terkunci)
+                </p>
+              </div>
+
+              {/* Card 2: Total Gross Profit */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-950/40 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-1.5">
+                <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-emerald-500" />
+                    2. Gross Profit Bulanan
+                  </span>
+                  <span className="p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <p className="font-black text-xl text-emerald-700 dark:text-emerald-300">
+                  {formatRupiah(monthGrossProfit)}
+                </p>
+                <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">
+                  Gross Margin: <span className="font-bold">{monthGrossMarginPct.toFixed(1)}%</span> (Setelah HPP & Bahan)
+                </p>
+              </div>
+
+              {/* Card 3: Total Pengurang Beban */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50/50 dark:from-rose-950/40 dark:to-pink-950/20 border border-rose-200 dark:border-rose-900/50 space-y-1.5">
+                <div className="flex items-center justify-between text-rose-700 dark:text-rose-300">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+                    <TrendingDown className="w-3 h-3 text-rose-500" />
+                    3. Biaya Pengurang Beban
+                  </span>
+                  <span className="p-1 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">
+                    <Receipt className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <p className="font-black text-xl text-rose-700 dark:text-rose-300">
+                  -{formatRupiah(totalMonthlyAllDeductions)}
+                </p>
+                <p className="text-[10px] text-rose-600/80 dark:text-rose-400/80">
+                  Gaji, Sewa, Operasional, Promo & Servis
+                </p>
+              </div>
+
+              {/* Card 4: Net Profit (Laba / Rugi Bersih) */}
+              <div className={`p-4 rounded-2xl border space-y-1.5 shadow-xs ${
+                monthlyNetProfit >= 0
+                  ? 'bg-gradient-to-br from-purple-900 to-indigo-950 text-white border-purple-800'
+                  : 'bg-gradient-to-br from-rose-900 to-red-950 text-white border-rose-800'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
+                    4. Laba / Rugi Bersih (Net)
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-white/20 text-white">
+                    {monthlyNetProfit >= 0 ? '✓ SURPLUS PROFIT' : '⚠️ DEFISIT OPERASIONAL'}
+                  </span>
+                </div>
+                <p className="font-black text-xl text-amber-300">
+                  {formatRupiah(monthlyNetProfit)}
+                </p>
+                <p className="text-[10px] text-purple-200">
+                  Net Margin: <span className="font-bold text-white">{monthlyNetMarginPct.toFixed(1)}%</span> dari Omset
+                </p>
+              </div>
+            </div>
+
+            {/* DUAL COLUMN BREAKDOWN: GROSS PROFIT ON LEFT, DEDUCTIONS ON RIGHT */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* LEFT COLUMN: PENDAPATAN & GROSS PROFIT */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50/50 dark:bg-purple-950/20 space-y-3">
+                <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-emerald-500" />
+                  Rincian Omset & Gross Profit Bulanan
+                </h5>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <span className="text-slate-600 dark:text-slate-300">• Penjualan Tunai POS</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">+{formatRupiah(monthCashRev)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <span className="text-slate-600 dark:text-slate-300">• Penerimaan QRIS</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">+{formatRupiah(monthQrisRev)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <span className="text-slate-600 dark:text-slate-300">• Penerimaan Transfer Bank</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">+{formatRupiah(monthTransferRev)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <span className="text-slate-600 dark:text-slate-300">• Penjualan Online Food (GoFood/Grab)</span>
+                    <span className="font-bold text-orange-600 dark:text-orange-400">+{formatRupiah(monthOnlineFoodRev)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 font-extrabold text-blue-800 dark:text-blue-300">
+                    <span>TOTAL OMSET BULANAN (TERKUNCI)</span>
+                    <span>{formatRupiah(totalMonthShiftRevenue)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-rose-50/50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50">
+                    <span className="text-rose-700 dark:text-rose-300 font-semibold">• Beban HPP Daging Ayam & Belanja Pasar</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">-{formatRupiah(monthCogsExpenses)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 font-black text-emerald-800 dark:text-emerald-300 text-sm">
+                    <span>TOTAL GROSS PROFIT BULANAN</span>
+                    <span>{formatRupiah(monthGrossProfit)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: RINCIAN BIAYA PENGURANG BEBAN */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50/50 dark:bg-purple-950/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                    <Receipt className="w-4 h-4 text-rose-500" />
+                    Pos Biaya Pengurang Beban Usaha Bulanan
+                  </h5>
+                  <button
+                    onClick={() => {
+                      setDedMonth(monthlyPnlMonth);
+                      setDedOutlet(monthlyPnlOutlet === 'ALL' ? 'Semua Cabang (Konsolidasi)' : monthlyPnlOutlet);
+                      setShowDeductionModal(true);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] flex items-center gap-1 cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-3 h-3" /> Tambah Beban
+                  </button>
+                </div>
+
+                <div className="space-y-1.5 text-xs">
+                  {/* 1. Penggajian */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">1. Penggajian & Bonus Karyawan</span>
+                      <span className="text-[10px] text-slate-400">{monthPayrollList.length} Slip Gaji Otomatis + Penyesuaian</span>
+                    </div>
+                    <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthPayrollDeduction)}</span>
+                  </div>
+
+                  {/* 2. Sewa Tempat */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">2. Sewa Tempat & Gedung Outlet</span>
+                      <span className="text-[10px] text-slate-400">Ruko, Lapak, Booth Cabang</span>
+                    </div>
+                    <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthRentDeduction)}</span>
+                  </div>
+
+                  {/* 3. Utilitas & Operasional */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">3. Utilitas & Operasional Toko</span>
+                      <span className="text-[10px] text-slate-400">Listrik, Air, Gas LPG, Kas Kecil Toko</span>
+                    </div>
+                    <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthOpDeduction)}</span>
+                  </div>
+
+                  {/* 4. Marketing */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">4. Marketing, Ads & Promo</span>
+                      <span className="text-[10px] text-slate-400">Iklan Medsos & Konten</span>
+                    </div>
+                    <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthMarketingDeduction)}</span>
+                  </div>
+
+                  {/* 5. Maintenance */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                    <div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">5. Maintenance & Servis Alat</span>
+                      <span className="text-[10px] text-slate-400">Servis Grill, Freezer, POS, AC</span>
+                    </div>
+                    <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthMaintenanceDeduction)}</span>
+                  </div>
+
+                  {/* 6. Lain-lain */}
+                  {totalMonthOtherDeduction > 0 && (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-100 dark:border-purple-900">
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">6. Pajak & Biaya Lainnya</span>
+                        <span className="text-[10px] text-slate-400">Retribusi & Pengeluaran Tambahan</span>
+                      </div>
+                      <span className="font-black text-rose-600 dark:text-rose-400">-{formatRupiah(totalMonthOtherDeduction)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-rose-100 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-900 font-black text-rose-800 dark:text-rose-300 text-sm">
+                    <span>TOTAL BIAYA PENGURANG</span>
+                    <span>-{formatRupiah(totalMonthlyAllDeductions)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* DAFTAR RINCIAN ITEM BIAYA PENGURANG MANUAL */}
+            <div className="pt-2 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-purple-500" />
+                  Daftar Rincian Item Biaya Pengurang Bulan Ini ({filteredMonthDeductions.length} Item)
+                </h5>
+                <span className="text-[11px] text-slate-400">
+                  Pos pengurang yang dapat ditambah & disesuaikan per cabang
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-purple-900 bg-white dark:bg-purple-950/40">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-600 dark:text-purple-300 font-bold">
+                      <th className="p-2.5">Nama Pos Pengurang</th>
+                      <th className="p-2.5">Kategori</th>
+                      <th className="p-2.5">Cabang Outlet</th>
+                      <th className="p-2.5 text-right">Nominal (Rp)</th>
+                      <th className="p-2.5 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
+                    {filteredMonthDeductions.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-slate-400">
+                          Belum ada catatan biaya pengurang tambahan untuk bulan ini.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredMonthDeductions.map((ded) => (
+                        <tr key={ded.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                          <td className="p-2.5">
+                            <span className="font-extrabold text-slate-800 dark:text-slate-200 block">{ded.name}</span>
+                            {ded.notes && <span className="text-[10px] text-slate-400">{ded.notes}</span>}
+                          </td>
+                          <td className="p-2.5">
+                            <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-[#3D1259] dark:text-amber-300 text-[10px] font-bold">
+                              {ded.category}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-slate-600 dark:text-slate-300 text-[11px]">
+                            {ded.outlet}
+                          </td>
+                          <td className="p-2.5 text-right font-black text-rose-600 dark:text-rose-400">
+                            -{formatRupiah(ded.amount)}
+                          </td>
+                          <td className="p-2.5 text-right">
+                            <button
+                              onClick={() => handleDeleteDeduction(ded.id, ded.name)}
+                              className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                              title="Hapus pos pengurang ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* TABEL REKAPITULASI LABA / RUGI PER CABANG OUTLET */}
+            <div className="pt-3 border-t border-slate-100 dark:border-purple-900/50 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-purple-500" />
+                  Rekapitulasi Laba / Rugi Bersih per Cabang Outlet ({monthlyPnlMonth})
+                </h5>
+                <span className="text-[11px] text-slate-400">
+                  Konsolidasi real-time Omset, HPP, Biaya Pengurang & Net Profit
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-purple-900">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-700 dark:text-purple-300 font-bold">
+                      <th className="p-2.5">Nama Cabang Outlet</th>
+                      <th className="p-2.5 text-center">Jumlah Shift</th>
+                      <th className="p-2.5 text-right">Omset Bulanan</th>
+                      <th className="p-2.5 text-right">Beban HPP/Bahan</th>
+                      <th className="p-2.5 text-right">Gross Profit</th>
+                      <th className="p-2.5 text-right">Total Pengurang</th>
+                      <th className="p-2.5 text-right">Laba / Rugi Bersih</th>
+                      <th className="p-2.5 text-center">Net Margin %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
+                    {perBranchMonthlyNetProfit.map((b) => (
+                      <tr key={b.outletName} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                        <td className="p-2.5 font-extrabold text-slate-800 dark:text-slate-200">
+                          {b.outletName}
+                        </td>
+                        <td className="p-2.5 text-center text-slate-600 dark:text-slate-300">
+                          {b.shiftCount} Shift
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                          {formatRupiah(b.shiftRev)}
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400">
+                          -{formatRupiah(b.cogsExp)}
+                        </td>
+                        <td className="p-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                          {formatRupiah(b.gp)}
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400">
+                          -{formatRupiah(b.totalDed)}
+                        </td>
+                        <td className={`p-2.5 text-right font-black ${
+                          b.netProfit >= 0 ? 'text-purple-950 dark:text-amber-300' : 'text-rose-600 dark:text-rose-400'
+                        }`}>
+                          {formatRupiah(b.netProfit)}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            b.netMargin >= 25
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                              : b.netMargin >= 10
+                              ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                              : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                          }`}>
+                            {b.netMargin.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Row Konsolidasi Total */}
+                    <tr className="bg-slate-100 dark:bg-purple-950 font-black border-t-2 border-slate-300 dark:border-purple-800">
+                      <td className="p-2.5 text-purple-950 dark:text-amber-300">
+                        KONSOLIDASI SELURUH CABANG
+                      </td>
+                      <td className="p-2.5 text-center text-slate-700 dark:text-slate-300">
+                        {monthShifts.length} Shift
+                      </td>
+                      <td className="p-2.5 text-right text-blue-600 dark:text-blue-400 text-sm">
+                        {formatRupiah(totalMonthShiftRevenue)}
+                      </td>
+                      <td className="p-2.5 text-right text-rose-600 dark:text-rose-400 text-sm">
+                        -{formatRupiah(monthCogsExpenses)}
+                      </td>
+                      <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400 text-sm">
+                        {formatRupiah(monthGrossProfit)}
+                      </td>
+                      <td className="p-2.5 text-right text-rose-600 dark:text-rose-400 text-sm">
+                        -{formatRupiah(totalMonthlyAllDeductions)}
+                      </td>
+                      <td className={`p-2.5 text-right text-sm ${monthlyNetProfit >= 0 ? 'text-purple-950 dark:text-amber-300' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {formatRupiah(monthlyNetProfit)}
+                      </td>
+                      <td className="p-2.5 text-center text-sm text-purple-600 dark:text-amber-400">
+                        {monthlyNetMarginPct.toFixed(1)}%
                       </td>
                     </tr>
                   </tbody>
@@ -3325,6 +4227,148 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                 <Trash2 className="w-3.5 h-3.5" /> Ya, Hapus Data
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INPUT BIAYA PENGURANG BULANAN */}
+      {showDeductionModal && (
+        <div className="fixed inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#1a0c28] border border-purple-900/50 rounded-2xl p-5 sm:p-6 max-w-md w-full my-auto max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-lg text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-rose-500" />
+              Tambah Pos Biaya Pengurang Bulanan
+            </h3>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!dedName.trim() || dedAmount <= 0) {
+                  showToast('⚠️ Nama biaya dan nominal wajib diisi!');
+                  return;
+                }
+                const newDed: MonthlyDeductionItem = {
+                  id: `DED-${dedMonth.replace('-', '')}-${Date.now().toString().slice(-4)}`,
+                  month: dedMonth,
+                  outlet: dedOutlet,
+                  category: dedCategory,
+                  name: dedName.trim(),
+                  amount: dedAmount,
+                  notes: dedNotes.trim() || undefined,
+                  createdAt: new Date().toISOString()
+                };
+                const updated = [newDed, ...monthlyDeductions];
+                saveMonthlyDeductionsData(updated);
+                setShowDeductionModal(false);
+                setDedName('');
+                setDedAmount(1000000);
+                setDedNotes('');
+                showToast(`💸 Biaya pengurang "${newDed.name}" (${formatRupiah(dedAmount)}) berhasil ditambahkan!`);
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300">Bulan Periode *</label>
+                  <input
+                    type="month"
+                    required
+                    value={dedMonth}
+                    onChange={(e) => setDedMonth(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300">Alokasi Cabang *</label>
+                  <select
+                    value={dedOutlet}
+                    onChange={(e) => setDedOutlet(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="Semua Cabang (Konsolidasi)">Semua Cabang (Konsolidasi)</option>
+                    {allKnownOutlets.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-700 dark:text-purple-300">Kategori Biaya Pengurang *</label>
+                <select
+                  value={dedCategory}
+                  onChange={(e) => setDedCategory(e.target.value as any)}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-slate-800 dark:text-slate-100"
+                >
+                  <option value="Penggajian & Bonus">Penggajian, Lembur & Bonus Tambahan</option>
+                  <option value="Sewa Tempat & Gedung">Sewa Tempat, Lapak & Ruko Outlet</option>
+                  <option value="Listrik, Air & Utilitas">Listrik, Air, Gas & WiFi / Internet</option>
+                  <option value="Operasional & Perlengkapan">Operasional Toko & Perlengkapan</option>
+                  <option value="Marketing & Promo">Marketing, Iklan Ads, Promo & Brosur</option>
+                  <option value="Maintenance & Perbaikan">Maintenance Alat, Grill & Servis Freezer</option>
+                  <option value="Pajak & Legalitas">Pajak Restoran, Retribusi & Izin</option>
+                  <option value="Lain-lain">Biaya Lain-lain / Beban Lainnya</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-700 dark:text-purple-300">Nama / Rincian Beban *</label>
+                <input
+                  type="text"
+                  required
+                  value={dedName}
+                  onChange={(e) => setDedName(e.target.value)}
+                  placeholder="e.g. Sewa Ruko Outlet Cibubur Bulan Ini"
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-700 dark:text-purple-300">Nominal Beban (Rp) *</label>
+                <input
+                  type="number"
+                  required
+                  min={1000}
+                  value={dedAmount}
+                  onChange={(e) => setDedAmount(Number(e.target.value))}
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-slate-800 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-700 dark:text-purple-300">Catatan Tambahan (Opsional)</label>
+                <input
+                  type="text"
+                  value={dedNotes}
+                  onChange={(e) => setDedNotes(e.target.value)}
+                  placeholder="e.g. Bukti transfer sewa / slip pembayaran"
+                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-[11px] text-purple-800 dark:text-purple-300">
+                ℹ️ Biaya pengurang ini akan langsung mengurangi Total Gross Profit pada Laporan Laba / Rugi Bulanan.
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-purple-900">
+                <button
+                  type="button"
+                  onClick={() => setShowDeductionModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black cursor-pointer shadow-md"
+                >
+                  Simpan Biaya Pengurang
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -403,6 +403,17 @@ export interface CashFlowExpenseItem {
   recordedBy?: string;
 }
 
+export interface MonthlyDeductionItem {
+  id: string; // e.g. "DED-202608-01"
+  month: string; // e.g. "2026-08"
+  outlet: string; // e.g. "Steak 11, Cibubur" or "Semua Cabang (Konsolidasi)"
+  category: 'Penggajian & Bonus' | 'Sewa Tempat & Gedung' | 'Listrik, Air & Utilitas' | 'Operasional & Perlengkapan' | 'Marketing & Promo' | 'Maintenance & Perbaikan' | 'Pajak & Legalitas' | 'Lain-lain' | string;
+  name: string;
+  amount: number;
+  notes?: string;
+  createdAt?: string;
+}
+
 export interface CashierShiftRecord {
   id: string;
   date: string;
