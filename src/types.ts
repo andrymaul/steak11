@@ -539,6 +539,7 @@ export interface WorkShiftTemplate {
   startTime: string; // e.g. "09:00"
   endTime: string; // e.g. "17:00"
   color: string; // tailwind color indicator
+  outlet?: string; // e.g. "Semua Outlet", "Steak 11, Kalisari", "Steak 11, Cibubur"
   isOff?: boolean;
   notes?: string;
 }

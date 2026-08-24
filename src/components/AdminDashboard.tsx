@@ -904,7 +904,9 @@ function doPost(e) {
   const [shiftTplStart, setShiftTplStart] = useState('09:00');
   const [shiftTplEnd, setShiftTplEnd] = useState('17:00');
   const [shiftTplColor, setShiftTplColor] = useState('emerald');
+  const [shiftTplOutlet, setShiftTplOutlet] = useState<string>('Semua Outlet');
   const [shiftTplIsOff, setShiftTplIsOff] = useState<boolean>(false);
+  const [shiftTemplateOutletFilter, setShiftTemplateOutletFilter] = useState<string>('ALL');
 
   // Employee Kasbon / Loan State
   const [employeeLoans, setEmployeeLoans] = useState<EmployeeLoan[]>(() => getStoredEmployeeLoans());
@@ -3283,13 +3285,61 @@ function doPost(e) {
     showToast(`Karyawan "${emp.name}" status roster shift diubah menjadi: ${newIsOff ? '🔴 OFF (Tidak Diterbitkan Roster)' : '🟢 ON (Aktif Diterbitkan Roster)'}`);
   };
 
-  const handleExecuteScheduleGeneration = () => {
-    if (checkReadOnlyPermission()) return;
-    if (employees.length === 0) {
-      showToast('Belum ada data karyawan. Tambahkan karyawan terlebih dahulu!');
-      return;
-    }
+  // Helper: Get master shift templates specifically tailored per outlet based on Outlet & Shift Rules
+  const getShiftsForOutlet = (outletName?: string): WorkShiftTemplate[] => {
+    const matchedLoc = locations.find(
+      (l) => l.name.toLowerCase() === (outletName || '').trim().toLowerCase()
+    );
 
+    // 1. Shift Operasional Resmi dari Menu Outlet & Shift Rules
+    const outletShift: WorkShiftTemplate | null = matchedLoc
+      ? {
+          id: `loc-shift-${matchedLoc.id}`,
+          name: `Shift Operasional (${matchedLoc.startWorkTime || '14:00'} - ${matchedLoc.endWorkTime || '23:00'})`,
+          startTime: matchedLoc.startWorkTime || '14:00',
+          endTime: matchedLoc.endWorkTime || '23:00',
+          color: 'emerald',
+          outlet: matchedLoc.name,
+          notes: `Shift resmi dari Aturan Shift Outlet ${matchedLoc.name}`
+        }
+      : null;
+
+    // 2. Custom shift templates assigned specifically to this outlet or 'Semua Outlet'
+    const customList = (shiftTemplates || []).filter((tpl) => {
+      if (tpl.isOff) return false;
+      if (!tpl.outlet || tpl.outlet === 'Semua Outlet') return true;
+      if (outletName && tpl.outlet.toLowerCase() === outletName.toLowerCase()) return true;
+      return false;
+    });
+
+    // 3. OFF Template
+    const offTpl: WorkShiftTemplate = (shiftTemplates || []).find((tpl) => tpl.isOff) || {
+      id: 'shift-off',
+      name: 'OFF / Libur',
+      startTime: '00:00',
+      endTime: '00:00',
+      color: 'slate',
+      outlet: 'Semua Outlet',
+      isOff: true,
+      notes: 'Hari libur rutin harian'
+    };
+
+    const result: WorkShiftTemplate[] = [];
+    if (outletShift) {
+      result.push(outletShift);
+    }
+    customList.forEach((s) => {
+      if (!result.some((r) => r.id === s.id || (r.startTime === s.startTime && r.endTime === s.endTime && r.name === s.name))) {
+        result.push(s);
+      }
+    });
+    if (!result.some((r) => r.isOff)) {
+      result.push(offTpl);
+    }
+    return result;
+  };
+
+  const handleGenerateMonthlySchedule = () => {
     const [yearStr, monthStr] = schedulePeriod.split('-');
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10);
@@ -3306,28 +3356,13 @@ function doPost(e) {
     }
 
     const generated: EmployeeSchedule[] = [];
-    const availableTemplates = (shiftTemplates && shiftTemplates.length > 0) ? shiftTemplates : [
-      { id: 'shift-1', name: 'Shift Pagi', startTime: '09:00', endTime: '17:00', color: 'emerald' },
-      { id: 'shift-2', name: 'Shift Siang / Mid', startTime: '12:00', endTime: '20:00', color: 'blue' },
-      { id: 'shift-3', name: 'Shift Malam', startTime: '15:00', endTime: '23:00', color: 'purple' },
-      { id: 'shift-4', name: 'OFF / Libur', startTime: '00:00', endTime: '00:00', color: 'slate', isOff: true }
-    ];
-
-    const workingShifts = availableTemplates.filter((s) => !s.isOff);
-    const offShiftTemplate = availableTemplates.find((s) => s.isOff) || {
+    const offShiftTemplate = shiftTemplates.find((s) => s.isOff) || {
       id: 'off',
       name: 'OFF / Libur',
       startTime: '00:00',
       endTime: '00:00',
       color: 'slate',
       isOff: true,
-    };
-    const defaultWorkingShift = workingShifts[0] || {
-      id: 'shift-1',
-      name: 'Shift Pagi',
-      startTime: '09:00',
-      endTime: '17:00',
-      color: 'emerald',
     };
 
     if (scheduleGenModel === 'single_person_outlet') {
@@ -3340,6 +3375,9 @@ function doPost(e) {
       });
 
       Object.entries(outletGroups).forEach(([outletName, empList]) => {
+        const outletShifts = getShiftsForOutlet(outletName);
+        const defaultWorkingShift = outletShifts.find((s) => !s.isOff) || outletShifts[0];
+
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const assignedIndex = (day - 1) % empList.length;
@@ -3362,17 +3400,19 @@ function doPost(e) {
               startTime: chosenShift.startTime,
               endTime: chosenShift.endTime,
               isOff: !isAssigned,
-              notes: isAssigned ? 'Penugasan Solo Stand 1 Orang per Outlet' : 'OFF (Rotasi Solo Stand)'
+              notes: isAssigned ? `Shift Operasional ${outletName}` : 'OFF (Rotasi Solo Stand)'
             });
           });
         }
       });
     } else if (scheduleGenModel === 'equal_two_shifts') {
       // --- MODEL: ROTASI 2 SHIFT (PAGI & MALAM / DUA SHIFT MASTER) ---
-      const morningShift = workingShifts[0] || defaultWorkingShift;
-      const nightShift = workingShifts.length > 1 ? workingShifts[workingShifts.length - 1] : defaultWorkingShift;
-
       targetEmps.forEach((emp, empIdx) => {
+        const empShifts = getShiftsForOutlet(emp.outlet);
+        const workingShifts = empShifts.filter((s) => !s.isOff);
+        const morningShift = workingShifts[0];
+        const nightShift = workingShifts.length > 1 ? workingShifts[workingShifts.length - 1] : morningShift;
+
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const dayOfWeek = new Date(year, month - 1, day).getDay();
@@ -3402,25 +3442,14 @@ function doPost(e) {
     } else if (scheduleGenModel === 'fixed_role_shift') {
       // --- MODEL: SHIFT TETAP BERDASARKAN JABATAN (ROLE-BASED MASTER SHIFT) ---
       targetEmps.forEach((emp, empIdx) => {
+        const empShifts = getShiftsForOutlet(emp.outlet);
+        const workingShifts = empShifts.filter((s) => !s.isOff);
         const roleLower = (emp.role || '').toLowerCase();
-        // Cari master shift yang namanya sesuai dengan role karyawan
         let matchedShift = workingShifts.find((s) => {
           const sNameLower = s.name.toLowerCase();
           const sNotesLower = (s.notes || '').toLowerCase();
           return sNameLower.includes(roleLower) || sNotesLower.includes(roleLower);
-        });
-
-        if (!matchedShift) {
-          if (roleLower.includes('kasir')) {
-            matchedShift = workingShifts[1] || defaultWorkingShift;
-          } else if (roleLower.includes('barista') || roleLower.includes('waitress')) {
-            matchedShift = workingShifts[0] || defaultWorkingShift;
-          } else if (roleLower.includes('chef') || roleLower.includes('cook')) {
-            matchedShift = workingShifts[workingShifts.length - 1] || defaultWorkingShift;
-          } else {
-            matchedShift = workingShifts[empIdx % workingShifts.length] || defaultWorkingShift;
-          }
-        }
+        }) || workingShifts[0];
 
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -3445,8 +3474,11 @@ function doPost(e) {
         }
       });
     } else {
-      // --- MODEL: ROTASI STANDAR BERIMBANG (MENGGILIR SELURUH MASTER SHIFT KERJA) ---
+      // --- MODEL: ROTASI STANDAR BERIMBANG (MENGGILIR MASTER SHIFT SESUAI OUTLET) ---
       targetEmps.forEach((emp, empIdx) => {
+        const empShifts = getShiftsForOutlet(emp.outlet);
+        const workingShifts = empShifts.filter((s) => !s.isOff);
+
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const dayOfWeek = new Date(year, month - 1, day).getDay();
@@ -3457,7 +3489,7 @@ function doPost(e) {
             chosenShift = offShiftTemplate;
           } else {
             const shiftIdx = (day + empIdx) % workingShifts.length;
-            chosenShift = workingShifts[shiftIdx] || defaultWorkingShift;
+            chosenShift = workingShifts[shiftIdx] || workingShifts[0];
           }
 
           generated.push({
@@ -3472,7 +3504,7 @@ function doPost(e) {
             startTime: chosenShift.startTime,
             endTime: chosenShift.endTime,
             isOff: isOffDay || Boolean(chosenShift.isOff),
-            notes: isOffDay ? 'OFF Rutin Mingguan' : (chosenShift.notes || `Rotasi Master Shift`)
+            notes: isOffDay ? 'OFF Rutin Mingguan' : (chosenShift.notes || `Rotasi Master Shift ${emp.outlet}`)
           });
         }
       });
@@ -3515,9 +3547,8 @@ function doPost(e) {
       case 'red':
         return 'bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800';
       case 'teal':
-        return 'bg-teal-100 text-teal-900 dark:bg-teal-950 dark:text-teal-300 border-teal-300 dark:border-teal-800';
       case 'orange':
-        return 'bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-300 border-orange-300 dark:border-orange-800';
+        return 'bg-teal-100 text-teal-900 dark:bg-teal-950 dark:text-teal-300 border-teal-300 dark:border-teal-800';
       case 'slate':
       default:
         return isOff
@@ -3533,6 +3564,9 @@ function doPost(e) {
     setSchEmployeeId(targetEmpId);
     setSchDate(targetDate);
 
+    const targetEmp = employees.find((e) => e.id === targetEmpId) || employees[0];
+    const outletShifts = getShiftsForOutlet(targetEmp?.outlet);
+
     const existingSch = targetEmpId && targetDate ? schedules.find((s) => s.employeeId === targetEmpId && s.date === targetDate) : null;
     if (existingSch) {
       setEditingScheduleId(existingSch.id);
@@ -3540,7 +3574,7 @@ function doPost(e) {
       setSchNotes(existingSch.notes || '');
     } else {
       setEditingScheduleId(null);
-      setSchShiftId(shiftTemplates[0]?.id || 'shift-1');
+      setSchShiftId(outletShifts[0]?.id || shiftTemplates[0]?.id || 'shift-1');
       setSchNotes('');
     }
     setShowScheduleModal(true);
@@ -3553,8 +3587,11 @@ function doPost(e) {
     }
 
     const emp = employees.find((e) => e.id === schEmployeeId);
-    const shift = shiftTemplates.find((s) => s.id === schShiftId);
-    if (!emp || !shift) return;
+    if (!emp) return;
+
+    const availableShifts = getShiftsForOutlet(emp.outlet);
+    const shift = availableShifts.find((s) => s.id === schShiftId) || shiftTemplates.find((s) => s.id === schShiftId);
+    if (!shift) return;
 
     const newSch: EmployeeSchedule = {
       id: editingScheduleId || `SCH-${emp.id}-${schDate}`,
@@ -3589,9 +3626,10 @@ function doPost(e) {
   const handleOpenAddShiftTemplate = () => {
     setEditingShiftTplId(null);
     setShiftTplName('');
-    setShiftTplStart('09:00');
-    setShiftTplEnd('17:00');
+    setShiftTplStart('14:00');
+    setShiftTplEnd('23:00');
     setShiftTplColor('emerald');
+    setShiftTplOutlet('Semua Outlet');
     setShiftTplIsOff(false);
   };
 
@@ -3601,6 +3639,7 @@ function doPost(e) {
     setShiftTplStart(tpl.startTime);
     setShiftTplEnd(tpl.endTime);
     setShiftTplColor(tpl.color);
+    setShiftTplOutlet(tpl.outlet || 'Semua Outlet');
     setShiftTplIsOff(!!tpl.isOff);
   };
 
@@ -3632,7 +3671,7 @@ function doPost(e) {
     if (editingShiftTplId) {
       updatedTemplates = shiftTemplates.map((t) =>
         t.id === editingShiftTplId
-          ? { ...t, name: shiftTplName.trim(), startTime: shiftTplStart, endTime: shiftTplEnd, color: shiftTplColor, isOff }
+          ? { ...t, name: shiftTplName.trim(), startTime: shiftTplStart, endTime: shiftTplEnd, color: shiftTplColor, outlet: shiftTplOutlet, isOff }
           : t
       );
       showToast(`Master Shift ${shiftTplName} berhasil diperbarui!`);
@@ -3644,6 +3683,7 @@ function doPost(e) {
         startTime: shiftTplStart,
         endTime: shiftTplEnd,
         color: shiftTplColor,
+        outlet: shiftTplOutlet,
         isOff
       };
       updatedTemplates = [...shiftTemplates, newTpl];
@@ -13322,87 +13362,119 @@ function doPost(e) {
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold block mb-1">Pilih Karyawan:</label>
-                <select
-                  value={schEmployeeId}
-                  onChange={(e) => setSchEmployeeId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold"
-                >
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.role} - {emp.outlet})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {(() => {
+              const currentEmp = employees.find((e) => e.id === schEmployeeId) || employees[0];
+              const availableShifts = getShiftsForOutlet(currentEmp?.outlet);
+              const loc = locations.find((l) => l.name.toLowerCase() === (currentEmp?.outlet || '').toLowerCase());
 
-              <div>
-                <label className="font-bold block mb-1">Tanggal Shift:</label>
-                <input
-                  type="date"
-                  value={schDate}
-                  onChange={(e) => setSchDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold"
-                />
-              </div>
+              return (
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <label className="font-bold block mb-1">Pilih Karyawan:</label>
+                    <select
+                      value={schEmployeeId}
+                      onChange={(e) => {
+                        const newEmpId = e.target.value;
+                        setSchEmployeeId(newEmpId);
+                        const empObj = employees.find((em) => em.id === newEmpId);
+                        const shiftsForNewEmp = getShiftsForOutlet(empObj?.outlet);
+                        if (shiftsForNewEmp.length > 0) {
+                          setSchShiftId(shiftsForNewEmp[0].id);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold"
+                    >
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.role} - {emp.outlet})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="font-bold block mb-1">Pilih Shift / Status Work:</label>
-                <select
-                  value={schShiftId}
-                  onChange={(e) => setSchShiftId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold"
-                >
-                  {shiftTemplates.map((tpl) => (
-                    <option key={tpl.id} value={tpl.id}>
-                      {tpl.name} ({tpl.isOff ? 'OFF / Libur' : `${tpl.startTime} - ${tpl.endTime}`})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {currentEmp && (
+                    <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-[11px] flex justify-between items-center">
+                      <div>
+                        <span className="font-bold text-purple-900 dark:text-amber-300 block">
+                          🏬 Outlet: {currentEmp.outlet}
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                          {loc ? `Aturan Shift Outlet: ${loc.startWorkTime || '14:00'} - ${loc.endWorkTime || '23:00'} WIB` : 'Aturan Shift Standar'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-md">
+                        {currentEmp.role}
+                      </span>
+                    </div>
+                  )}
 
-              <div>
-                <label className="font-bold block mb-1">Catatan Tambahan (Opsional):</label>
-                <input
-                  type="text"
-                  value={schNotes}
-                  onChange={(e) => setSchNotes(e.target.value)}
-                  placeholder="Misal: Tukar shift dengan Budi / Tugas Dapur Pagi"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950"
-                />
-              </div>
+                  <div>
+                    <label className="font-bold block mb-1">Tanggal Shift:</label>
+                    <input
+                      type="date"
+                      value={schDate}
+                      onChange={(e) => setSchDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold"
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-purple-900">
-                {editingScheduleId ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSchedule(editingScheduleId)}
-                    className="px-3 py-2 rounded-xl bg-rose-100 text-rose-700 font-bold text-xs hover:bg-rose-200 cursor-pointer"
-                  >
-                    Hapus
-                  </button>
-                ) : <div />}
+                  <div>
+                    <label className="font-bold block mb-1">Pilih Shift (Aturan Shift Outlet & Master):</label>
+                    <select
+                      value={schShiftId}
+                      onChange={(e) => setSchShiftId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-purple-950 dark:text-amber-300"
+                    >
+                      {availableShifts.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>
+                          {tpl.name} ({tpl.isOff ? 'OFF / Libur' : `${tpl.startTime} - ${tpl.endTime}`})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowScheduleModal(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-purple-900/50 text-slate-700 dark:text-slate-300 font-bold cursor-pointer"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSchedule}
-                    className="px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md cursor-pointer"
-                  >
-                    Simpan Shift
-                  </button>
+                  <div>
+                    <label className="font-bold block mb-1">Catatan Tambahan (Opsional):</label>
+                    <input
+                      type="text"
+                      value={schNotes}
+                      onChange={(e) => setSchNotes(e.target.value)}
+                      placeholder="Misal: Tukar shift dengan Budi / Tugas Dapur Pagi"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-slate-50 dark:bg-purple-950"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-purple-900">
+                    {editingScheduleId ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSchedule(editingScheduleId)}
+                        className="px-3 py-2 rounded-xl bg-rose-100 text-rose-700 font-bold text-xs hover:bg-rose-200 cursor-pointer"
+                      >
+                        Hapus
+                      </button>
+                    ) : <div />}
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowScheduleModal(false)}
+                        className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-purple-900/50 text-slate-700 dark:text-slate-300 font-bold cursor-pointer"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveSchedule}
+                        className="px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md cursor-pointer"
+                      >
+                        Simpan Shift
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -13414,9 +13486,14 @@ function doPost(e) {
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-purple-900 pb-3">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-amber-400" />
-                <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
-                  Kelola Master Jam Shift Kerja
-                </h3>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
+                    Kelola Master Shift Kerja (Per Outlet)
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Tersinkronisasi langsung dengan Aturan Shift Outlet
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => {
@@ -13430,9 +13507,57 @@ function doPost(e) {
             </div>
 
             <div className="space-y-4 text-xs">
+              {/* Filter Outlet */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800">
+                <label className="font-bold text-xs text-purple-900 dark:text-amber-300 flex items-center gap-1.5 shrink-0">
+                  <MapPin className="w-3.5 h-3.5" /> Filter Outlet:
+                </label>
+                <select
+                  value={shiftTemplateOutletFilter}
+                  onChange={(e) => setShiftTemplateOutletFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-purple-800 bg-white dark:bg-[#12071B] font-bold text-xs text-slate-800 dark:text-slate-100 flex-1"
+                >
+                  <option value="ALL">Semua Outlet Cabang</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.name}>
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Seksi Shift Rules Resmi dari Menu Outlet */}
+              <div className="space-y-1.5">
+                <span className="font-bold block text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>🏬 Shift Rules Resmi Outlet (Menu Outlet &amp; Shift Rules):</span>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Tersinkron Otomatis</span>
+                </span>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {locations
+                    .filter((loc) => shiftTemplateOutletFilter === 'ALL' || loc.name === shiftTemplateOutletFilter)
+                    .map((loc) => (
+                      <div key={`loc-rule-${loc.id}`} className="p-2.5 rounded-xl bg-amber-50/80 dark:bg-purple-950/80 border border-amber-300/80 dark:border-purple-700 flex justify-between items-center gap-2">
+                        <div className="overflow-hidden">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-purple-950 dark:text-amber-300 truncate text-[11px]">{loc.name}</span>
+                            <span className="text-[9px] font-bold bg-amber-200 dark:bg-purple-900 text-purple-950 dark:text-amber-300 px-1.5 py-0.2 rounded-md">Aturan Outlet</span>
+                          </div>
+                          <span className="text-[10px] text-slate-600 dark:text-slate-300 font-mono block">
+                            🕒 Jam Kerja: <strong>{loc.startWorkTime || '14:00'}</strong> s/d <strong>{loc.endWorkTime || '23:00'}</strong> WIB
+                          </span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                          Aktif
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Seksi Master Shift Tambahan */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold block text-slate-700 dark:text-slate-300">Daftar Master Shift saat ini:</span>
+                  <span className="font-bold block text-slate-700 dark:text-slate-300">Daftar Master Shift Tambahan:</span>
                   <button
                     type="button"
                     onClick={handleOpenAddShiftTemplate}
@@ -13442,37 +13567,49 @@ function doPost(e) {
                   </button>
                 </div>
                 <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                  {shiftTemplates.map((tpl) => (
-                    <div key={tpl.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 flex justify-between items-center gap-2">
-                      <div className="overflow-hidden">
-                        <span className="font-bold block text-slate-800 dark:text-slate-200 truncate">{tpl.name}</span>
-                        <span className="text-[10px] text-slate-400 block truncate">
-                          {tpl.isOff ? 'Hari Libur Karyawan' : `${tpl.startTime} s/d ${tpl.endTime}`}
-                        </span>
+                  {shiftTemplates
+                    .filter((tpl) => {
+                      if (shiftTemplateOutletFilter === 'ALL') return true;
+                      if (!tpl.outlet || tpl.outlet === 'Semua Outlet') return true;
+                      return tpl.outlet === shiftTemplateOutletFilter;
+                    })
+                    .map((tpl) => (
+                      <div key={tpl.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 flex justify-between items-center gap-2">
+                        <div className="overflow-hidden">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold block text-slate-800 dark:text-slate-200 truncate">{tpl.name}</span>
+                            <span className="text-[9px] bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-amber-300 px-1.5 py-0.2 rounded font-bold">
+                              {tpl.outlet || 'Semua Outlet'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block truncate">
+                            {tpl.isOff ? 'Hari Libur Karyawan' : `${tpl.startTime} s/d ${tpl.endTime}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleEditShiftTemplate(tpl)}
+                            className="p-1 rounded bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-slate-200 hover:bg-amber-400 hover:text-purple-950 transition-all cursor-pointer"
+                            title="Edit Master Shift Ini"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteShiftTemplate(tpl.id)}
+                            className="p-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all cursor-pointer"
+                            title="Hapus Master Shift"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleEditShiftTemplate(tpl)}
-                          className="p-1 rounded bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-slate-200 hover:bg-amber-400 hover:text-purple-950 transition-all cursor-pointer"
-                          title="Edit Master Shift Ini"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteShiftTemplate(tpl.id)}
-                          className="p-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all cursor-pointer"
-                          title="Hapus Master Shift"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
 
+              {/* Form Input Tambah / Edit Master Shift */}
               <div className="p-3 bg-amber-50 dark:bg-purple-950/40 rounded-xl border border-amber-300 dark:border-purple-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold block text-amber-900 dark:text-amber-300">
@@ -13487,6 +13624,22 @@ function doPost(e) {
                       Batal Edit
                     </button>
                   )}
+                </div>
+
+                <div>
+                  <label className="font-bold block mb-1">Berlaku untuk Outlet:</label>
+                  <select
+                    value={shiftTplOutlet}
+                    onChange={(e) => setShiftTplOutlet(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 font-bold"
+                  >
+                    <option value="Semua Outlet">Semua Outlet (Global)</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.name}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -13567,25 +13720,14 @@ function doPost(e) {
                     </span>
                   </div>
                 </label>
-              </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-purple-900">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowShiftTemplateModal(false);
-                    handleOpenAddShiftTemplate();
-                  }}
-                  className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-purple-900/50 text-slate-700 dark:text-slate-300 font-bold cursor-pointer"
-                >
-                  Tutup
-                </button>
                 <button
                   type="button"
                   onClick={handleSaveShiftTemplate}
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-purple-950 text-amber-400 dark:bg-amber-400 dark:text-purple-950 font-extrabold text-xs shadow-md hover:bg-purple-900 dark:hover:bg-amber-300 cursor-pointer flex items-center justify-center gap-1.5 transition-all"
                 >
-                  {editingShiftTplId ? 'Simpan Perubahan Shift' : 'Tambah Shift Baru'}
+                  <Save className="w-4 h-4" />
+                  {editingShiftTplId ? 'Simpan Perubahan Master Shift' : 'Tambah Master Shift'}
                 </button>
               </div>
             </div>
