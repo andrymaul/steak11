@@ -553,14 +553,16 @@ export const saveAttendanceRecordDirectToCloud = async (newRecord: AttendanceRec
  */
 export const updateAttendanceRecordInCloud = async (updatedRecord: AttendanceRecord): Promise<AttendanceRecord[]> => {
   const db = getDb();
-  let currentRecords = await pullAttendanceFromFirestore();
-  
-  const updated = currentRecords.map((rec) => {
-    if (rec.id === updatedRecord.id) {
-      return { ...rec, ...updatedRecord, updatedAt: new Date().toISOString() };
-    }
-    return rec;
-  });
+  const currentRecords = await pullAttendanceFromFirestore();
+  const exists = currentRecords.some((rec) => rec.id === updatedRecord.id);
+  const updated = exists
+    ? currentRecords.map((rec) => {
+        if (rec.id === updatedRecord.id) {
+          return { ...rec, ...updatedRecord, updatedAt: new Date().toISOString() };
+        }
+        return rec;
+      })
+    : [{ ...updatedRecord, createdAt: updatedRecord.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() }, ...currentRecords];
 
   updated.sort((a: any, b: any) => {
     const dateA = `${a.date} ${a.clockInTime || '00:00:00'}`;

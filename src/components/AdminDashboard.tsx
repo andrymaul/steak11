@@ -868,8 +868,21 @@ function doPost(e) {
   const [attEditClockOutStatus, setAttEditClockOutStatus] = useState<'Pulang Tepat Waktu' | 'Pulang Awal'>('Pulang Tepat Waktu');
   const [attEditEarlyOutMinutes, setAttEditEarlyOutMinutes] = useState(0);
   const [attEditHoursWorked, setAttEditHoursWorked] = useState(0);
-  const [attEditStatus, setAttEditStatus] = useState<'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpha'>('Hadir');
+  const [attEditStatus, setAttEditStatus] = useState<'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpha' | 'Lembur' | string>('Hadir');
   const [attEditNotes, setAttEditNotes] = useState('');
+
+  // Attendance Overtime (Presensi Lembur Tanpa Foto) State
+  const [showOvertimeModal, setShowOvertimeModal] = useState(false);
+  const [otEmployeeId, setOtEmployeeId] = useState('');
+  const [otDate, setOtDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [otOutlet, setOtOutlet] = useState('');
+  const [otStartTime, setOtStartTime] = useState('22:00');
+  const [otEndTime, setOtEndTime] = useState('01:00');
+  const [otHours, setOtHours] = useState<number>(3);
+  const [otCustomRate, setOtCustomRate] = useState<number>(0);
+  const [otReason, setOtReason] = useState('Persiapan Event / Bumbu Marinasi / Stok Opname');
+  const [otNotes, setOtNotes] = useState('');
+  const [attTypeFilter, setAttTypeFilter] = useState<'ALL' | 'REGULAR' | 'OVERTIME'>('ALL');
 
   // Payroll State
   const [payrollSlips, setPayrollSlips] = useState<PayrollSlip[]>(() => getStoredPayroll());
@@ -2354,16 +2367,19 @@ function doPost(e) {
       'Nama Karyawan': rec.employeeName,
       'Tanggal': rec.date,
       'Outlet Jaga': rec.outlet,
-      'Jam Masuk': rec.clockInTime,
+      'Tipe Presensi': rec.isOvertime || rec.status === 'Lembur' ? 'Presensi Lembur' : 'Shift Reguler',
+      'Jam Masuk / Mulai': rec.clockInTime,
       'Status Masuk': rec.clockInStatus || 'Tepat Waktu',
       'Terlambat (Menit)': rec.lateMinutes || 0,
-      'Jam Pulang': rec.clockOutTime || 'Masih Bertugas',
+      'Jam Pulang / Selesai': rec.clockOutTime || (rec.isOvertime ? 'Selesai Lembur' : 'Masih Bertugas'),
       'Status Pulang': rec.clockOutStatus || '-',
       'Pulang Awal (Menit)': rec.earlyOutMinutes || 0,
       'Durasi Kerja (Jam)': rec.hoursWorked || 0,
+      'Jam Lembur': rec.isOvertime || rec.status === 'Lembur' ? (rec.overtimeHours || rec.hoursWorked || 0) : (rec.hoursWorked > 8 ? rec.hoursWorked - 8 : 0),
+      'Estimasi Upah Lembur': rec.overtimePay || ((rec.overtimeHours || (rec.isOvertime ? rec.hoursWorked : 0) || 0) * (rec.overtimeRatePerHour || 15000)),
       'Status Presensi': rec.status,
-      'Lokasi / GPS': rec.locationName || 'GPS Verified',
-      'Catatan': rec.notes || ''
+      'Lokasi / GPS': rec.locationName || (rec.isOvertime ? 'Presensi Lembur Manual' : 'GPS Verified'),
+      'Keterangan / Tugas Lembur': rec.overtimeReason || rec.notes || ''
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -2390,7 +2406,7 @@ function doPost(e) {
 
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('STEAK 11 - LAPORAN REKAP PRESENSI DIGITAL SHIFT KARYAWAN', 14, 18);
+    doc.text('STEAK 11 - LAPORAN REKAP PRESENSI DIGITAL & LEMBUR KARYAWAN', 14, 18);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -2405,8 +2421,9 @@ function doPost(e) {
       'Jam Masuk',
       'Jam Pulang',
       'Jam Kerja',
+      'Lembur',
       'Status',
-      'Catatan'
+      'Catatan / Tugas'
     ];
 
     const tableRows = filteredAttendance.map((rec, index) => [
@@ -2415,10 +2432,11 @@ function doPost(e) {
       rec.date,
       rec.outlet,
       rec.clockInTime + (rec.lateMinutes ? ` (L:${rec.lateMinutes}m)` : ''),
-      rec.clockOutTime || 'Bertugas',
+      rec.clockOutTime || (rec.isOvertime ? 'Selesai' : 'Bertugas'),
       `${rec.hoursWorked || 0} jam`,
+      rec.isOvertime || rec.status === 'Lembur' ? `${rec.overtimeHours || rec.hoursWorked} jam (+${formatRupiah(rec.overtimePay || 0)})` : '-',
       rec.status,
-      rec.notes || '-'
+      rec.overtimeReason || rec.notes || '-'
     ]);
 
     autoTable(doc, {
@@ -2535,6 +2553,67 @@ function doPost(e) {
     showToast('✅ Data rekam absensi berhasil diperbarui di Cloud Firestore!');
   };
 
+  // --- Overtime Attendance Handlers ---
+  const handleOpenAddOvertime = () => {
+    const activeEmps = (employees || []).filter((e) => e.status === 'Aktif');
+    const firstEmp = activeEmps[0];
+    setOtEmployeeId(firstEmp ? firstEmp.id : '');
+    setOtDate(attDateFilter || new Date().toISOString().split('T')[0]);
+    setOtOutlet(firstEmp?.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
+    setOtStartTime('22:00');
+    setOtEndTime('01:00');
+    setOtHours(3);
+    setOtCustomRate(firstEmp?.hourlyRate || 15000);
+    setOtReason('Persiapan Event / Bumbu Marinasi / Stok Opname');
+    setOtNotes('');
+    setShowOvertimeModal(true);
+  };
+
+  const handleSaveOvertimeAttendance = async () => {
+    if (checkReadOnlyPermission()) return;
+    if (!otEmployeeId) {
+      showToast('Pilih karyawan penerima lembur!');
+      return;
+    }
+    const selectedEmp = (employees || []).find((e) => e.id === otEmployeeId);
+    if (!selectedEmp) {
+      showToast('Karyawan tidak ditemukan!');
+      return;
+    }
+    if (!otHours || Number(otHours) <= 0) {
+      showToast('Masukkan durasi jam lembur yang valid (> 0 jam)!');
+      return;
+    }
+
+    const effectiveRate = otCustomRate > 0 ? Number(otCustomRate) : (selectedEmp.hourlyRate || 15000);
+    const calculatedOvertimePay = Math.round(Number(otHours) * effectiveRate);
+
+    const newRecord: AttendanceRecord = {
+      id: `ATT-OT-${Date.now()}`,
+      employeeId: selectedEmp.id,
+      employeeName: selectedEmp.name,
+      date: otDate,
+      clockInTime: otStartTime || '22:00',
+      clockOutTime: otEndTime || '01:00',
+      hoursWorked: Number(otHours),
+      outlet: otOutlet || selectedEmp.outlet || 'Steak 11, Cibubur',
+      status: 'Lembur',
+      isOvertime: true,
+      overtimeHours: Number(otHours),
+      overtimeRatePerHour: effectiveRate,
+      overtimePay: calculatedOvertimePay,
+      overtimeReason: otReason,
+      notes: `[LEMBUR] ${otReason || 'Presensi Lembur'}${otNotes ? ` - ${otNotes}` : ''}`,
+      clockInStatus: 'Tepat Waktu',
+      createdAt: new Date().toISOString()
+    };
+
+    const updated = await updateAttendanceRecordInCloud(newRecord);
+    setAttendance(updated);
+    setShowOvertimeModal(false);
+    showToast(`⏱️ Presensi lembur ${selectedEmp.name} (${otHours} jam = +${formatRupiah(calculatedOvertimePay)}) berhasil dicatat & terintegrasi!`);
+  };
+
   const filteredAttendance = (attendance || []).filter((a) => {
     const searchLower = attSearchTerm.toLowerCase().trim();
     const matchSearch =
@@ -2543,6 +2622,7 @@ function doPost(e) {
       (a.employeeId || '').toLowerCase().includes(searchLower) ||
       (a.outlet || '').toLowerCase().includes(searchLower) ||
       (a.notes || '').toLowerCase().includes(searchLower) ||
+      (a.overtimeReason || '').toLowerCase().includes(searchLower) ||
       (a.status || '').toLowerCase().includes(searchLower);
     const matchOutlet =
       attOutletFilter === 'ALL' ||
@@ -2550,7 +2630,11 @@ function doPost(e) {
       (a.outlet || '').toLowerCase().trim().includes(attOutletFilter.toLowerCase().trim()) ||
       attOutletFilter.toLowerCase().trim().includes((a.outlet || '').toLowerCase().trim());
     const matchDate = !attDateFilter || a.date === attDateFilter;
-    return matchSearch && matchOutlet && matchDate;
+    const matchType =
+      attTypeFilter === 'ALL' ||
+      (attTypeFilter === 'OVERTIME' && (a.isOvertime || a.status === 'Lembur' || (a.overtimeHours && a.overtimeHours > 0))) ||
+      (attTypeFilter === 'REGULAR' && !a.isOvertime && a.status !== 'Lembur');
+    return matchSearch && matchOutlet && matchDate && matchType;
   });
 
   const handleDeleteAttendance = (id: string) => {
@@ -2581,26 +2665,31 @@ function doPost(e) {
           (a) => (a.employeeId === emp.id || (emp.name && (a.employeeName || '').toLowerCase() === emp.name.toLowerCase())) && a.date.startsWith(payrollPeriod)
         );
 
-        const daysPresent = empAtt.filter((a) => a.status === 'Hadir' || a.status === 'Terlambat').length;
-        const daysLate = empAtt.filter((a) => a.status === 'Terlambat' || a.clockInStatus === 'Terlambat Masuk' || (a.lateMinutes && a.lateMinutes > 0)).length;
-        const daysLatePenalized = empAtt.filter((a) => a.lateMinutes && a.lateMinutes > latePenaltyThresholdMinutes).length;
-        const daysOnTime = empAtt.filter(
+        const regularAtt = empAtt.filter((a) => !a.isOvertime && a.status !== 'Lembur');
+        const overtimeAtt = empAtt.filter((a) => a.isOvertime || a.status === 'Lembur' || (a.overtimeHours && a.overtimeHours > 0));
+
+        const daysPresent = regularAtt.filter((a) => a.status === 'Hadir' || a.status === 'Terlambat').length;
+        const daysLate = regularAtt.filter((a) => a.status === 'Terlambat' || a.clockInStatus === 'Terlambat Masuk' || (a.lateMinutes && a.lateMinutes > 0)).length;
+        const daysLatePenalized = regularAtt.filter((a) => a.lateMinutes && a.lateMinutes > latePenaltyThresholdMinutes).length;
+        const daysOnTime = regularAtt.filter(
           (a) =>
             a.status === 'Hadir' &&
             a.clockInStatus !== 'Terlambat Masuk' &&
             (!a.lateMinutes || a.lateMinutes === 0)
         ).length;
-        const totalLateMinutes = empAtt.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
+        const totalLateMinutes = regularAtt.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
 
-        const totalHours = empAtt.reduce((sum, a) => sum + (a.hoursWorked || 8), 0);
-
-        // Perhitungan Lembur: jam kerja di atas 8 jam per shift
-        const totalOvertimeHours = empAtt.reduce((acc, a) => {
+        const totalRegularHours = regularAtt.reduce((sum, a) => sum + (a.hoursWorked || 8), 0);
+        const totalExplicitOvertimeHours = overtimeAtt.reduce((sum, a) => sum + (a.overtimeHours || a.hoursWorked || 0), 0);
+        const regularShiftExcessHours = regularAtt.reduce((acc, a) => {
           const shiftHrs = a.hoursWorked || 8;
           return acc + (shiftHrs > 8 ? Math.round(shiftHrs - 8) : 0);
         }, 0);
+
+        const totalOvertimeHours = Math.round(totalExplicitOvertimeHours + regularShiftExcessHours);
         const hourlyRate = emp.hourlyRate ?? 0;
         const overtimePay = Math.round(totalOvertimeHours * hourlyRate);
+        const totalHours = Math.round(totalRegularHours + totalExplicitOvertimeHours);
 
         // Standard calculation
         const base = daysPresent * emp.dailyRate;
@@ -7674,8 +7763,16 @@ function doPost(e) {
                   </p>
                 </div>
 
-                {/* Toolbar Action Buttons: Refresh, XLSX, PDF, Sync Sheet */}
+                {/* Toolbar Action Buttons: Refresh, XLSX, PDF, Sync Sheet, Lembur */}
                 <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                  <button
+                    onClick={handleOpenAddOvertime}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+                    title="Catat Presensi Lembur Karyawan (Tanpa Foto Selfie)"
+                  >
+                    <Clock className="w-3.5 h-3.5" /> + Catat Presensi Lembur
+                  </button>
+
                   <button
                     onClick={() => setActiveTab('presensi_kamera')}
                     className="px-3.5 py-2 rounded-xl bg-[#3D1259] dark:bg-amber-400 text-amber-300 dark:text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-all cursor-pointer"
@@ -7718,44 +7815,83 @@ function doPost(e) {
                 </div>
               </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100 dark:border-purple-900/40">
-                <input
-                  type="text"
-                  placeholder="Cari nama karyawan..."
-                  value={attSearchTerm}
-                  onChange={(e) => setAttSearchTerm(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 min-w-[200px]"
-                />
+              {/* Filters & Type Switcher */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-purple-900/40">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <input
+                    type="text"
+                    placeholder="Cari nama karyawan / keterangan..."
+                    value={attSearchTerm}
+                    onChange={(e) => setAttSearchTerm(e.target.value)}
+                    className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 min-w-[200px]"
+                  />
 
-                <select
-                  value={attOutletFilter}
-                  onChange={(e) => setAttOutletFilter(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-semibold"
-                >
-                  <option value="ALL">Semua Outlet</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.name}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  type="date"
-                  value={attDateFilter}
-                  onChange={(e) => setAttDateFilter(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100"
-                />
-
-                {attDateFilter && (
-                  <button
-                    onClick={() => setAttDateFilter('')}
-                    className="text-[11px] font-bold text-amber-500 hover:underline cursor-pointer"
+                  <select
+                    value={attOutletFilter}
+                    onChange={(e) => setAttOutletFilter(e.target.value)}
+                    className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-semibold"
                   >
-                    Reset Tanggal
+                    <option value="ALL">Semua Outlet</option>
+                    {locations.map((l) => (
+                      <option key={l.id} value={l.name}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="date"
+                    value={attDateFilter}
+                    onChange={(e) => setAttDateFilter(e.target.value)}
+                    className="px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100"
+                  />
+
+                  {attDateFilter && (
+                    <button
+                      onClick={() => setAttDateFilter('')}
+                      className="text-[11px] font-bold text-amber-500 hover:underline cursor-pointer"
+                    >
+                      Reset Tanggal
+                    </button>
+                  )}
+                </div>
+
+                {/* Tipe Presensi Pills */}
+                <div className="flex items-center bg-slate-100 dark:bg-purple-950 p-1 rounded-xl border border-slate-200 dark:border-purple-900">
+                  <button
+                    type="button"
+                    onClick={() => setAttTypeFilter('ALL')}
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                      attTypeFilter === 'ALL'
+                        ? 'bg-[#3D1259] text-amber-300 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-purple-700'
+                    }`}
+                  >
+                    Semua ({attendance.length})
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setAttTypeFilter('REGULAR')}
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                      attTypeFilter === 'REGULAR'
+                        ? 'bg-[#3D1259] text-amber-300 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-purple-700'
+                    }`}
+                  >
+                    🏢 Reguler ({attendance.filter((a) => !a.isOvertime && a.status !== 'Lembur').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttTypeFilter('OVERTIME')}
+                    className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                      attTypeFilter === 'OVERTIME'
+                        ? 'bg-amber-500 text-purple-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-amber-500'
+                    }`}
+                  >
+                    ⏱️ Lembur Saja ({attendance.filter((a) => a.isOvertime || a.status === 'Lembur').length})
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -8065,52 +8201,68 @@ function doPost(e) {
                           </tr>
                         ) : (
                           paginatedAttendance.map((rec, idx) => (
-                        <tr key={`${rec.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-purple-950/40">
+                        <tr key={`${rec.id}-${idx}`} className={`hover:bg-slate-50 dark:hover:bg-purple-950/40 ${rec.isOvertime || rec.status === 'Lembur' ? 'bg-amber-50/30 dark:bg-amber-950/20' : ''}`}>
                           <td className="p-4 align-top">
-                            <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                            <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
                               {rec.employeeName}
+                              {(rec.isOvertime || rec.status === 'Lembur') && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 text-purple-950">
+                                  ⏱️ Lembur
+                                </span>
+                              )}
                             </span>
-                            <span className="text-[10px] text-slate-500">{rec.date} ({rec.employeeId})</span>
+                            <span className="text-[10px] text-slate-500 block mt-0.5">{rec.date} ({rec.employeeId})</span>
                           </td>
                           <td className="p-4 align-top">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {/* Selfie Masuk */}
-                              {rec.selfieUrl ? (
-                                <div
-                                  onClick={() => setEnlargedSelfie(rec.selfieUrl || null)}
-                                  className="w-11 h-11 rounded-lg border-2 border-emerald-500 overflow-hidden cursor-pointer hover:scale-105 transition-transform relative group shadow-xs"
-                                  title="Foto Selfie Masuk (Klik untuk perbesar)"
-                                >
-                                  <img src={rec.selfieUrl} alt="Selfie Masuk" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-x-0 bottom-0 bg-black/60 text-emerald-300 text-[8px] font-black text-center py-0.5">
-                                    MASUK
+                            {rec.isOvertime || rec.status === 'Lembur' ? (
+                              <div className="p-2 rounded-xl bg-amber-50 dark:bg-purple-950/80 border border-amber-300 dark:border-purple-800 text-center max-w-[140px]">
+                                <span className="text-[10px] font-extrabold text-amber-800 dark:text-amber-300 flex items-center justify-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-amber-500" /> Lembur (Tanpa Foto)
+                                </span>
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                  Rate: {formatRupiah(rec.overtimeRatePerHour || 15000)}/j
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {/* Selfie Masuk */}
+                                {rec.selfieUrl ? (
+                                  <div
+                                    onClick={() => setEnlargedSelfie(rec.selfieUrl || null)}
+                                    className="w-11 h-11 rounded-lg border-2 border-emerald-500 overflow-hidden cursor-pointer hover:scale-105 transition-transform relative group shadow-xs"
+                                    title="Foto Selfie Masuk (Klik untuk perbesar)"
+                                  >
+                                    <img src={rec.selfieUrl} alt="Selfie Masuk" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 text-emerald-300 text-[8px] font-black text-center py-0.5">
+                                      MASUK
+                                    </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <span className="text-[9px] italic text-slate-400 block">Masuk: -</span>
-                              )}
+                                ) : (
+                                  <span className="text-[9px] italic text-slate-400 block">Masuk: -</span>
+                                )}
 
-                              {/* Selfie Pulang */}
-                              {rec.clockOutSelfieUrl ? (
-                                <div
-                                  onClick={() => setEnlargedSelfie(rec.clockOutSelfieUrl || null)}
-                                  className="w-11 h-11 rounded-lg border-2 border-amber-400 overflow-hidden cursor-pointer hover:scale-105 transition-transform relative group shadow-xs"
-                                  title="Foto Selfie Pulang (Klik untuk perbesar)"
-                                >
-                                  <img src={rec.clockOutSelfieUrl} alt="Selfie Pulang" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-x-0 bottom-0 bg-black/60 text-amber-300 text-[8px] font-black text-center py-0.5">
-                                    PULANG
+                                {/* Selfie Pulang */}
+                                {rec.clockOutSelfieUrl ? (
+                                  <div
+                                    onClick={() => setEnlargedSelfie(rec.clockOutSelfieUrl || null)}
+                                    className="w-11 h-11 rounded-lg border-2 border-amber-400 overflow-hidden cursor-pointer hover:scale-105 transition-transform relative group shadow-xs"
+                                    title="Foto Selfie Pulang (Klik untuk perbesar)"
+                                  >
+                                    <img src={rec.clockOutSelfieUrl} alt="Selfie Pulang" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-x-0 bottom-0 bg-black/60 text-amber-300 text-[8px] font-black text-center py-0.5">
+                                      PULANG
+                                    </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <span className="text-[9px] italic text-slate-400 block">Pulang: -</span>
-                              )}
-                            </div>
+                                ) : (
+                                  <span className="text-[9px] italic text-slate-400 block">Pulang: -</span>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td className="p-4 align-top font-semibold text-slate-800 dark:text-slate-200">
                             <span className="font-bold block text-purple-900 dark:text-amber-300">{rec.outlet}</span>
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 block leading-tight mt-0.5">
-                              📍 {rec.locationName || 'GPS Verified'}
+                              📍 {rec.locationName || (rec.isOvertime ? 'Presensi Lembur Manual' : 'GPS Verified')}
                             </span>
                             {rec.latitude && rec.longitude && (
                               <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono block mt-0.5">
@@ -8122,7 +8274,11 @@ function doPost(e) {
                             <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                               {rec.clockInTime}
                             </div>
-                            {rec.clockInStatus === 'Terlambat Masuk' ? (
+                            {rec.isOvertime || rec.status === 'Lembur' ? (
+                              <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                                Mulai Lembur
+                              </span>
+                            ) : rec.clockInStatus === 'Terlambat Masuk' ? (
                               <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
                                 Terlambat {rec.lateMinutes || 0}m
                               </span>
@@ -8134,9 +8290,13 @@ function doPost(e) {
                           </td>
                           <td className="p-4 align-top">
                             <div className="font-mono text-amber-600 dark:text-amber-400 font-bold">
-                              {rec.clockOutTime || 'Masih Bertugas'}
+                              {rec.clockOutTime || (rec.isOvertime ? 'Selesai Lembur' : 'Masih Bertugas')}
                             </div>
-                            {rec.clockOutStatus === 'Pulang Awal' ? (
+                            {rec.isOvertime || rec.status === 'Lembur' ? (
+                              <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300">
+                                Selesai Lembur
+                              </span>
+                            ) : rec.clockOutStatus === 'Pulang Awal' ? (
                               <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300 border border-rose-300">
                                 Pulang Awal {rec.earlyOutMinutes || 0}m
                               </span>
@@ -8147,21 +8307,45 @@ function doPost(e) {
                             ) : null}
                           </td>
                           <td className="p-4 align-top font-bold text-purple-900 dark:text-amber-300">
-                            {rec.hoursWorked || 0} Jam
+                            {rec.isOvertime || rec.status === 'Lembur' ? (
+                              <div>
+                                <span className="font-black text-amber-600 dark:text-amber-400 block">
+                                  {rec.overtimeHours || rec.hoursWorked || 0} Jam Lembur
+                                </span>
+                                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 block">
+                                  +{formatRupiah(rec.overtimePay || ((rec.overtimeHours || rec.hoursWorked || 0) * (rec.overtimeRatePerHour || 15000)))}
+                                </span>
+                              </div>
+                            ) : (
+                              <span>{rec.hoursWorked || 0} Jam</span>
+                            )}
                           </td>
                           <td className="p-4 align-top">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                                rec.status === 'Hadir'
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                              }`}
-                            >
-                              {rec.status}
-                            </span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
-                              {rec.notes || '-'}
-                            </span>
+                            {rec.isOvertime || rec.status === 'Lembur' ? (
+                              <div>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs">
+                                  ⏱️ Presensi Lembur
+                                </span>
+                                <span className="text-[10px] text-amber-900 dark:text-amber-300 font-semibold block mt-1">
+                                  {rec.overtimeReason || rec.notes || 'Tugas Lembur Tambahan'}
+                                </span>
+                              </div>
+                            ) : (
+                              <div>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                    rec.status === 'Hadir'
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {rec.status}
+                                </span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
+                                  {rec.notes || '-'}
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td className="p-4 align-top text-center">
                             <div className="flex items-center justify-center gap-1.5">
@@ -11408,6 +11592,207 @@ function doPost(e) {
                 className="px-5 py-2 bg-amber-400 text-purple-950 font-extrabold text-xs rounded-full hover:bg-amber-300 cursor-pointer"
               >
                 Tutup Pratinjau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CATAT PRESENSI LEMBUR (TANPA FOTO) */}
+      {showOvertimeModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1a0c28] border border-amber-300 dark:border-purple-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-amber-100 dark:border-purple-900 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-amber-500/15 rounded-2xl text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 dark:text-white font-baloo">
+                    Catat Presensi Lembur (Tanpa Foto)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Terintegrasi otomatis dengan Rate Lembur Karyawan & Menu Penggajian
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOvertimeModal(false)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Pilih Karyawan */}
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                  Pilih Karyawan Penerima Lembur *
+                </label>
+                <select
+                  value={otEmployeeId}
+                  onChange={(e) => {
+                    const empId = e.target.value;
+                    setOtEmployeeId(empId);
+                    const selected = employees.find((emp) => emp.id === empId);
+                    if (selected) {
+                      setOtOutlet(selected.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
+                      setOtCustomRate(selected.hourlyRate || 15000);
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                >
+                  <option value="">-- Pilih Karyawan --</option>
+                  {employees.filter((e) => e.status === 'Aktif').map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.role} • {emp.outlet}) — Rate: {formatRupiah(emp.hourlyRate || 15000)}/jam
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tanggal & Outlet */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                    Tanggal Lembur *
+                  </label>
+                  <input
+                    type="date"
+                    value={otDate}
+                    onChange={(e) => setOtDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                    Outlet Cabang *
+                  </label>
+                  <select
+                    value={otOutlet}
+                    onChange={(e) => setOtOutlet(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                  >
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.name}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Jam Lembur & Durasi */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-purple-950/60 border border-amber-200 dark:border-purple-800 space-y-2.5">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                      Jam Mulai
+                    </label>
+                    <input
+                      type="time"
+                      value={otStartTime}
+                      onChange={(e) => setOtStartTime(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-900 font-bold text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                      Jam Selesai
+                    </label>
+                    <input
+                      type="time"
+                      value={otEndTime}
+                      onChange={(e) => setOtEndTime(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-900 font-bold text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-amber-800 dark:text-amber-300 block mb-1">
+                      Total Jam Lembur *
+                    </label>
+                    <input
+                      type="number"
+                      min={0.5}
+                      step={0.5}
+                      value={otHours}
+                      onChange={(e) => setOtHours(Number(e.target.value))}
+                      className="w-full px-2 py-1.5 rounded-lg border-2 border-amber-400 bg-white dark:bg-purple-900 font-black text-center text-amber-700 dark:text-amber-300 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Rate Lembur & Live Calculation */}
+                <div className="pt-2 border-t border-amber-200/80 dark:border-purple-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-500 block">Rate Lembur per Jam:</span>
+                    <div className="flex items-center gap-1 font-mono font-bold text-slate-800 dark:text-slate-200">
+                      <span>Rp</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1000}
+                        value={otCustomRate}
+                        onChange={(e) => setOtCustomRate(Number(e.target.value))}
+                        className="w-24 px-1.5 py-0.5 rounded border border-slate-300 dark:border-purple-700 bg-white dark:bg-purple-900 text-right font-bold text-xs"
+                      />
+                      <span className="text-[10px] text-slate-400">/jam</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] text-slate-500 block">Estimasi Upah Lembur:</span>
+                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      +{formatRupiah(Math.round((otHours || 0) * (otCustomRate || 0)))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alasan / Tugas Lembur */}
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                  Alasan / Keterangan Tugas Lembur *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Persiapan Stok Opname & Bumbu Marinasi Malam"
+                  value={otReason}
+                  onChange={(e) => setOtReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                  Catatan Tambahan (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Disetujui oleh Manager Outlet"
+                  value={otNotes}
+                  onChange={(e) => setOtNotes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100"
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-purple-900">
+              <button
+                type="button"
+                onClick={() => setShowOvertimeModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveOvertimeAttendance}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Simpan Presensi Lembur
               </button>
             </div>
           </div>

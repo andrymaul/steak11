@@ -154,7 +154,7 @@ export interface AttendanceRecord {
   clockOutTime?: string; // HH:mm:ss
   hoursWorked: number; // Total jam kerja
   outlet: string;
-  status: 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpha';
+  status: 'Hadir' | 'Terlambat' | 'Izin' | 'Sakit' | 'Alpha' | 'Lembur' | string;
   notes?: string;
   locationName?: string;
   selfieUrl?: string; // Foto selfie absensi masuk dengan watermark Steak 11
@@ -163,6 +163,11 @@ export interface AttendanceRecord {
   clockOutStatus?: 'Pulang Tepat Waktu' | 'Pulang Awal';
   lateMinutes?: number; // Jumlah menit keterlambatan
   earlyOutMinutes?: number; // Jumlah menit pulang awal
+  isOvertime?: boolean; // True jika pencatatan presensi lembur
+  overtimeHours?: number; // Durasi jam lembur
+  overtimeRatePerHour?: number; // Rate upah lembur per jam
+  overtimePay?: number; // Total estimasi upah lembur
+  overtimeReason?: string; // Alasan/deskripsi tugas lembur
   latitude?: number;
   longitude?: number;
   createdAt?: string;
