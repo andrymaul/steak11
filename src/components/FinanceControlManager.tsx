@@ -221,6 +221,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   // New Expense State
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseModalSource, setExpenseModalSource] = useState<'petty_cash' | 'cash_flow'>('petty_cash');
   const [expCategory, setExpCategory] = useState<PettyCashExpense['category']>('Pembelian Bahan Darurat');
   const [expDescription, setExpDescription] = useState('');
   const [expAmount, setExpAmount] = useState<number>(20000);
@@ -248,9 +249,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   const posTotalRevenue = posCashRevenue + posQrisRevenue + posTransferRevenue;
 
-  // Expenses for today (in overall filter)
+  // Expenses for today (in overall filter) - Kas Kecil Laci Toko
   const todayExpenses = (expenses || []).filter(
-    (e) => e.date === todayStr && (selectedOutletFilter === 'ALL' || e.outlet === selectedOutletFilter)
+    (e) => e.date === todayStr && (selectedOutletFilter === 'ALL' || e.outlet === selectedOutletFilter) && e.source !== 'cash_flow'
   );
   const totalOperationalExpenses = todayExpenses.reduce((acc, c) => acc + (c.amount || 0), 0);
 
@@ -271,8 +272,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     .filter((o) => o.paymentMethod === 'Transfer')
     .reduce((acc, c) => acc + (c.total || 0), 0);
 
+  // Modal Kas Keluar Laci Kasir: Sinkron dari Kas Kecil & Operasional (TANPA beban manual cash flow)
   const modalExpenses = (expenses || []).filter(
-    (e) => e.date === todayStr && (outlet === 'ALL' || e.outlet === outlet)
+    (e) => e.date === todayStr && (outlet === 'ALL' || e.outlet === outlet) && e.source !== 'cash_flow'
   ).reduce((acc, c) => acc + (c.amount || 0), 0);
 
   // Denominations Total
@@ -1055,8 +1057,30 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     const updated = [newShift, ...shifts];
     setShifts(updated);
     saveShiftsData(updated);
+
+    // 1. Sinkronisasi Otomatis Pengeluaran per Item Closing Kasir ke Daftar Kas Kecil & Operasional
+    const newPettyExpenses: PettyCashExpense[] = manualExpenseItems.map((itm, idx) => ({
+      id: `EXP-${todayStr.replace(/-/g, '')}-${Date.now().toString().slice(-4)}-${idx + 1}`,
+      date: todayStr,
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      outlet,
+      cashierName: currentUser?.name || cashierName,
+      category: 'Pembelian Bahan Darurat',
+      description: itm.description,
+      amount: itm.amount,
+      shiftId: newShift.id,
+      approvedBy: currentUser?.name || 'Kasir',
+      source: 'petty_cash',
+    }));
+
+    if (newPettyExpenses.length > 0) {
+      const updatedExpenses = [...newPettyExpenses, ...expenses];
+      setExpenses(updatedExpenses);
+      saveExpensesData(updatedExpenses);
+    }
+
     setShowClosingModal(false);
-    showToast(`✅ Closing Shift Kasir ${newShift.id} (${outlet} - ${shiftName}) berhasil disimpan & diaudit!`);
+    showToast(`✅ Closing Shift Kasir ${newShift.id} (${outlet} - ${shiftName}) berhasil disimpan & disinkronkan ke Kas Kecil!`);
   };
 
   // Handle Save Expense
@@ -1079,6 +1103,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       amount: expAmount,
       receiptNumber: expReceiptNo.trim() || undefined,
       approvedBy: currentUser?.name || 'Manager',
+      source: expenseModalSource,
     };
 
     const updated = [newExp, ...expenses];
@@ -1088,7 +1113,11 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     setExpDescription('');
     setExpAmount(20000);
     setExpReceiptNo('');
-    showToast(`💸 Pengeluaran kas kecil "${formatRupiah(expAmount)}" berhasil dicatat!`);
+    showToast(
+      expenseModalSource === 'cash_flow'
+        ? `📊 Pengeluaran beban Cash Flow "${formatRupiah(expAmount)}" berhasil dicatat (tidak memotong kas laci closing).`
+        : `💸 Pengeluaran kas kecil "${formatRupiah(expAmount)}" berhasil dicatat & disinkronkan!`
+    );
   };
 
   const handleDeleteExpense = (id: string, desc: string) => {
@@ -1274,22 +1303,28 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
         {subTab === 'petty_cash' && (
           <button
-            onClick={() => setShowExpenseModal(true)}
+            onClick={() => {
+              setExpenseModalSource('petty_cash');
+              setShowExpenseModal(true);
+            }}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Catat Pengeluaran Operasional</span>
+            <span>Catat Kas Kecil Laci</span>
           </button>
         )}
 
         {subTab === 'cash_flow' && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowExpenseModal(true)}
+              onClick={() => {
+                setExpenseModalSource('cash_flow');
+                setShowExpenseModal(true);
+              }}
               className="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Catat Pengeluaran</span>
+              <span>Catat Beban Cash Flow</span>
             </button>
             <button
               onClick={handlePrintCashFlowReport}
@@ -1427,20 +1462,25 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 2: PETTY CASH & OPERATIONAL EXPENSES */}
+      {/* SUB-TAB 2: PETTY CASH & OPERATIONAL EXPENSES (SINKRON DENGAN CLOSING SHIFT) */}
       {subTab === 'petty_cash' && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-purple-900/50 pb-3">
-              <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-rose-500" />
-                Pencatatan Pengeluaran Kas Kecil Operasional ({(expenses || []).length} Transaksi)
-              </h4>
+              <div>
+                <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-rose-500" />
+                  Pencatatan Kas Kecil & Operasional Laci ({(expenses || []).filter(e => e.source !== 'cash_flow').length} Transaksi)
+                </h4>
+                <span className="text-[10px] text-slate-400">
+                  ✓ Tersinkronisasi dua arah dengan Kas Keluar Operasional pada Audit Closing Shift
+                </span>
+              </div>
 
               <div className="text-xs">
-                <span className="text-slate-400">Total Pengeluaran: </span>
+                <span className="text-slate-400">Total Kas Kecil: </span>
                 <span className="font-black text-rose-600 dark:text-rose-400 text-sm">
-                  {formatRupiah((expenses || []).reduce((a, b) => a + b.amount, 0))}
+                  {formatRupiah((expenses || []).filter(e => e.source !== 'cash_flow').reduce((a, b) => a + b.amount, 0))}
                 </span>
               </div>
             </div>
@@ -1459,7 +1499,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
-                  {expenses.map((exp) => (
+                  {(expenses || [])
+                    .filter(e => e.source !== 'cash_flow')
+                    .map((exp) => (
                     <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
                       <td className="p-2.5 text-slate-600 dark:text-slate-300">
                         {exp.date} <span className="text-[10px] text-slate-400 block">{exp.time}</span>
@@ -1468,6 +1510,11 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                         <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[10px] font-bold">
                           {exp.category}
                         </span>
+                        {exp.shiftId && (
+                          <span className="block mt-0.5 text-[9px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                            ✓ Closing: {exp.shiftId}
+                          </span>
+                        )}
                       </td>
                       <td className="p-2.5 font-extrabold text-slate-800 dark:text-slate-100">{exp.description}</td>
                       <td className="p-2.5 text-slate-400 font-mono text-[10px]">{exp.receiptNumber || '-'}</td>
@@ -1826,7 +1873,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowExpenseModal(true)}
+                    onClick={() => {
+                      setExpenseModalSource('cash_flow');
+                      setShowExpenseModal(true);
+                    }}
                     className="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] flex items-center gap-1 cursor-pointer shadow-xs"
                   >
                     <Plus className="w-3 h-3" /> Tambah
@@ -3097,7 +3147,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           <div className="bg-white dark:bg-[#1a0c28] border border-purple-900/50 rounded-2xl p-5 sm:p-6 max-w-md w-full my-auto max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
             <h3 className="font-extrabold text-lg text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
               <Receipt className="w-5 h-5 text-rose-500" />
-              Catat Pengeluaran Kas Kecil Operasional
+              {expenseModalSource === 'cash_flow'
+                ? 'Catat Pengeluaran Beban Usaha (Cash Flow)'
+                : 'Catat Pengeluaran Kas Kecil Operasional'}
             </h3>
 
             <form onSubmit={handleSaveExpense} className="space-y-3 text-xs">
@@ -3181,7 +3233,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
               </div>
 
               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-800 dark:text-amber-300">
-                ℹ️ Pengeluaran kas kecil ini otomatis langsung memotong Saldo Laci Kasir dan diperhitungkan di Laporan Laba Rugi.
+                {expenseModalSource === 'cash_flow'
+                  ? 'ℹ️ Pengeluaran beban ini khusus untuk laporan Cash Flow & Gross Profit dan TIDAK disinkronkan ke Kas Laci Audit Closing Shift Kasir.'
+                  : 'ℹ️ Pengeluaran kas kecil ini otomatis langsung memotong Saldo Laci Kasir dan disinkronkan ke Audit Closing Shift.'}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-purple-900">

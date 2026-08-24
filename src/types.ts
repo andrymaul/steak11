@@ -387,6 +387,20 @@ export interface PettyCashExpense {
   shiftId?: string;
   approvedBy?: string;
   paymentMethod?: 'Tunai / Kas Laci' | 'Transfer Bank' | string;
+  source?: 'petty_cash' | 'cash_flow'; // 'petty_cash' = Kas Laci Toko (sinkron ke closing), 'cash_flow' = Beban Cash Flow (TIDAK disinkronkan ke audit closing)
+}
+
+export interface CashFlowExpenseItem {
+  id: string;
+  date: string;
+  time?: string;
+  outlet: string;
+  category: string;
+  description: string;
+  amount: number;
+  receiptNumber?: string;
+  paymentMethod?: string;
+  recordedBy?: string;
 }
 
 export interface CashierShiftRecord {
