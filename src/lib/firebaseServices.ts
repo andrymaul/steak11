@@ -477,25 +477,30 @@ export const sanitizeAttendanceForFirestore = (records: AttendanceRecord[]): Att
  * Removes any undefined properties from payload for Firestore compatibility
  */
 export const sanitizePayloadForFirestore = (payload: any): any => {
-  if (Array.isArray(payload)) {
-    return payload.map((item) => {
-      if (item && typeof item === 'object') {
-        const copy: any = { ...item };
-        Object.keys(copy).forEach((k) => {
-          if (copy[k] === undefined) delete copy[k];
-        });
-        return copy;
-      }
-      return item;
-    });
-  } else if (payload && typeof payload === 'object') {
-    const copy: any = { ...payload };
-    Object.keys(copy).forEach((k) => {
-      if (copy[k] === undefined) delete copy[k];
-    });
-    return copy;
+  if (payload === undefined) return null;
+  try {
+    return JSON.parse(JSON.stringify(payload));
+  } catch {
+    if (Array.isArray(payload)) {
+      return payload.map((item) => {
+        if (item && typeof item === 'object') {
+          const copy: any = { ...item };
+          Object.keys(copy).forEach((k) => {
+            if (copy[k] === undefined) delete copy[k];
+          });
+          return copy;
+        }
+        return item;
+      });
+    } else if (payload && typeof payload === 'object') {
+      const copy: any = { ...payload };
+      Object.keys(copy).forEach((k) => {
+        if (copy[k] === undefined) delete copy[k];
+      });
+      return copy;
+    }
+    return payload;
   }
-  return payload;
 };
 
 export const saveAttendanceRecordDirectToCloud = async (newRecord: AttendanceRecord): Promise<AttendanceRecord[]> => {
@@ -909,7 +914,12 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
       if (sharedSnap.exists() && sharedSnap.data()?.payload !== undefined) {
         const remoteData = sharedSnap.data().payload;
         let finalData = remoteData;
-        if (key === 'attendance' || key === 'orders' || key === 'cashier_shifts') {
+        const historyAppendKeys = [
+          'cashier_shifts', 'expenses', 'attendance', 'orders',
+          'stock_opnames', 'stock_transfers', 'audit_logs', 'stock_mutations',
+          'purchase_orders', 'employee_loans', 'promos', 'reviews', 'suppliers'
+        ];
+        if (historyAppendKeys.includes(key)) {
           const rawLocal = localStorage.getItem('steak11_' + key);
           let localArr: any[] = [];
           if (rawLocal) {
@@ -996,9 +1006,9 @@ const getItemTimestamp = (item: any): number => {
       if (!isNaN(t) && t > 1000000000000) return t;
     }
   }
-  // If date + clockInTime/time is present (e.g. date: "2026-08-21", clockInTime: "18:55:00")
+  // If date + clockInTime/time is present (e.g. date: "2026-08-21", clockInTime: "18:55:00", closedAt: "23:00")
   if (item.date) {
-    const timeStr = item.clockInTime || item.time || item.clockOutTime || '';
+    const timeStr = item.clockInTime || item.time || item.clockOutTime || item.closedAt || '';
     if (timeStr) {
       const fullStr = `${item.date}T${timeStr.length === 5 ? timeStr + ':00' : timeStr}`;
       const t = new Date(fullStr).getTime();
@@ -1108,10 +1118,32 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           let finalData = remoteData;
           let needsRemotePush = false;
 
-          // For arrays: collections use remoteData directly as the authoritative single source of truth
-          if (Array.isArray(remoteData)) {
-            finalData = remoteData;
-            needsRemotePush = false;
+          const historyAppendKeys = [
+            'cashier_shifts', 'expenses', 'attendance', 'orders',
+            'stock_opnames', 'stock_transfers', 'audit_logs', 'stock_mutations',
+            'purchase_orders', 'employee_loans', 'promos', 'reviews', 'suppliers'
+          ];
+
+          if (historyAppendKeys.includes(key)) {
+            if (Array.isArray(localData) && Array.isArray(remoteData)) {
+              finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
+              if (finalData.length > remoteData.length) {
+                needsRemotePush = true;
+              }
+            } else if (Array.isArray(localData) && localData.length > 0 && (!Array.isArray(remoteData) || remoteData.length === 0)) {
+              finalData = localData;
+              needsRemotePush = true;
+            } else {
+              finalData = remoteData;
+            }
+          } else if (Array.isArray(remoteData)) {
+            // For master data arrays (menu_items, locations, employees, etc)
+            if (Array.isArray(localData) && localData.length > remoteData.length) {
+              finalData = mergeArrayById(localData, remoteData, remoteUpdatedAt);
+              needsRemotePush = true;
+            } else {
+              finalData = remoteData;
+            }
           } else if (localData && typeof localData === 'object' && !Array.isArray(localData) && remoteData && typeof remoteData === 'object' && !Array.isArray(remoteData)) {
             // For configuration objects (branding, settings), remote is primary with local fallback
             finalData = { ...localData, ...remoteData };
@@ -1146,7 +1178,7 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           } else {
             initialData = getInitialDataForKey(key);
           }
-          setDoc(sharedDocRef, { payload: initialData, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+          setDoc(sharedDocRef, { payload: sanitizePayloadForFirestore(initialData), updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         }
       }, (err) => {
         console.warn(`Error on listener for ${key}:`, err);
