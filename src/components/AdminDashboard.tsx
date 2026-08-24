@@ -5225,7 +5225,11 @@ function doPost(e) {
                       <FileSpreadsheet className="w-4 h-4 text-amber-500 shrink-0" />
                       <span>Daftar Pesanan</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-purple-900 dark:text-amber-300 font-black text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'pesanan'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-amber-100 dark:bg-purple-900 text-purple-950 dark:text-amber-300 border border-amber-300/80 dark:border-purple-700'
+                    }`}>
                       {totalOrders}
                     </span>
                   </button>
@@ -5270,7 +5274,11 @@ function doPost(e) {
                       <Utensils className="w-4 h-4 text-amber-500 shrink-0" />
                       <span>Daftar Menu</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-purple-900/60 font-black text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'menu'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-slate-100 dark:bg-purple-900 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-purple-700'
+                    }`}>
                       {(menuItems || []).length}
                     </span>
                   </button>
@@ -5307,7 +5315,11 @@ function doPost(e) {
                       <Boxes className="w-4 h-4 text-orange-400 shrink-0" />
                       <span>Manajemen Stok</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-purple-900/60 font-black text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'inventory'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-slate-100 dark:bg-purple-900 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-purple-700'
+                    }`}>
                       {(inventory || []).length}
                     </span>
                   </button>
@@ -5327,7 +5339,11 @@ function doPost(e) {
                       <MessageSquare className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>Ulasan Pelanggan</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-600 dark:text-amber-400 font-black text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'reviews'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-amber-100 dark:bg-purple-900 text-amber-900 dark:text-amber-300 border border-amber-300/80 dark:border-purple-700'
+                    }`}>
                       {(reviews || []).length}
                     </span>
                   </button>
@@ -5372,7 +5388,11 @@ function doPost(e) {
                       <Users className="w-4 h-4 text-purple-400 shrink-0" />
                       <span>Data Karyawan</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-purple-900/60 font-black text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'karyawan'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-purple-100 dark:bg-purple-900 text-purple-950 dark:text-amber-300 border border-purple-300 dark:border-purple-700'
+                    }`}>
                       {(employees || []).length}
                     </span>
                   </button>
@@ -5409,7 +5429,11 @@ function doPost(e) {
                       <Camera className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>Presensi Kamera Selfie</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'presensi_kamera'
+                        ? 'bg-emerald-400 text-emerald-950 shadow-xs'
+                        : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                    }`}>
                       LIVE
                     </span>
                   </button>
@@ -5429,7 +5453,11 @@ function doPost(e) {
                       <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>Jadwal Shift Kerja</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-extrabold text-[10px]">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                      activeTab === 'jadwal'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                    }`}>
                       ROSTER
                     </span>
                   </button>
@@ -5467,7 +5495,11 @@ function doPost(e) {
                       <span>Audit Closing Shift</span>
                     </div>
                     {cashierShifts && cashierShifts.length > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        activeTab === 'shifts'
+                          ? 'bg-amber-400 text-purple-950 shadow-xs'
+                          : 'bg-amber-100 dark:bg-purple-900 text-amber-900 dark:text-amber-300 border border-amber-300/80 dark:border-purple-700'
+                      }`}>
                         {cashierShifts.length}
                       </span>
                     )}
@@ -5652,7 +5684,11 @@ function doPost(e) {
                       <Users className="w-4 h-4 text-purple-400 shrink-0" />
                       <span>Data Pelanggan & WA</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300 font-black text-[9px] uppercase">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[9px] uppercase ${
+                      activeTab === 'customers'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
+                    }`}>
                       CRM
                     </span>
                   </button>
@@ -5672,7 +5708,11 @@ function doPost(e) {
                       <UserCheck className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>Data Pengunjung</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-purple-950 dark:text-amber-300 font-black text-[9px] uppercase">
+                    <span className={`px-2 py-0.5 rounded-full font-black text-[9px] uppercase ${
+                      activeTab === 'pengunjung'
+                        ? 'bg-amber-400 text-purple-950 shadow-xs'
+                        : 'bg-amber-100 dark:bg-amber-950 text-purple-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                    }`}>
                       VISITOR
                     </span>
                   </button>
