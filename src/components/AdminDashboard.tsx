@@ -3339,16 +3339,22 @@ function doPost(e) {
     return result;
   };
 
-  const handleGenerateMonthlySchedule = () => {
-    const [yearStr, monthStr] = schedulePeriod.split('-');
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10);
-    const daysInMonth = new Date(year, month, 0).getDate();
+  const handleExecuteScheduleGeneration = () => {
+    if (checkReadOnlyPermission()) return;
+    if (!employees || employees.length === 0) {
+      showToast('Belum ada data karyawan. Tambahkan karyawan terlebih dahulu!');
+      return;
+    }
+
+    const [yearStr, monthStr] = (schedulePeriod || '2026-08').split('-');
+    const year = parseInt(yearStr || '2026', 10);
+    const month = parseInt(monthStr || '8', 10);
+    const daysInMonth = new Date(year, month, 0).getDate() || 30;
 
     const activeRosterEmps = employees.filter((e) => e.status !== 'Non-Aktif' && !e.isScheduleOff);
     const targetEmps = scheduleOutletFilter === 'ALL'
       ? activeRosterEmps
-      : activeRosterEmps.filter((e) => e.outlet === scheduleOutletFilter);
+      : activeRosterEmps.filter((e) => (e.outlet || '').toLowerCase() === (scheduleOutletFilter || '').toLowerCase());
 
     if (targetEmps.length === 0) {
       showToast('⚠️ Tidak ada karyawan aktif untuk roster pada outlet yang dipilih.');
@@ -3356,7 +3362,7 @@ function doPost(e) {
     }
 
     const generated: EmployeeSchedule[] = [];
-    const offShiftTemplate = shiftTemplates.find((s) => s.isOff) || {
+    const offShiftTemplate = (shiftTemplates || []).find((s) => s.isOff) || {
       id: 'off',
       name: 'OFF / Libur',
       startTime: '00:00',
@@ -3375,8 +3381,15 @@ function doPost(e) {
       });
 
       Object.entries(outletGroups).forEach(([outletName, empList]) => {
+        if (empList.length === 0) return;
         const outletShifts = getShiftsForOutlet(outletName);
-        const defaultWorkingShift = outletShifts.find((s) => !s.isOff) || outletShifts[0];
+        const defaultWorkingShift = outletShifts.find((s) => !s.isOff) || outletShifts[0] || {
+          id: 'shift-default',
+          name: 'Shift Operasional',
+          startTime: '14:00',
+          endTime: '23:00',
+          color: 'emerald'
+        };
 
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -3410,7 +3423,13 @@ function doPost(e) {
       targetEmps.forEach((emp, empIdx) => {
         const empShifts = getShiftsForOutlet(emp.outlet);
         const workingShifts = empShifts.filter((s) => !s.isOff);
-        const morningShift = workingShifts[0];
+        const morningShift = workingShifts[0] || {
+          id: 'shift-1',
+          name: 'Shift Pagi',
+          startTime: '09:00',
+          endTime: '17:00',
+          color: 'emerald'
+        };
         const nightShift = workingShifts.length > 1 ? workingShifts[workingShifts.length - 1] : morningShift;
 
         for (let day = 1; day <= daysInMonth; day++) {
@@ -3449,7 +3468,13 @@ function doPost(e) {
           const sNameLower = s.name.toLowerCase();
           const sNotesLower = (s.notes || '').toLowerCase();
           return sNameLower.includes(roleLower) || sNotesLower.includes(roleLower);
-        }) || workingShifts[0];
+        }) || workingShifts[0] || {
+          id: 'shift-default',
+          name: 'Shift Operasional',
+          startTime: '14:00',
+          endTime: '23:00',
+          color: 'emerald'
+        };
 
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -3478,6 +3503,13 @@ function doPost(e) {
       targetEmps.forEach((emp, empIdx) => {
         const empShifts = getShiftsForOutlet(emp.outlet);
         const workingShifts = empShifts.filter((s) => !s.isOff);
+        const safeWorkingShifts = workingShifts.length > 0 ? workingShifts : [{
+          id: 'shift-default',
+          name: 'Shift Operasional',
+          startTime: '14:00',
+          endTime: '23:00',
+          color: 'emerald'
+        }];
 
         for (let day = 1; day <= daysInMonth; day++) {
           const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -3488,8 +3520,8 @@ function doPost(e) {
           if (isOffDay) {
             chosenShift = offShiftTemplate;
           } else {
-            const shiftIdx = (day + empIdx) % workingShifts.length;
-            chosenShift = workingShifts[shiftIdx] || workingShifts[0];
+            const shiftIdx = (day + empIdx) % safeWorkingShifts.length;
+            chosenShift = safeWorkingShifts[shiftIdx] || safeWorkingShifts[0];
           }
 
           generated.push({
@@ -3512,14 +3544,14 @@ function doPost(e) {
 
     let updated: EmployeeSchedule[];
     if (scheduleGenOverwrite) {
-      const otherSchedules = schedules.filter(
+      const otherSchedules = (schedules || []).filter(
         (s) => !s.date.startsWith(schedulePeriod) || (scheduleOutletFilter !== 'ALL' && s.outlet !== scheduleOutletFilter)
       );
       updated = [...otherSchedules, ...generated];
     } else {
-      const existingKeys = new Set(schedules.map((s) => `${s.employeeId}_${s.date}`));
+      const existingKeys = new Set((schedules || []).map((s) => `${s.employeeId}_${s.date}`));
       const newOnly = generated.filter((g) => !existingKeys.has(`${g.employeeId}_${g.date}`));
-      updated = [...schedules, ...newOnly];
+      updated = [...(schedules || []), ...newOnly];
     }
 
     setSchedules(updated);
@@ -3527,6 +3559,8 @@ function doPost(e) {
     setShowGenerateScheduleModal(false);
     showToast(`🎉 Roster berhasil diterbitkan (${generated.length} penugasan) menggunakan model: ${getGenModelName(scheduleGenModel)}!`);
   };
+
+  const handleGenerateMonthlySchedule = handleExecuteScheduleGeneration;
 
   // Helper badge style for shift color
   const getShiftBadgeStyle = (colorName?: string, isOff?: boolean) => {
