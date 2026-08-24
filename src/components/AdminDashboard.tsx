@@ -2567,14 +2567,27 @@ function doPost(e) {
   // --- Overtime Attendance Handlers ---
   const handleOpenAddOvertime = () => {
     const activeEmps = (employees || []).filter((e) => e.status === 'Aktif');
-    const firstEmp = activeEmps[0];
-    setOtEmployeeId(firstEmp ? firstEmp.id : '');
+    const cleanUser = (currentUser?.name || '').trim().toLowerCase();
+    const loggedInEmp = activeEmps.find(
+      (e) =>
+        cleanUser && (
+          e.name.toLowerCase() === cleanUser ||
+          (e.username && e.username.toLowerCase() === cleanUser) ||
+          e.id.toLowerCase() === cleanUser ||
+          cleanUser.includes(e.name.toLowerCase()) ||
+          e.name.toLowerCase().includes(cleanUser)
+        )
+    );
+    const isLockedEmp = Boolean(!isRegisteredAdmin(currentUser) && loggedInEmp);
+    const targetEmp = isLockedEmp && loggedInEmp ? loggedInEmp : activeEmps[0];
+
+    setOtEmployeeId(targetEmp ? targetEmp.id : '');
     setOtDate(attDateFilter || new Date().toISOString().split('T')[0]);
-    setOtOutlet(firstEmp?.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
+    setOtOutlet(targetEmp?.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
     setOtStartTime('23:00');
     setOtEndTime('00:00');
     setOtHours(1);
-    setOtCustomRate(firstEmp?.hourlyRate || 15000);
+    setOtCustomRate(targetEmp?.hourlyRate || 15000);
     setOtReason('Persiapan Event / Bumbu Marinasi / Stok Opname');
     setOtNotes('');
     setShowOvertimeModal(true);
@@ -2582,11 +2595,25 @@ function doPost(e) {
 
   const handleSaveOvertimeAttendance = async () => {
     if (checkReadOnlyPermission()) return;
-    if (!otEmployeeId) {
+    const cleanUser = (currentUser?.name || '').trim().toLowerCase();
+    const loggedInEmp = employees.find(
+      (e) =>
+        cleanUser && (
+          e.name.toLowerCase() === cleanUser ||
+          (e.username && e.username.toLowerCase() === cleanUser) ||
+          e.id.toLowerCase() === cleanUser ||
+          cleanUser.includes(e.name.toLowerCase()) ||
+          e.name.toLowerCase().includes(cleanUser)
+        )
+    );
+    const isLockedEmp = Boolean(!isRegisteredAdmin(currentUser) && loggedInEmp);
+    const targetEmpId = isLockedEmp && loggedInEmp ? loggedInEmp.id : otEmployeeId;
+
+    if (!targetEmpId) {
       showToast('Pilih karyawan penerima lembur!');
       return;
     }
-    const selectedEmp = (employees || []).find((e) => e.id === otEmployeeId);
+    const selectedEmp = (employees || []).find((e) => e.id === targetEmpId);
     if (!selectedEmp) {
       showToast('Karyawan tidak ditemukan!');
       return;
@@ -2598,6 +2625,7 @@ function doPost(e) {
 
     const effectiveRate = otCustomRate > 0 ? Number(otCustomRate) : (selectedEmp.hourlyRate || 15000);
     const calculatedOvertimePay = Math.round(Number(otHours) * effectiveRate);
+    const effectiveOutlet = isLockedEmp && loggedInEmp ? (loggedInEmp.outlet || otOutlet) : (otOutlet || selectedEmp.outlet || 'Steak 11, Cibubur');
 
     const newRecord: AttendanceRecord = {
       id: `ATT-OT-${Date.now()}`,
@@ -2607,7 +2635,7 @@ function doPost(e) {
       clockInTime: otStartTime || '23:00',
       clockOutTime: otEndTime || '00:00',
       hoursWorked: Number(otHours),
-      outlet: otOutlet || selectedEmp.outlet || 'Steak 11, Cibubur',
+      outlet: effectiveOutlet,
       status: 'Lembur',
       isOvertime: true,
       overtimeHours: Number(otHours),
@@ -12286,31 +12314,64 @@ function doPost(e) {
 
             <div className="space-y-3.5 text-xs">
               {/* Pilih Karyawan */}
-              <div>
-                <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
-                  Pilih Karyawan Penerima Lembur *
-                </label>
-                <select
-                  value={otEmployeeId}
-                  onChange={(e) => {
-                    const empId = e.target.value;
-                    setOtEmployeeId(empId);
-                    const selected = employees.find((emp) => emp.id === empId);
-                    if (selected) {
-                      setOtOutlet(selected.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
-                      setOtCustomRate(selected.hourlyRate || 15000);
-                    }
-                  }}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
-                >
-                  <option value="">-- Pilih Karyawan --</option>
-                  {employees.filter((e) => e.status === 'Aktif').map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.role} • {emp.outlet})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {(() => {
+                const cleanUser = (currentUser?.name || '').trim().toLowerCase();
+                const loggedInEmp = employees.find(
+                  (e) =>
+                    cleanUser && (
+                      e.name.toLowerCase() === cleanUser ||
+                      (e.username && e.username.toLowerCase() === cleanUser) ||
+                      e.id.toLowerCase() === cleanUser ||
+                      cleanUser.includes(e.name.toLowerCase()) ||
+                      e.name.toLowerCase().includes(cleanUser)
+                    )
+                );
+                const isLockedEmp = Boolean(!isRegisteredAdmin(currentUser) && loggedInEmp);
+
+                return (
+                  <div>
+                    <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                      Pilih Karyawan Penerima Lembur *
+                    </label>
+                    {isLockedEmp && loggedInEmp ? (
+                      <div className="p-3 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-950/60 flex items-center justify-between shadow-xs">
+                        <div>
+                          <span className="font-extrabold text-sm text-[#3D1259] dark:text-amber-300 block">
+                            {loggedInEmp.name}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">
+                            {loggedInEmp.role} • {loggedInEmp.outlet}
+                          </span>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> Terkunci Akun Login
+                        </span>
+                      </div>
+                    ) : (
+                      <select
+                        value={otEmployeeId}
+                        onChange={(e) => {
+                          const empId = e.target.value;
+                          setOtEmployeeId(empId);
+                          const selected = employees.find((emp) => emp.id === empId);
+                          if (selected) {
+                            setOtOutlet(selected.outlet || (locations[0]?.name || 'Steak 11, Cibubur'));
+                            setOtCustomRate(selected.hourlyRate || 15000);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                      >
+                        <option value="">-- Pilih Karyawan --</option>
+                        {employees.filter((e) => e.status === 'Aktif').map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.role} • {emp.outlet})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Tanggal & Outlet */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -12329,17 +12390,43 @@ function doPost(e) {
                   <label className="font-bold text-slate-700 dark:text-slate-200 block mb-1">
                     Outlet Cabang *
                   </label>
-                  <select
-                    value={otOutlet}
-                    onChange={(e) => setOtOutlet(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
-                  >
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.name}>
-                        {loc.name}
-                      </option>
-                    ))}
-                  </select>
+                  {(() => {
+                    const cleanUser = (currentUser?.name || '').trim().toLowerCase();
+                    const loggedInEmp = employees.find(
+                      (e) =>
+                        cleanUser && (
+                          e.name.toLowerCase() === cleanUser ||
+                          (e.username && e.username.toLowerCase() === cleanUser) ||
+                          e.id.toLowerCase() === cleanUser ||
+                          cleanUser.includes(e.name.toLowerCase()) ||
+                          e.name.toLowerCase().includes(cleanUser)
+                        )
+                    );
+                    const isLockedEmp = Boolean(!isRegisteredAdmin(currentUser) && loggedInEmp);
+
+                    if (isLockedEmp && loggedInEmp) {
+                      return (
+                        <div className="px-3 py-2 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/40 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-between">
+                          <span>{loggedInEmp.outlet || otOutlet}</span>
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <select
+                        value={otOutlet}
+                        onChange={(e) => setOtOutlet(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-purple-800 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold"
+                      >
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.name}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </div>
               </div>
 
