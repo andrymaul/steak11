@@ -755,12 +755,12 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   // 1. Penggajian & Bonus
   const monthPayrollList = (payrolls || []).filter((p) => {
-    const pDate = p.period || p.date || '';
+    const pDate = p.periodMonth || p.period || '';
     const matchesMonth = pDate.startsWith(monthlyPnlMonth);
     const matchesOutlet = monthlyPnlOutlet === 'ALL' || p.outlet === monthlyPnlOutlet || !p.outlet;
     return matchesMonth && matchesOutlet;
   });
-  const autoPayrollAmount = monthPayrollList.reduce((acc, p) => acc + (p.netSalary || p.totalSalary || 0), 0);
+  const autoPayrollAmount = monthPayrollList.reduce((acc, p) => acc + (p.netSalary || 0), 0);
   const manualPayrollDeductions = filteredMonthDeductions
     .filter((d) => d.category === 'Penggajian & Bonus')
     .reduce((acc, d) => acc + (d.amount || 0), 0);
@@ -833,7 +833,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       (d) => (d.outlet === outletName || d.outlet === 'Semua Cabang (Konsolidasi)') && d.month === monthlyPnlMonth
     );
     const branchPayrolls = (payrolls || []).filter(
-      (p) => p.outlet === outletName && (p.period || p.date || '').startsWith(monthlyPnlMonth)
+      (p) => p.outlet === outletName && (p.periodMonth || p.period || '').startsWith(monthlyPnlMonth)
     );
 
     const shiftRev = branchShifts.reduce(
@@ -864,7 +864,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           e.category !== 'Pembelian Bahan Darurat'
       )
       .reduce((acc, e) => acc + (e.amount || 0), 0);
-    const payExp = branchPayrolls.reduce((acc, p) => acc + (p.netSalary || p.totalSalary || 0), 0);
+    const payExp = branchPayrolls.reduce((acc, p) => acc + (p.netSalary || 0), 0);
     const dedExp = branchDeductions.reduce((acc, d) => acc + (d.amount || 0), 0);
     const totalDed = opExp + payExp + dedExp;
     const netProfit = gp - totalDed;
@@ -3701,12 +3701,12 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                           <td className="p-3 text-center">
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                                s.auditStatus === 'Sesuai' || !s.auditStatus
+                                (s.auditStatus && s.auditStatus.includes('Sesuai')) || !s.auditStatus
                                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                                   : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                               }`}
                             >
-                              {s.auditStatus || 'Sesuai'}
+                              {s.auditStatus || 'Sesuai (Balance)'}
                             </span>
                           </td>
                         </tr>
@@ -4018,7 +4018,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                           <option value="">-- Pilih Nama Karyawan --</option>
                           {activeEmployeesList.map((emp) => (
                             <option key={emp.id} value={emp.id}>
-                              {emp.name} ({emp.position || 'Staff'} • {emp.outlet || 'Semua Outlet'})
+                              {emp.name} ({emp.role || 'Staff'} • {emp.outlet || 'Semua Outlet'})
                             </option>
                           ))}
                         </select>
