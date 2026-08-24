@@ -851,29 +851,7 @@ export const DEFAULT_PROMOS: PromoVoucher[] = [
   }
 ];
 
-export const DEFAULT_CASHIER_SHIFTS: CashierShiftRecord[] = [
-  {
-    id: 'SHF-20260810-01',
-    date: '2026-08-10',
-    shiftName: 'Shift Malam (15.00 - 22.00)',
-    cashierName: 'Rina Kurnia',
-    outlet: 'Steak 11, Cibubur',
-    startingCash: 200000,
-    cashRevenue: 480000,
-    qrisRevenue: 620000,
-    transferRevenue: 150000,
-    totalRevenue: 1250000,
-    operationalExpenses: 35000, // Misal Beli Es Batu & Plastik Darurat
-    expectedCashInDrawer: 645000, // 200,000 + 480,000 - 35,000 = 645,000
-    actualCashInDrawer: 645000,
-    systemCashTotal: 680000,
-    actualCashTotal: 645000,
-    cashDifference: 0,
-    auditStatus: 'Sesuai (Balance)',
-    notes: 'Shift lancar, kasir & pengeluaran kas kecil tercatat rapi.',
-    status: 'Closed'
-  }
-];
+export const DEFAULT_CASHIER_SHIFTS: CashierShiftRecord[] = [];
 
 export const DEFAULT_SUPPLIERS: Supplier[] = [
   {
@@ -968,34 +946,7 @@ export const DEFAULT_PURCHASE_ORDERS: PurchaseOrder[] = [
   }
 ];
 
-export const DEFAULT_EXPENSES: PettyCashExpense[] = [
-  {
-    id: 'EXP-20260810-001',
-    date: '2026-08-10',
-    time: '16:30',
-    outlet: 'Steak 11, Cibubur',
-    cashierName: 'Rina Kurnia',
-    category: 'Pembelian Bahan Darurat',
-    description: 'Beli Es Batu Kristal 3 Plastik @ Rp 7.000',
-    amount: 21000,
-    receiptNumber: 'NOTA-ES-01',
-    shiftId: 'SHF-20260810-01',
-    approvedBy: 'Budi Santoso'
-  },
-  {
-    id: 'EXP-20260810-002',
-    date: '2026-08-10',
-    time: '18:15',
-    outlet: 'Steak 11, Cibubur',
-    cashierName: 'Rina Kurnia',
-    category: 'Gas LPG',
-    description: 'Refill Tabung Gas LPG 12kg Kompor Grill',
-    amount: 14000,
-    receiptNumber: 'NOTA-GAS-88',
-    shiftId: 'SHF-20260810-01',
-    approvedBy: 'Budi Santoso'
-  }
-];
+export const DEFAULT_EXPENSES: PettyCashExpense[] = [];
 
 export const DEFAULT_RECIPES: MenuRecipe[] = [
   {

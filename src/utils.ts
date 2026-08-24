@@ -608,7 +608,9 @@ export function getStoredCashierShifts(): CashierShiftRecord[] {
   if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((s: CashierShiftRecord) => s.id !== 'SHF-20260810-01');
+      }
     } catch {
       return [];
     }
@@ -699,7 +701,14 @@ export function getStoredExpenses(): PettyCashExpense[] {
   if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (e: PettyCashExpense) =>
+            e.id !== 'EXP-20260810-001' &&
+            e.id !== 'EXP-20260810-002' &&
+            e.shiftId !== 'SHF-20260810-01'
+        );
+      }
     } catch {
       return [];
     }

@@ -91,6 +91,20 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }
   }, [activeParentTab]);
 
+  // Auto-cleanup legacy dummy default shifts and expenses
+  useEffect(() => {
+    if ((shifts || []).some((s) => s.id === 'SHF-20260810-01')) {
+      const cleaned = (shifts || []).filter((s) => s.id !== 'SHF-20260810-01');
+      setShifts(cleaned);
+      saveShiftsData(cleaned);
+    }
+    if ((expenses || []).some((e) => e.id === 'EXP-20260810-001' || e.id === 'EXP-20260810-002' || e.shiftId === 'SHF-20260810-01')) {
+      const cleanedExp = (expenses || []).filter((e) => e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
+      setExpenses(cleanedExp);
+      saveExpensesData(cleanedExp);
+    }
+  }, [shifts, expenses]);
+
   // Active Employees & Loans fallback
   const activeEmployeesList = propEmployees && propEmployees.length > 0 ? propEmployees : getStoredEmployees();
   const activeEmployeeLoans = propEmployeeLoans && propEmployeeLoans.length > 0 ? propEmployeeLoans : getStoredEmployeeLoans();
