@@ -406,6 +406,7 @@ export interface CashierShiftRecord {
   operationalExpenses?: number; // Total Kas Keluar Operasional (Petty Cash)
   manualCashAdjustment?: number; // Tambahan Manual Penjualan Tunai POS
   manualExpenseAdjustment?: number; // Tambahan Manual Kas Keluar Operasional
+  expenseItems?: { id?: string; description: string; amount: number }[]; // Rincian Pengeluaran Kas Keluar per Item
   expectedCashInDrawer?: number; // Modal Awal + Kas Masuk POS - Operasional
   actualCashInDrawer?: number; // Hasil Hitung Fisik Kasir di Laci
   systemCashTotal: number;

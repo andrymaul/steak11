@@ -161,10 +161,47 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const [startingCash, setStartingCash] = useState<number>(200000);
   const [manualCashAdjustment, setManualCashAdjustment] = useState<number>(0);
   const [manualExpenseAdjustment, setManualExpenseAdjustment] = useState<number>(0);
+  
+  // Itemized Operational Expenses State (Pengeluaran per Item)
+  const [manualExpenseItems, setManualExpenseItems] = useState<{ id: string; description: string; amount: number }[]>([]);
+  const [tempExpenseDesc, setTempExpenseDesc] = useState('');
+  const [tempExpenseAmount, setTempExpenseAmount] = useState<number | ''>('');
+
   const [actualQrisRevenue, setActualQrisRevenue] = useState<number>(0);
   const [actualTransferRevenue, setActualTransferRevenue] = useState<number>(0);
   const [onlineFoodRevenue, setOnlineFoodRevenue] = useState<number>(0);
   const [notes, setNotes] = useState('');
+
+  const handleAddManualExpenseItem = () => {
+    if (!tempExpenseDesc.trim()) {
+      showToast('⚠️ Masukkan deskripsi item pengeluaran!');
+      return;
+    }
+    const amt = Number(tempExpenseAmount) || 0;
+    if (amt <= 0) {
+      showToast('⚠️ Nominal pengeluaran harus lebih dari 0!');
+      return;
+    }
+
+    const newItem = {
+      id: `exp-item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      description: tempExpenseDesc.trim(),
+      amount: amt,
+    };
+
+    setManualExpenseItems([...manualExpenseItems, newItem]);
+    setTempExpenseDesc('');
+    setTempExpenseAmount('');
+    showToast(`💸 Item "${newItem.description}" (${formatRupiah(newItem.amount)}) ditambahkan ke pengeluaran shift.`);
+  };
+
+  const handleRemoveManualExpenseItem = (itemId: string) => {
+    const target = manualExpenseItems.find((i) => i.id === itemId);
+    setManualExpenseItems(manualExpenseItems.filter((it) => it.id !== itemId));
+    if (target) {
+      showToast(`🗑️ Item "${target.description}" dihapus.`);
+    }
+  };
 
   // Money Denominations Breakdown (Calculator)
   const [denominations, setDenominations] = useState<Record<string, number>>({
@@ -247,7 +284,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   const calculatedActualCash = useDenominationCalc ? denomTotal : manualActualCash;
   const effectiveCashRevenue = modalPosCash + Number(manualCashAdjustment || 0);
-  const effectiveOperationalExpenses = modalExpenses + Number(manualExpenseAdjustment || 0);
+  const totalItemizedExpenses = manualExpenseItems.reduce((acc, itm) => acc + (Number(itm.amount) || 0), 0);
+  const effectiveOperationalExpenses = modalExpenses + totalItemizedExpenses + Number(manualExpenseAdjustment || 0);
   const expectedCashInDrawer = startingCash + effectiveCashRevenue - effectiveOperationalExpenses;
   const cashDifference = calculatedActualCash - expectedCashInDrawer;
 
@@ -268,6 +306,9 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     setStartingCash(200000);
     setManualCashAdjustment(0);
     setManualExpenseAdjustment(0);
+    setManualExpenseItems([]);
+    setTempExpenseDesc('');
+    setTempExpenseAmount('');
     setActualQrisRevenue(0);
     setActualTransferRevenue(0);
     setOnlineFoodRevenue(0);
@@ -658,7 +699,8 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       totalRevenue: totalShiftRevenue,
       operationalExpenses: effectiveOperationalExpenses,
       manualCashAdjustment: Number(manualCashAdjustment || 0),
-      manualExpenseAdjustment: Number(manualExpenseAdjustment || 0),
+      manualExpenseAdjustment: totalItemizedExpenses + Number(manualExpenseAdjustment || 0),
+      expenseItems: manualExpenseItems.length > 0 ? manualExpenseItems : undefined,
       expectedCashInDrawer,
       actualCashInDrawer: calculatedActualCash,
       systemCashTotal: startingCash + effectiveCashRevenue,
@@ -749,7 +791,14 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           <div class="row"><span>2. Penjualan Tunai POS:</span><span>+${formatRupiah(shift.cashRevenue)}</span></div>
           ${shift.manualCashAdjustment ? `<div class="row" style="padding-left:10px;font-size:11px;color:#555;"><span>• Penyesuaian Tunai:</span><span>${shift.manualCashAdjustment > 0 ? '+' : ''}${formatRupiah(shift.manualCashAdjustment)}</span></div>` : ''}
           <div class="row"><span>3. Kas Keluar Operasional:</span><span>-${formatRupiah(shift.operationalExpenses || 0)}</span></div>
-          ${shift.manualExpenseAdjustment ? `<div class="row" style="padding-left:10px;font-size:11px;color:#555;"><span>• Penyesuaian Kas Keluar:</span><span>+${formatRupiah(shift.manualExpenseAdjustment)}</span></div>` : ''}
+          ${(shift.expenseItems && shift.expenseItems.length > 0)
+            ? `<div style="padding-left:10px;font-size:11px;color:#555;margin:3px 0;">
+                <p style="font-weight:bold;margin:2px 0;">Rincian Pengeluaran per Item:</p>
+                ${shift.expenseItems.map(it => `<div class="row" style="margin:2px 0;"><span>- ${it.description}:</span><span>-${formatRupiah(it.amount)}</span></div>`).join('')}
+              </div>`
+            : ''
+          }
+          ${shift.manualExpenseAdjustment && (!shift.expenseItems || shift.expenseItems.length === 0) ? `<div class="row" style="padding-left:10px;font-size:11px;color:#555;"><span>• Penyesuaian Kas Keluar:</span><span>+${formatRupiah(shift.manualExpenseAdjustment)}</span></div>` : ''}
           <div class="line"></div>
           <div class="row highlight"><span>KAS TEORETIS SEHARUSNYA:</span><span>${formatRupiah(shift.expectedCashInDrawer || shift.systemCashTotal)}</span></div>
           <div class="row highlight"><span>HASIL HITUNG FISIK LACI:</span><span>${formatRupiah(shift.actualCashInDrawer || shift.actualCashTotal)}</span></div>
@@ -1820,11 +1869,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   onChange={(e) => setShiftName(e.target.value)}
                   className="w-full mt-1 px-3 py-2 rounded-xl border border-emerald-300 dark:border-purple-800 bg-emerald-50/40 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-extrabold"
                 >
-                  {getShiftsForOutlet(outlet).map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name} ({s.startTime} - {s.endTime}) {s.outlet ? `• ${s.outlet}` : ''}
-                    </option>
-                  ))}
+                  {getShiftsForOutlet(outlet).map((s) => {
+                    const hasTime = s.name.includes(s.startTime || '') || s.name.includes(s.endTime || '');
+                    const label = hasTime ? s.name : `${s.name} (${s.startTime} - ${s.endTime})`;
+                    return (
+                      <option key={s.id} value={s.name}>
+                        {label} {s.outlet ? `• ${s.outlet}` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -1880,31 +1933,117 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   </div>
                 </div>
 
-                {/* 3. Kas Keluar Operasional Sistem + Penyesuaian Manual */}
-                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2">
+                {/* 3. Kas Keluar Operasional Sistem + Rincian Pengeluaran per Item */}
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-extrabold text-rose-800 dark:text-rose-300 block">3. Kas Keluar Operasional (Petty Cash):</span>
+                      <span className="font-extrabold text-rose-800 dark:text-rose-300 block text-xs">
+                        3. Kas Keluar Operasional (Petty Cash & Pengeluaran per Item):
+                      </span>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                        Otomatis Kas Kecil: -{formatRupiah(modalExpenses)} {manualExpenseAdjustment ? `(+ Tambahan Manual: ${formatRupiah(manualExpenseAdjustment)})` : ''}
+                        Kas Kecil Sistem: -{formatRupiah(modalExpenses)}
+                        {totalItemizedExpenses > 0 ? ` • ${manualExpenseItems.length} Item Tambahan: -${formatRupiah(totalItemizedExpenses)}` : ''}
+                        {manualExpenseAdjustment ? ` • Koreksi: -${formatRupiah(manualExpenseAdjustment)}` : ''}
                       </span>
                     </div>
-                    <span className="font-black text-rose-600 dark:text-rose-400 text-sm">-{formatRupiah(effectiveOperationalExpenses)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-rose-500/20">
-                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-bold flex items-center gap-1">
-                      <Plus className="w-3 h-3 text-rose-500" /> Tambah / Koreksi Manual Kas Keluar:
+                    <span className="font-black text-rose-600 dark:text-rose-400 text-sm">
+                      -{formatRupiah(effectiveOperationalExpenses)}
                     </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] text-slate-400 font-mono">Rp</span>
-                      <input
-                        type="number"
-                        value={manualExpenseAdjustment}
-                        onChange={(e) => setManualExpenseAdjustment(Number(e.target.value))}
-                        placeholder="0"
-                        className="w-32 px-2 py-0.5 rounded-lg border border-rose-300 dark:border-rose-700 bg-white dark:bg-purple-900 text-right font-bold text-xs"
-                      />
+                  </div>
+
+                  {/* Form Input Pengeluaran per Item */}
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-purple-900/80 border border-rose-200 dark:border-rose-900/60 space-y-2">
+                    <span className="font-extrabold text-[11px] text-rose-900 dark:text-rose-300 flex items-center gap-1">
+                      <Plus className="w-3.5 h-3.5 text-rose-500" /> Tambah Pengeluaran per Item:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-1.5">
+                      <div className="sm:col-span-7">
+                        <input
+                          type="text"
+                          value={tempExpenseDesc}
+                          onChange={(e) => setTempExpenseDesc(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddManualExpenseItem();
+                            }
+                          }}
+                          placeholder="Nama item / keperluan (e.g. Beli Es Batu, Plastik, Gas, Galon)"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-purple-700 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 text-xs font-medium"
+                        />
+                      </div>
+                      <div className="sm:col-span-3 flex items-center gap-1">
+                        <span className="text-[11px] text-slate-400 font-mono">Rp</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={tempExpenseAmount}
+                          onChange={(e) => setTempExpenseAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddManualExpenseItem();
+                            }
+                          }}
+                          placeholder="Nominal (Rp)"
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-300 dark:border-purple-700 bg-slate-50 dark:bg-purple-950 text-right font-bold text-xs"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <button
+                          type="button"
+                          onClick={handleAddManualExpenseItem}
+                          className="w-full h-full min-h-[30px] px-2 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-black text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs"
+                          title="Tambah item pengeluaran ini"
+                        >
+                          <Plus className="w-3 h-3" /> Tambah
+                        </button>
+                      </div>
                     </div>
+
+                    {/* List of Added Itemized Expenses */}
+                    {manualExpenseItems.length > 0 ? (
+                      <div className="mt-2 space-y-1.5 pt-2 border-t border-rose-100 dark:border-rose-900/40">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold px-1">
+                          <span>DAFTAR ITEM PENGELUARAN TAMBAHAN:</span>
+                          <span className="text-rose-600 dark:text-rose-400">{manualExpenseItems.length} Item ({formatRupiah(totalItemizedExpenses)})</span>
+                        </div>
+                        <div className="max-h-36 overflow-y-auto space-y-1 pr-0.5">
+                          {manualExpenseItems.map((item, idx) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between gap-2 p-1.5 px-2 rounded-lg bg-rose-50 dark:bg-purple-950/80 border border-rose-200/80 dark:border-rose-900/40 text-xs"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <span className="w-4 h-4 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 font-black text-[9px] flex items-center justify-center shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate" title={item.description}>
+                                  {item.description}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-black text-rose-600 dark:text-rose-400">
+                                  -{formatRupiah(item.amount)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveManualExpenseItem(item.id)}
+                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-950 cursor-pointer transition-all"
+                                  title="Hapus item ini"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 italic pt-1">
+                        💡 Belum ada item pengeluaran manual. Ketik nama keperluan dan nominal di atas lalu klik tombol "+ Tambah".
+                      </p>
+                    )}
                   </div>
                 </div>
 
