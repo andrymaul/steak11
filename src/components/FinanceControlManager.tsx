@@ -66,7 +66,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   locations = [],
   shiftTemplates = []
 }) => {
-  const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'profit_loss' | 'payment_methods'>('closing_audit');
+  const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'profit_loss' | 'payment_methods'>('closing_audit');
 
   // Timeframe Filters for Financial Statements (P&L & Payment Methods)
   const todayStr = new Date().toISOString().split('T')[0];
@@ -469,6 +469,345 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const cashSharePct = pnlGrossRevenue > 0 ? (cashTotalRevenue / pnlGrossRevenue) * 100 : 0;
   const transferSharePct = pnlGrossRevenue > 0 ? (transferTotalRevenue / pnlGrossRevenue) * 100 : 0;
   const debitSharePct = pnlGrossRevenue > 0 ? (debitTotalRevenue / pnlGrossRevenue) * 100 : 0;
+
+  // CASH FLOW & GROSS PROFIT CALCULATIONS
+  // 1. Inflow from Closed Shifts (Total Omset Shift Terkunci - Read Only)
+  const filteredCashFlowShifts = (shifts || []).filter(
+    (s) =>
+      isDateInPnlFilter(s.date || '') &&
+      (selectedOutletFilter === 'ALL' || s.outlet === selectedOutletFilter)
+  );
+
+  const totalShiftRevenueLocked = filteredCashFlowShifts.reduce(
+    (acc, s) =>
+      acc + (s.totalRevenue || (s.cashRevenue + s.qrisRevenue + s.transferRevenue + (s.onlineFoodRevenue || 0))),
+    0
+  );
+
+  const totalShiftCashLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.cashRevenue || 0), 0);
+  const totalShiftQrisLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.actualQrisRevenue ?? s.qrisRevenue ?? 0), 0);
+  const totalShiftTransferLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.actualTransferRevenue ?? s.transferRevenue ?? 0), 0);
+  const totalShiftOnlineFoodLocked = filteredCashFlowShifts.reduce((acc, s) => acc + (s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0), 0);
+
+  // 2. Outflow from Recorded Operational & Manual Expenses
+  const filteredCashFlowExpenses = (expenses || []).filter(
+    (e) =>
+      isDateInPnlFilter(e.date || '') &&
+      (selectedOutletFilter === 'ALL' || e.outlet === selectedOutletFilter)
+  );
+
+  const totalCashFlowExpenses = filteredCashFlowExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+  const cogsCashFlowExpenses = filteredCashFlowExpenses
+    .filter(
+      (e) =>
+        e.category === 'Bahan Baku & HPP' ||
+        e.category === 'Belanja Pasar & Sayur' ||
+        e.category === 'Pembelian Bahan Darurat'
+    )
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
+  const opCashFlowExpenses = totalCashFlowExpenses - cogsCashFlowExpenses;
+
+  // 3. Gross Profit & Cash Flow Performance
+  const cashFlowGrossProfit = totalShiftRevenueLocked - totalCashFlowExpenses;
+  const cashFlowMarginPct = totalShiftRevenueLocked > 0 ? (cashFlowGrossProfit / totalShiftRevenueLocked) * 100 : 0;
+
+  // 4. Branch Comparison for Cash Flow
+  const perBranchCashFlow = allKnownOutlets.map((outletName) => {
+    const branchShifts = (shifts || []).filter(
+      (s) => s.outlet === outletName && isDateInPnlFilter(s.date || '')
+    );
+    const branchExpenses = (expenses || []).filter(
+      (e) => e.outlet === outletName && isDateInPnlFilter(e.date || '')
+    );
+
+    const shiftRev = branchShifts.reduce(
+      (acc, s) =>
+        acc + (s.totalRevenue || (s.cashRevenue + s.qrisRevenue + s.transferRevenue + (s.onlineFoodRevenue || 0))),
+      0
+    );
+    const expTotal = branchExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+    const gp = shiftRev - expTotal;
+    const margin = shiftRev > 0 ? (gp / shiftRev) * 100 : 0;
+
+    return {
+      outletName,
+      shiftCount: branchShifts.length,
+      shiftRev,
+      expTotal,
+      gp,
+      margin,
+    };
+  });
+
+  // Print Cash Flow & Gross Profit Statement
+  const handlePrintCashFlowReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const periodLabel =
+      pnlMode === 'harian'
+        ? `HARIAN (${pnlDate})`
+        : pnlMode === 'mingguan'
+        ? `MINGGUAN (7 HARI S/D ${pnlDate})`
+        : pnlMode === 'bulanan'
+        ? `BULANAN (${pnlMonth})`
+        : 'KESELURUHAN DATA';
+
+    const content = `
+      <html>
+        <head>
+          <title>Laporan Cash Flow & Gross Profit - Steak 11</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #1e293b; max-width: 820px; margin: 0 auto; font-size: 12px; }
+            .header { text-align: center; border-bottom: 2px solid #3D1259; padding-bottom: 12px; margin-bottom: 16px; }
+            .header h2 { margin: 0; color: #3D1259; font-size: 20px; }
+            .header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+            .meta-bar { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 16px; font-weight: bold; font-size: 11px; }
+            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+            .card { padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; }
+            .card .label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
+            .card .val { font-size: 16px; font-weight: 800; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+            th { background: #f1f5f9; font-weight: bold; color: #334155; }
+            .text-right { text-align: right; }
+            .bold { font-weight: bold; }
+            .footer { margin-top: 30px; display: flex; justify-content: space-between; text-align: center; font-size: 11px; }
+            .sign { margin-top: 45px; border-top: 1px solid #000; width: 140px; padding-top: 4px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>STEAK 11 — MYTHIC CHICKEN TASTE</h2>
+            <h4 style="margin:4px 0; color:#475569;">LAPORAN ARUS KAS & GROSS PROFIT (CASH FLOW STATEMENT)</h4>
+          </div>
+
+          <div class="meta-bar">
+            <span>PERIODE: ${periodLabel}</span>
+            <span>FILTER OUTLET: ${selectedOutletFilter}</span>
+            <span>TANGGAL CETAK: ${new Date().toLocaleString('id-ID')}</span>
+          </div>
+
+          <div class="grid">
+            <div class="card" style="border-left: 4px solid #10b981;">
+              <div class="label">Total Omset Shift (Terkunci)</div>
+              <div class="val" style="color: #059669;">${formatRupiah(totalShiftRevenueLocked)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #ef4444;">
+              <div class="label">Total Pengeluaran Beban</div>
+              <div class="val" style="color: #dc2626;">-${formatRupiah(totalCashFlowExpenses)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #8b5cf6;">
+              <div class="label">Gross Profit (Laba Kotor)</div>
+              <div class="val" style="color: ${cashFlowGrossProfit >= 0 ? '#059669' : '#dc2626'};">${formatRupiah(cashFlowGrossProfit)}</div>
+            </div>
+            <div class="card" style="border-left: 4px solid #3b82f6;">
+              <div class="label">Gross Margin %</div>
+              <div class="val" style="color: #2563eb;">${cashFlowMarginPct.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          <h4 style="margin-top:16px;margin-bottom:6px;color:#3D1259;">1. Rincian Penerimaan Shift Kasir (🔒 Terkunci dari Hasil Audit Closing Shift)</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>ID Shift</th>
+                <th>Tanggal</th>
+                <th>Kasir</th>
+                <th>Outlet</th>
+                <th class="text-right">Tunai POS</th>
+                <th class="text-right">QRIS / Transfer</th>
+                <th class="text-right">Online Food</th>
+                <th class="text-right">Total Omset Shift</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredCashFlowShifts.map(s => `
+                <tr>
+                  <td class="bold">${s.id}</td>
+                  <td>${s.date}</td>
+                  <td>${s.cashierName}</td>
+                  <td>${s.outlet}</td>
+                  <td class="text-right">${formatRupiah(s.cashRevenue || 0)}</td>
+                  <td class="text-right">${formatRupiah((s.actualQrisRevenue ?? s.qrisRevenue ?? 0) + (s.actualTransferRevenue ?? s.transferRevenue ?? 0))}</td>
+                  <td class="text-right">${formatRupiah(s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0)}</td>
+                  <td class="text-right bold" style="color:#059669;">${formatRupiah(s.totalRevenue || 0)}</td>
+                </tr>
+              `).join('')}
+              <tr style="background:#f8fafc;" class="bold">
+                <td colspan="4">TOTAL OMSET SHIFT TERKUNCI</td>
+                <td class="text-right">${formatRupiah(totalShiftCashLocked)}</td>
+                <td class="text-right">${formatRupiah(totalShiftQrisLocked + totalShiftTransferLocked)}</td>
+                <td class="text-right">${formatRupiah(totalShiftOnlineFoodLocked)}</td>
+                <td class="text-right" style="color:#059669;">${formatRupiah(totalShiftRevenueLocked)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4 style="margin-top:20px;margin-bottom:6px;color:#3D1259;">2. Rincian Pengeluaran Beban Manual & Kas Keluar</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal & Jam</th>
+                <th>Kategori</th>
+                <th>Deskripsi Keperluan</th>
+                <th>Outlet</th>
+                <th class="text-right">Nominal Pengeluaran</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredCashFlowExpenses.map(e => `
+                <tr>
+                  <td>${e.date} ${e.time || ''}</td>
+                  <td><span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold;">${e.category}</span></td>
+                  <td class="bold">${e.description}</td>
+                  <td>${e.outlet}</td>
+                  <td class="text-right bold" style="color:#dc2626;">-${formatRupiah(e.amount)}</td>
+                </tr>
+              `).join('')}
+              <tr style="background:#f8fafc;" class="bold">
+                <td colspan="4">TOTAL PENGELUARAN BEBAN</td>
+                <td class="text-right" style="color:#dc2626;">-${formatRupiah(totalCashFlowExpenses)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4 style="margin-top:20px;margin-bottom:6px;color:#3D1259;">3. Rekapitulasi Cash Flow & Gross Profit per Cabang</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Outlet</th>
+                <th class="text-right">Shift Closing</th>
+                <th class="text-right">Total Omset Shift (🔒)</th>
+                <th class="text-right">Total Pengeluaran</th>
+                <th class="text-right">Gross Profit</th>
+                <th class="text-right">Margin %</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${perBranchCashFlow.map(b => `
+                <tr>
+                  <td class="bold">${b.outletName}</td>
+                  <td class="text-right">${b.shiftCount}</td>
+                  <td class="text-right bold" style="color:#059669;">${formatRupiah(b.shiftRev)}</td>
+                  <td class="text-right" style="color:#dc2626;">-${formatRupiah(b.expTotal)}</td>
+                  <td class="text-right bold" style="color:${b.gp >= 0 ? '#059669' : '#dc2626'};">${formatRupiah(b.gp)}</td>
+                  <td class="text-right">${b.margin.toFixed(1)}%</td>
+                </tr>
+              `).join('')}
+              <tr style="background:#f8fafc;" class="bold">
+                <td>KONSOLIDASI SELURUH CABANG</td>
+                <td class="text-right">${filteredCashFlowShifts.length}</td>
+                <td class="text-right" style="color:#059669;">${formatRupiah(totalShiftRevenueLocked)}</td>
+                <td class="text-right" style="color:#dc2626;">-${formatRupiah(totalCashFlowExpenses)}</td>
+                <td class="text-right" style="color:${cashFlowGrossProfit >= 0 ? '#059669' : '#dc2626'};">${formatRupiah(cashFlowGrossProfit)}</td>
+                <td class="text-right">${cashFlowMarginPct.toFixed(1)}%</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <div>
+              <p>Dibuat oleh (Finance/Kasir):</p>
+              <div class="sign">${currentUser?.name || 'Staff Finance'}</div>
+            </div>
+            <div>
+              <p>Diperiksa oleh (Manager):</p>
+              <div class="sign">Operation Manager</div>
+            </div>
+            <div>
+              <p>Disetujui oleh (Owner):</p>
+              <div class="sign">Owner Steak 11</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+  };
+
+  // Export Cash Flow Statement to Excel
+  const handleExportCashFlowExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const summaryData = [
+      ['STEAK 11 - LAPORAN CASH FLOW & GROSS PROFIT'],
+      ['Periode', `${pnlMode.toUpperCase()} (${pnlMode === 'harian' ? pnlDate : pnlMode === 'bulanan' ? pnlMonth : 'Semua Data'})`],
+      ['Filter Cabang', selectedOutletFilter],
+      ['Waktu Cetak', new Date().toLocaleString('id-ID')],
+      [],
+      ['INDIKATOR ARUS KAS', 'NOMINAL (RP)', 'KETERANGAN'],
+      ['1. Total Omset Shift Masuk (Terkunci)', totalShiftRevenueLocked, `Otomatis dari ${filteredCashFlowShifts.length} Shift Closing Kasir`],
+      ['  • Penerimaan Tunai POS', totalShiftCashLocked, 'Kas Masuk Laci'],
+      ['  • Penerimaan QRIS & Transfer', totalShiftQrisLocked + totalShiftTransferLocked, 'Nontunai Bank'],
+      ['  • Penerimaan Online Food', totalShiftOnlineFoodLocked, 'GoFood / GrabFood / ShopeeFood'],
+      ['2. Total Pengeluaran Beban Manual', -totalCashFlowExpenses, `${filteredCashFlowExpenses.length} Transaksi Pengeluaran Dicatat`],
+      ['  • Pembelian Bahan Baku & HPP', -cogsCashFlowExpenses, 'Belanja Daging, Bahan, & Sayur'],
+      ['  • Operasional & Beban Lainnya', -opCashFlowExpenses, 'Gas, Listrik, Toko, & Maintenance'],
+      ['3. GROSS PROFIT (LABA KOTOR CASH FLOW)', cashFlowGrossProfit, cashFlowGrossProfit >= 0 ? 'Surplus Arus Kas' : 'Defisit Arus Kas'],
+      ['GROSS PROFIT MARGIN (%)', `${cashFlowMarginPct.toFixed(2)}%`, 'Margin Bersih terhadap Omset Shift'],
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Ringkasan Cash Flow');
+
+    const shiftData = [
+      ['ID Shift', 'Tanggal', 'Kasir', 'Outlet Cabang', 'Tunai POS (Rp)', 'QRIS (Rp)', 'Transfer (Rp)', 'Online Food (Rp)', 'Total Omset Shift Terkunci (Rp)', 'Status Audit'],
+      ...filteredCashFlowShifts.map((s) => [
+        s.id,
+        s.date,
+        s.cashierName,
+        s.outlet,
+        s.cashRevenue || 0,
+        s.actualQrisRevenue ?? s.qrisRevenue ?? 0,
+        s.actualTransferRevenue ?? s.transferRevenue ?? 0,
+        s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0,
+        s.totalRevenue || 0,
+        s.auditStatus || 'Sesuai',
+      ]),
+    ];
+    const wsShift = XLSX.utils.aoa_to_sheet(shiftData);
+    XLSX.utils.book_append_sheet(wb, wsShift, 'Omset Shift Terkunci');
+
+    const expData = [
+      ['ID Pengeluaran', 'Tanggal', 'Jam', 'Kategori', 'Deskripsi Keperluan', 'No. Nota', 'Kasir / PIC', 'Outlet', 'Nominal Pengeluaran (Rp)'],
+      ...filteredCashFlowExpenses.map((e) => [
+        e.id,
+        e.date,
+        e.time || '',
+        e.category,
+        e.description,
+        e.receiptNumber || '',
+        e.cashierName,
+        e.outlet,
+        e.amount,
+      ]),
+    ];
+    const wsExp = XLSX.utils.aoa_to_sheet(expData);
+    XLSX.utils.book_append_sheet(wb, wsExp, 'Rincian Pengeluaran');
+
+    const branchData = [
+      ['Nama Outlet Cabang', 'Jumlah Shift Closing', 'Total Omset Shift Terkunci (Rp)', 'Total Pengeluaran (Rp)', 'Gross Profit (Rp)', 'Gross Margin (%)'],
+      ...perBranchCashFlow.map((b) => [
+        b.outletName,
+        b.shiftCount,
+        b.shiftRev,
+        b.expTotal,
+        b.gp,
+        `${b.margin.toFixed(2)}%`,
+      ]),
+    ];
+    const wsBranch = XLSX.utils.aoa_to_sheet(branchData);
+    XLSX.utils.book_append_sheet(wb, wsBranch, 'Performa Cabang');
+
+    XLSX.writeFile(wb, `Laporan_Cash_Flow_Gross_Profit_${pnlMode}_${todayStr}.xlsx`);
+    showToast('📊 File Excel Laporan Cash Flow & Gross Profit berhasil diunduh!');
+  };
 
   // Export P&L Statement to Excel
   const handleExportPnlExcel = () => {
@@ -887,6 +1226,18 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           </button>
 
           <button
+            onClick={() => setSubTab('cash_flow')}
+            className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+              subTab === 'cash_flow'
+                ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-purple-900/40'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <span>Cash Flow & Gross Profit</span>
+          </button>
+
+          <button
             onClick={() => setSubTab('profit_loss')}
             className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               subTab === 'profit_loss'
@@ -929,6 +1280,32 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             <Plus className="w-4 h-4" />
             <span>Catat Pengeluaran Operasional</span>
           </button>
+        )}
+
+        {subTab === 'cash_flow' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowExpenseModal(true)}
+              className="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Catat Pengeluaran</span>
+            </button>
+            <button
+              onClick={handlePrintCashFlowReport}
+              className="px-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-[#3D1259] dark:text-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Cetak</span>
+            </button>
+            <button
+              onClick={handleExportCashFlowExcel}
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -1115,7 +1492,485 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 3: LAPORAN LABA / RUGI (PROFIT & LOSS STATEMENT) */}
+      {/* SUB-TAB 3: LAPORAN CASH FLOW & GROSS PROFIT */}
+      {subTab === 'cash_flow' && (
+        <div className="space-y-4">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-4">
+            {/* Header & Filter Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-purple-900/50 pb-4">
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  Laporan Cash Flow & Gross Profit (Arus Kas)
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Arus masuk omset terkunci otomatis dari <strong>Audit Closing Shift</strong>, dikurangi pengeluaran beban manual untuk menghasilkan <strong>Gross Profit</strong>.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Timeframe Mode Selector */}
+                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-purple-950 border border-slate-200 dark:border-purple-800 text-xs">
+                  <button
+                    onClick={() => setPnlMode('harian')}
+                    className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer ${
+                      pnlMode === 'harian'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    Harian
+                  </button>
+                  <button
+                    onClick={() => setPnlMode('mingguan')}
+                    className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer ${
+                      pnlMode === 'mingguan'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    Mingguan
+                  </button>
+                  <button
+                    onClick={() => setPnlMode('bulanan')}
+                    className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer ${
+                      pnlMode === 'bulanan'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    Bulanan
+                  </button>
+                  <button
+                    onClick={() => setPnlMode('semua')}
+                    className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer ${
+                      pnlMode === 'semua'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    Semua Data
+                  </button>
+                </div>
+
+                {/* Specific Picker based on mode */}
+                {pnlMode === 'harian' && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="date"
+                      value={pnlDate}
+                      onChange={(e) => setPnlDate(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 text-xs font-bold"
+                    />
+                  </div>
+                )}
+
+                {pnlMode === 'mingguan' && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-slate-400 font-bold">s/d Tanggal:</span>
+                    <input
+                      type="date"
+                      value={pnlDate}
+                      onChange={(e) => setPnlDate(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 text-xs font-bold"
+                    />
+                  </div>
+                )}
+
+                {pnlMode === 'bulanan' && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="month"
+                      value={pnlMonth}
+                      onChange={(e) => setPnlMonth(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 text-xs font-bold"
+                    />
+                  </div>
+                )}
+
+                {/* Outlet Selector Filter */}
+                <div className="flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-slate-400" />
+                  <select
+                    value={selectedOutletFilter}
+                    onChange={(e) => setSelectedOutletFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 font-bold text-xs"
+                  >
+                    <option value="ALL">Semua Cabang (Konsolidasi)</option>
+                    {allKnownOutlets.map((out) => (
+                      <option key={out} value={out}>
+                        {out}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 SUMMARY KPI CARDS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Card 1: Total Omset Shift (Terkunci) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                    <Wallet className="w-3.5 h-3.5" /> 1. Total Omset Shift Masuk
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black text-[9px] flex items-center gap-0.5" title="Nilai terkunci otomatis dari Audit Closing Shift">
+                    <Lock className="w-2.5 h-2.5" /> Terkunci
+                  </span>
+                </div>
+                <p className="font-black text-2xl text-emerald-600 dark:text-emerald-400">
+                  {formatRupiah(totalShiftRevenueLocked)}
+                </p>
+                <div className="space-y-0.5 pt-1 border-t border-emerald-500/20 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                  <div className="flex justify-between">
+                    <span>• Kas Laci POS (Tunai):</span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300">{formatRupiah(totalShiftCashLocked)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• QRIS & Transfer Bank:</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">{formatRupiah(totalShiftQrisLocked + totalShiftTransferLocked)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• Omset Online Food:</span>
+                    <span className="font-bold text-orange-600 dark:text-orange-400">{formatRupiah(totalShiftOnlineFoodLocked)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Total Pengeluaran Beban Manual */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 via-pink-500/5 to-transparent border border-rose-500/30 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-rose-800 dark:text-rose-300 flex items-center gap-1">
+                    <Receipt className="w-3.5 h-3.5" /> 2. Pengeluaran Beban Manual
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold text-[9px]">
+                    {filteredCashFlowExpenses.length} Transaksi
+                  </span>
+                </div>
+                <p className="font-black text-2xl text-rose-600 dark:text-rose-400">
+                  -{formatRupiah(totalCashFlowExpenses)}
+                </p>
+                <div className="space-y-0.5 pt-1 border-t border-rose-500/20 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                  <div className="flex justify-between">
+                    <span>• Bahan Baku & HPP:</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">-{formatRupiah(cogsCashFlowExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>• Operasional & Beban Lain:</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">-{formatRupiah(opCashFlowExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between text-[9px] text-slate-400 italic pt-0.5">
+                    <span>Mengurangi total omset kasir</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Gross Profit (Laba Kotor Cash Flow) */}
+              <div className={`p-4 rounded-2xl border shadow-xs space-y-2 ${
+                cashFlowGrossProfit >= 0
+                  ? 'bg-gradient-to-br from-purple-500/10 via-amber-500/5 to-transparent border-purple-500/30'
+                  : 'bg-gradient-to-br from-red-500/15 via-rose-500/10 to-transparent border-red-500/40'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-[#3D1259] dark:text-amber-300 flex items-center gap-1">
+                    <DollarSign className="w-3.5 h-3.5 text-amber-500" /> 3. Gross Profit (Arus Kas)
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full font-black text-[9px] ${
+                    cashFlowGrossProfit >= 0
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-rose-500/20 text-rose-700 dark:text-rose-300'
+                  }`}>
+                    {cashFlowGrossProfit >= 0 ? '✓ SURPLUS ARUS KAS' : '⚠️ DEFISIT ARUS KAS'}
+                  </span>
+                </div>
+                <p className={`font-black text-2xl ${
+                  cashFlowGrossProfit >= 0 ? 'text-purple-950 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'
+                }`}>
+                  {formatRupiah(cashFlowGrossProfit)}
+                </p>
+                <div className="pt-1 border-t border-purple-500/20 text-[10px] text-slate-500 dark:text-slate-400">
+                  <p className="font-bold text-slate-700 dark:text-slate-300">
+                    Formula: Omset Shift (🔒) - Pengeluaran Beban
+                  </p>
+                  <span className="text-[9px] text-slate-400">Laba kotor kas riil shift operasional</span>
+                </div>
+              </div>
+
+              {/* Card 4: Gross Profit Margin */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent border border-blue-500/30 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-blue-800 dark:text-blue-300 flex items-center gap-1">
+                    <BarChart3 className="w-3.5 h-3.5" /> 4. Gross Margin %
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 font-bold">
+                    {filteredCashFlowShifts.length} Shift
+                  </span>
+                </div>
+                <p className="font-black text-2xl text-blue-600 dark:text-blue-400">
+                  {cashFlowMarginPct.toFixed(1)}%
+                </p>
+                <div className="space-y-1 pt-1 border-t border-blue-500/20">
+                  <div className="w-full bg-slate-200 dark:bg-purple-950 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-emerald-400 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(Math.max(cashFlowMarginPct, 0), 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-400 block text-right">
+                    Rasio Laba Kotor terhadap Omset
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* DUAL COLUMN MATRIX: Shift Inflow Terkunci vs Pengeluaran Beban Manual */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-2">
+              {/* KOLOM KIRI: Penerimaan Omset per Shift (🔒 Terkunci) */}
+              <div className="lg:col-span-7 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-purple-950/60 border border-emerald-200 dark:border-purple-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-emerald-950 dark:text-emerald-300">
+                        1. Rincian Omset Shift Kasir (🔒 Terkunci)
+                      </h5>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Total {filteredCashFlowShifts.length} Record Closing Shift Terverifikasi
+                      </span>
+                    </div>
+                  </div>
+                  <span className="font-black text-emerald-700 dark:text-emerald-400 text-xs">
+                    +{formatRupiah(totalShiftRevenueLocked)}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-purple-900 bg-white dark:bg-purple-950/40">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-600 dark:text-purple-300 font-bold">
+                        <th className="p-2.5">Shift & Tanggal</th>
+                        <th className="p-2.5">Kasir & Outlet</th>
+                        <th className="p-2.5 text-right">Rincian Kanal</th>
+                        <th className="p-2.5 text-right">Omset Shift (🔒)</th>
+                        <th className="p-2.5 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
+                      {filteredCashFlowShifts.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-slate-400">
+                            Belum ada record audit closing shift untuk filter ini.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCashFlowShifts.map((s) => (
+                          <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                            <td className="p-2.5">
+                              <span className="font-bold text-slate-900 dark:text-white font-mono block">{s.id}</span>
+                              <span className="text-[10px] text-slate-400">{s.date} • {s.shiftName}</span>
+                            </td>
+                            <td className="p-2.5">
+                              <span className="font-extrabold text-slate-800 dark:text-slate-200 block">{s.cashierName}</span>
+                              <span className="text-[10px] text-slate-400">{s.outlet}</span>
+                            </td>
+                            <td className="p-2.5 text-right text-[10px] space-y-0.5">
+                              <div className="text-slate-500">Tunai: <span className="font-bold text-emerald-600">{formatRupiah(s.cashRevenue)}</span></div>
+                              <div className="text-slate-500">QRIS/Trf: <span className="font-bold text-blue-600">{formatRupiah((s.actualQrisRevenue ?? s.qrisRevenue ?? 0) + (s.actualTransferRevenue ?? s.transferRevenue ?? 0))}</span></div>
+                              {(s.actualOnlineFoodRevenue || s.onlineFoodRevenue) ? (
+                                <div className="text-slate-500">Online: <span className="font-bold text-orange-600">{formatRupiah(s.actualOnlineFoodRevenue ?? s.onlineFoodRevenue ?? 0)}</span></div>
+                              ) : null}
+                            </td>
+                            <td className="p-2.5 text-right">
+                              <div className="font-black text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-end gap-1">
+                                <Lock className="w-2.5 h-2.5 text-amber-500" />
+                                {formatRupiah(s.totalRevenue)}
+                              </div>
+                              <span className="text-[9px] text-slate-400 block">{s.auditStatus || 'Sesuai'}</span>
+                            </td>
+                            <td className="p-2.5 text-center">
+                              <button
+                                onClick={() => handlePrintClosingSummary(s)}
+                                className="px-2 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/80 text-purple-950 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                                title="Cetak Struk Audit Closing Shift"
+                              >
+                                <Printer className="w-3 h-3" /> Struk
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* KOLOM KANAN: Pengeluaran Beban Manual */}
+              <div className="lg:col-span-5 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-purple-950/60 border border-rose-200 dark:border-purple-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold">
+                      <Receipt className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-rose-950 dark:text-rose-300">
+                        2. Pengeluaran Beban Manual
+                      </h5>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {filteredCashFlowExpenses.length} Pengeluaran Mengurangi Omset
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowExpenseModal(true)}
+                    className="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] flex items-center gap-1 cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-3 h-3" /> Tambah
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-purple-900 bg-white dark:bg-purple-950/40">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-600 dark:text-purple-300 font-bold">
+                        <th className="p-2.5">Kategori & Keperluan</th>
+                        <th className="p-2.5">Outlet</th>
+                        <th className="p-2.5 text-right">Nominal</th>
+                        <th className="p-2.5 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
+                      {filteredCashFlowExpenses.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="p-6 text-center text-slate-400">
+                            Belum ada pengeluaran beban manual untuk filter ini.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCashFlowExpenses.map((exp) => (
+                          <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                            <td className="p-2.5">
+                              <span className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-[9px] font-bold block w-fit mb-0.5">
+                                {exp.category}
+                              </span>
+                              <span className="font-extrabold text-slate-800 dark:text-slate-200 block">{exp.description}</span>
+                              <span className="text-[10px] text-slate-400">{exp.date} {exp.time ? `• ${exp.time}` : ''}</span>
+                            </td>
+                            <td className="p-2.5 text-slate-600 dark:text-slate-300 text-[11px]">
+                              {exp.outlet}
+                              <span className="text-[9px] text-slate-400 block">{exp.cashierName}</span>
+                            </td>
+                            <td className="p-2.5 text-right font-black text-rose-600 dark:text-rose-400">
+                              -{formatRupiah(exp.amount)}
+                            </td>
+                            <td className="p-2.5 text-right">
+                              <button
+                                onClick={() => handleDeleteExpense(exp.id, exp.description)}
+                                className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                                title="Hapus pengeluaran ini"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* TABEL REKAPITULASI CASH FLOW & GROSS PROFIT PER CABANG OUTLET */}
+            <div className="pt-3 border-t border-slate-100 dark:border-purple-900/50 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h5 className="font-extrabold text-xs text-[#3D1259] dark:text-amber-400 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-purple-500" />
+                  Rekapitulasi Cash Flow & Gross Profit per Cabang Outlet
+                </h5>
+                <span className="text-[11px] text-slate-400">
+                  Konsolidasi real-time seluruh cabang operasional
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-purple-900">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-700 dark:text-purple-300 font-bold">
+                      <th className="p-2.5">Nama Outlet Cabang</th>
+                      <th className="p-2.5 text-center">Jumlah Shift</th>
+                      <th className="p-2.5 text-right">Total Omset Shift (🔒)</th>
+                      <th className="p-2.5 text-right">Total Pengeluaran Beban</th>
+                      <th className="p-2.5 text-right">Gross Profit (Arus Kas)</th>
+                      <th className="p-2.5 text-center">Gross Margin %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-purple-900/50">
+                    {perBranchCashFlow.map((b) => (
+                      <tr key={b.outletName} className="hover:bg-slate-50 dark:hover:bg-purple-900/30 transition-colors">
+                        <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                          <Store className="w-3.5 h-3.5 text-amber-500" />
+                          {b.outletName}
+                        </td>
+                        <td className="p-2.5 text-center font-bold text-slate-600 dark:text-slate-300">
+                          {b.shiftCount} Shift
+                        </td>
+                        <td className="p-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                          {formatRupiah(b.shiftRev)}
+                        </td>
+                        <td className="p-2.5 text-right font-black text-rose-600 dark:text-rose-400">
+                          -{formatRupiah(b.expTotal)}
+                        </td>
+                        <td className={`p-2.5 text-right font-black ${b.gp >= 0 ? 'text-purple-950 dark:text-amber-300' : 'text-rose-600 dark:text-rose-400'}`}>
+                          {formatRupiah(b.gp)}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <span className={`px-2 py-0.5 rounded-full font-black text-[10px] ${
+                            b.margin >= 40
+                              ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                              : b.margin >= 20
+                              ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                              : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                          }`}>
+                            {b.margin.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Row Konsolidasi Total */}
+                    <tr className="bg-slate-100 dark:bg-purple-950 font-black border-t-2 border-slate-300 dark:border-purple-800">
+                      <td className="p-2.5 text-purple-950 dark:text-amber-300">
+                        KONSOLIDASI SELURUH CABANG
+                      </td>
+                      <td className="p-2.5 text-center text-slate-700 dark:text-slate-300">
+                        {filteredCashFlowShifts.length} Shift
+                      </td>
+                      <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400 text-sm">
+                        {formatRupiah(totalShiftRevenueLocked)}
+                      </td>
+                      <td className="p-2.5 text-right text-rose-600 dark:text-rose-400 text-sm">
+                        -{formatRupiah(totalCashFlowExpenses)}
+                      </td>
+                      <td className={`p-2.5 text-right text-sm ${cashFlowGrossProfit >= 0 ? 'text-purple-950 dark:text-amber-300' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {formatRupiah(cashFlowGrossProfit)}
+                      </td>
+                      <td className="p-2.5 text-center text-sm text-blue-600 dark:text-blue-400">
+                        {cashFlowMarginPct.toFixed(1)}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 4: LAPORAN LABA / RUGI (PROFIT & LOSS STATEMENT) */}
       {subTab === 'profit_loss' && (
         <div className="space-y-4">
           <div className="p-5 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-4">
@@ -2246,20 +3101,46 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             </h3>
 
             <form onSubmit={handleSaveExpense} className="space-y-3 text-xs">
-              <div>
-                <label className="font-extrabold text-slate-700 dark:text-purple-300">Kategori Pengeluaran *</label>
-                <select
-                  value={expCategory}
-                  onChange={(e) => setExpCategory(e.target.value as any)}
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold"
-                >
-                  <option value="Pembelian Bahan Darurat">Pembelian Bahan Darurat (Es, Bumbu)</option>
-                  <option value="Gas LPG">Gas LPG Kompor Grill</option>
-                  <option value="Listrik & Air">Listrik & Air Operasional</option>
-                  <option value="Kebersihan & Operasional">Kebersihan, Plastik & Perlengkapan</option>
-                  <option value="Transport & Kurir">Transport & Kurir</option>
-                  <option value="Lain-lain">Lain-lain</option>
-                </select>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300">Lokasi Outlet Cabang *</label>
+                  <select
+                    value={outlet}
+                    onChange={(e) => setOutlet(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-slate-800 dark:text-slate-100"
+                  >
+                    {locations.length > 0 ? (
+                      locations.map((loc) => (
+                        <option key={loc.id} value={loc.name}>
+                          {loc.name}
+                        </option>
+                      ))
+                    ) : (
+                      outletsList.map((out) => (
+                        <option key={out} value={out}>{out}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-extrabold text-slate-700 dark:text-purple-300">Kategori Pengeluaran *</label>
+                  <select
+                    value={expCategory}
+                    onChange={(e) => setExpCategory(e.target.value as any)}
+                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-purple-800 bg-slate-50 dark:bg-purple-950 font-bold text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="Bahan Baku & HPP">Bahan Baku & HPP (Daging, Ayam)</option>
+                    <option value="Belanja Pasar & Sayur">Belanja Pasar & Sayur</option>
+                    <option value="Pembelian Bahan Darurat">Bahan Darurat (Es, Bumbu)</option>
+                    <option value="Gas LPG">Gas LPG Kompor Grill</option>
+                    <option value="Listrik & Air">Listrik & Air Operasional</option>
+                    <option value="Kebersihan & Operasional">Kebersihan & Perlengkapan</option>
+                    <option value="Gaji & Bonus Harian">Gaji & Bonus Harian</option>
+                    <option value="Transport & Kurir">Transport & Kurir</option>
+                    <option value="Lain-lain">Lain-lain</option>
+                  </select>
+                </div>
               </div>
 
               <div>

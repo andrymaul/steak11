@@ -380,12 +380,13 @@ export interface PettyCashExpense {
   time: string;
   outlet: string;
   cashierName: string;
-  category: 'Pembelian Bahan Darurat' | 'Listrik & Air' | 'Gas LPG' | 'Kebersihan & Operasional' | 'Transport & Kurir' | 'Lain-lain';
+  category: 'Bahan Baku & HPP' | 'Belanja Pasar & Sayur' | 'Gas & Listrik' | 'Operasional Toko' | 'Gaji & Bonus Harian' | 'Pembelian Bahan Darurat' | 'Listrik & Air' | 'Gas LPG' | 'Kebersihan & Operasional' | 'Transport & Kurir' | 'Lain-lain' | string;
   description: string;
   amount: number;
   receiptNumber?: string;
   shiftId?: string;
   approvedBy?: string;
+  paymentMethod?: 'Tunai / Kas Laci' | 'Transfer Bank' | string;
 }
 
 export interface CashierShiftRecord {
