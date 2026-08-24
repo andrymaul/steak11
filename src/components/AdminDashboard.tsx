@@ -922,6 +922,8 @@ function doPost(e) {
   const [shiftTplOutlet, setShiftTplOutlet] = useState<string>('Semua Outlet');
   const [shiftTplIsOff, setShiftTplIsOff] = useState<boolean>(false);
   const [shiftTemplateOutletFilter, setShiftTemplateOutletFilter] = useState<string>('ALL');
+  const [scheduleViewMode, setScheduleViewMode] = useState<'ROSTER' | 'ACTUAL_ATTENDANCE'>('ROSTER');
+  const [selectedAttDetail, setSelectedAttDetail] = useState<{ emp: Employee; date: string; records: AttendanceRecord[] } | null>(null);
 
   // Employee Kasbon / Loan State
   const [employeeLoans, setEmployeeLoans] = useState<EmployeeLoan[]>(() => getStoredEmployeeLoans());
@@ -4013,6 +4015,102 @@ function doPost(e) {
     XLSX.utils.book_append_sheet(workbook, worksheet, `Roster ${schedulePeriod}`);
     XLSX.writeFile(workbook, `Roster_Jadwal_Shift_Steak11_${schedulePeriod}.xlsx`);
     showToast('Berhasil mengunduh Roster Excel Profesional!');
+  };
+
+  const handleDownloadExcelActualAttendanceMatrix = () => {
+    const targetEmps = scheduleOutletFilter === 'ALL' ? employees : employees.filter((e) => e.outlet === scheduleOutletFilter);
+    const [yearStr, monthStr] = schedulePeriod.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const tableRows = targetEmps.map((emp, idx) => {
+      const rowObj: any = {
+        'No': idx + 1,
+        'ID Karyawan': emp.id,
+        'Nama Karyawan': emp.name,
+        'Jabatan': emp.role,
+        'Outlet Cabang': emp.outlet,
+      };
+
+      let totalDaysPresent = 0;
+      let totalDaysLate = 0;
+      let totalHoursWorked = 0;
+      let totalOvertimeHours = 0;
+      let totalSakit = 0;
+      let totalIzin = 0;
+      let totalAlpha = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayAtts = (attendance || []).filter((a) => a.employeeId === emp.id && a.date === dateStr);
+        if (dayAtts.length > 0) {
+          const regAtt = dayAtts.find((a) => !a.isOvertime && a.status !== 'Lembur');
+          const otAtt = dayAtts.find((a) => a.isOvertime || a.status === 'Lembur');
+
+          const parts: string[] = [];
+          if (regAtt) {
+            if (regAtt.status === 'Sakit') {
+              parts.push('Sakit');
+              totalSakit++;
+            } else if (regAtt.status === 'Izin') {
+              parts.push('Izin');
+              totalIzin++;
+            } else if (regAtt.status === 'Alpha') {
+              parts.push('Alpha');
+              totalAlpha++;
+            } else {
+              totalDaysPresent++;
+              totalHoursWorked += (regAtt.hoursWorked || 0);
+              if (regAtt.lateMinutes && regAtt.lateMinutes > 0) {
+                totalDaysLate++;
+                parts.push(`Telat ${regAtt.lateMinutes}m (${regAtt.clockInTime?.substring(0, 5) || ''}-${regAtt.clockOutTime?.substring(0, 5) || ''})`);
+              } else {
+                parts.push(`Hadir (${regAtt.clockInTime?.substring(0, 5) || ''}-${regAtt.clockOutTime?.substring(0, 5) || ''})`);
+              }
+            }
+          }
+          if (otAtt) {
+            const otH = otAtt.overtimeHours || otAtt.hoursWorked || 1;
+            totalOvertimeHours += otH;
+            parts.push(`OT ${otH}j (${otAtt.clockInTime?.substring(0, 5) || ''}-${otAtt.clockOutTime?.substring(0, 5) || ''})`);
+          }
+          rowObj[`Tgl ${day}`] = parts.join(' + ') || 'Hadir';
+        } else {
+          rowObj[`Tgl ${day}`] = '-';
+        }
+      }
+
+      rowObj['Total Hadir'] = totalDaysPresent;
+      rowObj['Total Telat'] = totalDaysLate;
+      rowObj['Total Jam Kerja'] = totalHoursWorked;
+      rowObj['Total Lembur (Jam)'] = totalOvertimeHours;
+      rowObj['Total Sakit'] = totalSakit;
+      rowObj['Total Izin'] = totalIzin;
+      rowObj['Total Alpha'] = totalAlpha;
+
+      return rowObj;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(tableRows);
+
+    const colWidths = [
+      { wch: 5 },  // No
+      { wch: 14 }, // ID
+      { wch: 22 }, // Nama
+      { wch: 18 }, // Jabatan
+      { wch: 18 }, // Outlet
+    ];
+    for (let d = 1; d <= daysInMonth; d++) {
+      colWidths.push({ wch: 14 });
+    }
+    colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 12 });
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Realisasi ${schedulePeriod}`);
+    XLSX.writeFile(workbook, `Matriks_Realisasi_Presensi_Fix_Steak11_${schedulePeriod}.xlsx`);
+    showToast('Berhasil mengunduh Matriks Realisasi Presensi Digital ke Excel!');
   };
 
   const handleDownloadExcelImportScheduleTemplate = () => {
@@ -8923,98 +9021,172 @@ function doPost(e) {
         {activeTab === 'jadwal' && (
           <div className="space-y-6">
             {/* Header Control Bar */}
-            <div className="bg-white dark:bg-[#1f0e30] p-5 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-lg font-black text-[#3D1259] dark:text-amber-400 font-baloo">
-                    Jadwal Shift Kerja & Roster Karyawan
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 border border-purple-300 dark:border-purple-800">
-                    Terintegrasi Absensi & Payroll
-                  </span>
+            <div className="bg-white dark:bg-[#1f0e30] p-5 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Calendar className="w-5 h-5 text-amber-500" />
+                    <h3 className="text-lg font-black text-[#3D1259] dark:text-amber-400 font-baloo">
+                      {scheduleViewMode === 'ROSTER'
+                        ? 'Jadwal Shift Kerja & Roster Karyawan'
+                        : 'Matriks Realisasi Presensi Digital (Jadwal Shift Fix)'}
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 border border-purple-300 dark:border-purple-800">
+                      Terintegrasi Absensi & Payroll
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {scheduleViewMode === 'ROSTER'
+                      ? 'Atur & pantau penugasan shift kerja harian per karyawan. Terkoneksi otomatis dengan presensi selfie (keterlambatan) & penggajian (upah lembur).'
+                      : 'Matriks jadwal riil harian berdasarkan rekap presensi digital karyawan (foto selfie, jam masuk, jam pulang, keterlambatan & lembur).'}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Atur & pantau penugasan shift kerja harian per karyawan. Terkoneksi otomatis dengan presensi selfie (keterlambatan) & penggajian (upah lembur).
-                </p>
+
+                {/* View Mode Toggle Pill */}
+                <div className="flex items-center bg-purple-50 dark:bg-purple-950/80 p-1 rounded-xl border border-purple-200 dark:border-purple-800 shadow-2xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleViewMode('ROSTER')}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      scheduleViewMode === 'ROSTER'
+                        ? 'bg-[#3D1259] text-amber-300 dark:bg-amber-400 dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-purple-900 dark:hover:text-amber-300'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>📅 Roster (Rencana)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleViewMode('ACTUAL_ATTENDANCE')}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      scheduleViewMode === 'ACTUAL_ATTENDANCE'
+                        ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>⏱️ Realisasi Presensi (Fix)</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end text-xs">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 block mb-0.5">
-                    Periode Roster:
-                  </label>
-                  <input
-                    type="month"
-                    value={schedulePeriod}
-                    onChange={(e) => setSchedulePeriod(e.target.value)}
-                    className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-sm"
-                  />
+              {/* Action Toolbar */}
+              <div className="flex items-center gap-2 flex-wrap justify-between pt-3 border-t border-slate-100 dark:border-purple-900/40 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-0.5">
+                      Periode Bulan:
+                    </label>
+                    <input
+                      type="month"
+                      value={schedulePeriod}
+                      onChange={(e) => setSchedulePeriod(e.target.value)}
+                      className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-0.5">
+                      Filter Outlet Cabang:
+                    </label>
+                    <select
+                      value={scheduleOutletFilter}
+                      onChange={(e) => setScheduleOutletFilter(e.target.value)}
+                      className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-sm"
+                    >
+                      <option value="ALL">Semua Outlet Cabang</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.name}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <select
-                  value={scheduleOutletFilter}
-                  onChange={(e) => setScheduleOutletFilter(e.target.value)}
-                  className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-sm mt-3"
-                >
-                  <option value="ALL">Semua Outlet Cabang</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.name}>
-                      {loc.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {scheduleViewMode === 'ROSTER' ? (
+                    <>
+                      <button
+                        onClick={() => setShowGenerateScheduleModal(true)}
+                        className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        title="Pilih model & generate jadwal shift roster otomatis 1 bulan penuh"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" /> Generate Otomatis
+                      </button>
 
-                <button
-                  onClick={() => setShowGenerateScheduleModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer mt-3 transition-all active:scale-95"
-                  title="Pilih model & generate jadwal shift roster otomatis 1 bulan penuh"
-                >
-                  <Sparkles className="w-3.5 h-3.5" /> Generate Otomatis
-                </button>
+                      <button
+                        onClick={() => setShowShiftTemplateModal(true)}
+                        className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                      >
+                        <Sliders className="w-3.5 h-3.5" /> Master Shift
+                      </button>
 
-                <button
-                  onClick={() => setShowShiftTemplateModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer mt-3 transition-all active:scale-95"
-                >
-                  <Sliders className="w-3.5 h-3.5" /> Master Shift
-                </button>
+                      <button
+                        onClick={() => handleOpenAssignSchedule()}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Tambah Shift
+                      </button>
 
-                <button
-                  onClick={() => handleOpenAssignSchedule()}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer mt-3 transition-all active:scale-95"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Tambah Shift
-                </button>
+                      <button
+                        onClick={handleDownloadExcelScheduleRoster}
+                        className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer"
+                        title="Ekspor Roster Shift ke Excel Profesional"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Ekspor Roster
+                      </button>
 
-                <button
-                  onClick={handleDownloadExcelScheduleRoster}
-                  className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer mt-3"
-                  title="Ekspor Roster Shift ke Excel Profesional"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Ekspor Excel
-                </button>
+                      <button
+                        onClick={handleDownloadExcelImportScheduleTemplate}
+                        className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer"
+                        title="Unduh Format Template Excel Roster Shift untuk Diimpor"
+                      >
+                        <Download className="w-3.5 h-3.5 text-blue-500" /> Template
+                      </button>
 
-                <button
-                  onClick={handleDownloadExcelImportScheduleTemplate}
-                  className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer mt-3"
-                  title="Unduh Format Template Excel Roster Shift untuk Diimpor"
-                >
-                  <Download className="w-3.5 h-3.5 text-blue-500" /> Template Impor
-                </button>
+                      <label
+                        className="px-3 py-2 rounded-xl bg-blue-600 text-white font-extrabold text-xs hover:bg-blue-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        title="Unggah & Impor Roster Shift dari File Excel (.xlsx)"
+                      >
+                        <Upload className="w-3.5 h-3.5" /> Impor
+                        <input
+                          type="file"
+                          accept=".xlsx, .xls, .csv"
+                          onChange={handleImportScheduleExcel}
+                          className="hidden"
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleDownloadExcelActualAttendanceMatrix}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        title="Ekspor Matriks Realisasi Presensi Digital ke File Excel"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5" /> Ekspor Matriks Realisasi (Excel)
+                      </button>
 
-                <label
-                  className="px-3 py-2 rounded-xl bg-blue-600 text-white font-extrabold text-xs hover:bg-blue-700 shadow-md flex items-center gap-1.5 cursor-pointer mt-3 transition-all active:scale-95"
-                  title="Unggah & Impor Roster Shift dari File Excel (.xlsx)"
-                >
-                  <Upload className="w-3.5 h-3.5" /> Impor Excel
-                  <input
-                    type="file"
-                    accept=".xlsx, .xls, .csv"
-                    onChange={handleImportScheduleExcel}
-                    className="hidden"
-                  />
-                </label>
+                      <button
+                        onClick={handleOpenAddOvertime}
+                        className="px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        title="Catat Presensi Lembur Karyawan"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Catat Lembur
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab('absensi')}
+                        className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        title="Buka Tabel Rekap Presensi Digital Lengkap"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-500" /> Rekap Presensi Lengkap
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -9022,120 +9194,237 @@ function doPost(e) {
             {(() => {
               const targetEmps = scheduleOutletFilter === 'ALL' ? employees : employees.filter((e) => e.outlet === scheduleOutletFilter);
               const targetEmpIds = new Set(targetEmps.map((e) => e.id));
-              const monthSchedules = schedules.filter(
-                (s) => s.date.startsWith(schedulePeriod) && targetEmpIds.has(s.employeeId)
-              );
 
-              const countOff = monthSchedules.filter((s) => {
-                const matchedTpl = shiftTemplates.find((t) => t.id === s.shiftId || t.name.trim().toLowerCase() === s.shiftName.trim().toLowerCase());
-                return s.isOff || matchedTpl?.isOff || s.shiftName.toLowerCase().includes('off') || s.shiftName.toLowerCase().includes('libur');
-              }).length;
+              if (scheduleViewMode === 'ROSTER') {
+                const monthSchedules = schedules.filter(
+                  (s) => s.date.startsWith(schedulePeriod) && targetEmpIds.has(s.employeeId)
+                );
 
-              const countWorking = monthSchedules.length - countOff;
+                const countOff = monthSchedules.filter((s) => {
+                  const matchedTpl = shiftTemplates.find((t) => t.id === s.shiftId || t.name.trim().toLowerCase() === s.shiftName.trim().toLowerCase());
+                  return s.isOff || matchedTpl?.isOff || s.shiftName.toLowerCase().includes('off') || s.shiftName.toLowerCase().includes('libur');
+                }).length;
 
-              const shiftCounts = shiftTemplates.map((tpl) => {
-                const count = monthSchedules.filter((s) => s.shiftId === tpl.id || s.shiftName.trim().toLowerCase() === tpl.name.trim().toLowerCase()).length;
-                return { ...tpl, count };
-              });
-              const topWorkingShift = shiftCounts.filter((t) => !t.isOff).sort((a, b) => b.count - a.count)[0];
+                const countWorking = monthSchedules.length - countOff;
 
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                  <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-slate-500 dark:text-slate-400">Total Shift Terjadwal</span>
-                      <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-xl text-purple-600 dark:text-amber-400">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <p className="text-xl font-black text-[#3D1259] dark:text-amber-300">
-                      {monthSchedules.length} <span className="text-xs font-semibold text-slate-500">Penugasan</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Untuk {targetEmps.length} Karyawan Aktif
-                    </p>
-                  </div>
+                const shiftCounts = shiftTemplates.map((tpl) => {
+                  const count = monthSchedules.filter((s) => s.shiftId === tpl.id || s.shiftName.trim().toLowerCase() === tpl.name.trim().toLowerCase()).length;
+                  return { ...tpl, count };
+                });
+                const topWorkingShift = shiftCounts.filter((t) => !t.isOff).sort((a, b) => b.count - a.count)[0];
 
-                  <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-slate-500 dark:text-slate-400">Shift Bekerja (Aktif)</span>
-                      <div className="p-2 bg-emerald-100 dark:bg-emerald-950 rounded-xl text-emerald-600 dark:text-emerald-400">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                      {countWorking} <span className="text-xs font-semibold text-slate-400">Hari Kerja</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Tercatat dalam Operasional Outlets
-                    </p>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-slate-500 dark:text-slate-400">Hari Libur / OFF</span>
-                      <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300">
-                        <UserCheck className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <p className="text-xl font-black text-slate-700 dark:text-slate-300">
-                      {countOff} <span className="text-xs font-semibold text-slate-500">Hari Libur</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Rotasi Libur Rutin Karyawan
-                    </p>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-slate-500 dark:text-slate-400">Shift Kerja Dominan</span>
-                      <div className="p-2 bg-amber-100 dark:bg-amber-950 rounded-xl text-amber-600 dark:text-amber-400">
-                        <Flame className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <p className="text-xl font-black text-amber-600 dark:text-amber-400 truncate">
-                      {topWorkingShift ? `${topWorkingShift.name}` : '-'}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      {topWorkingShift ? `${topWorkingShift.count} Penugasan Roster` : 'Belum ada data'}
-                    </p>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Outlet Color Coding Legend Pill */}
-            <div className="flex items-center gap-2 flex-wrap p-3 bg-white dark:bg-[#1f0e30] rounded-2xl border border-slate-200 dark:border-purple-900/50 text-xs">
-              <span className="font-extrabold text-slate-700 dark:text-amber-300 flex items-center gap-1.5 shrink-0">
-                <MapPin className="w-3.5 h-3.5 text-amber-500" /> Kode Warna Outlet:
-              </span>
-              {locations.map((loc) => {
-                const badgeStyle = getOutletBadgeStyle(loc.name, false);
                 return (
-                  <div key={loc.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] shadow-2xs ${badgeStyle}`}>
-                    <span className="w-2 h-2 rounded-full bg-current opacity-80 shrink-0" />
-                    <span>{loc.name.replace(/^Steak\s*11,?\s*/i, '')}</span>
-                    <span className="text-[9.5px] opacity-75 font-mono font-normal">({loc.startWorkTime || '14:00'}-{loc.endWorkTime || '23:00'})</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Total Shift Terjadwal</span>
+                        <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-xl text-purple-600 dark:text-amber-400">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-[#3D1259] dark:text-amber-300">
+                        {monthSchedules.length} <span className="text-xs font-semibold text-slate-500">Penugasan</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Untuk {targetEmps.length} Karyawan Aktif
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Shift Bekerja (Aktif)</span>
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-950 rounded-xl text-emerald-600 dark:text-emerald-400">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                        {countWorking} <span className="text-xs font-semibold text-slate-400">Hari Kerja</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Tercatat dalam Operasional Outlets
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Hari Libur / OFF</span>
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300">
+                          <UserCheck className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-slate-700 dark:text-slate-300">
+                        {countOff} <span className="text-xs font-semibold text-slate-500">Hari Libur</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Rotasi Libur Rutin Karyawan
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Shift Kerja Dominan</span>
+                        <div className="p-2 bg-amber-100 dark:bg-amber-950 rounded-xl text-amber-600 dark:text-amber-400">
+                          <Flame className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-amber-600 dark:text-amber-400 truncate">
+                        {topWorkingShift ? `${topWorkingShift.name}` : '-'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        {topWorkingShift ? `${topWorkingShift.count} Penugasan Roster` : 'Belum ada data'}
+                      </p>
+                    </div>
                   </div>
                 );
-              })}
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-extrabold shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-                <span>OFF / Libur</span>
-              </div>
-            </div>
+              } else {
+                const monthAtts = (attendance || []).filter((a) => a.date.startsWith(schedulePeriod) && targetEmpIds.has(a.employeeId));
+                const totalWorkingSessions = monthAtts.filter((a) => !a.isOvertime && a.status !== 'Lembur' && a.status !== 'Sakit' && a.status !== 'Izin' && a.status !== 'Alpha').length;
+                const totalLateSessions = monthAtts.filter((a) => !a.isOvertime && ((a.lateMinutes && a.lateMinutes > 0) || a.status === 'Terlambat' || a.clockInStatus === 'Terlambat Masuk')).length;
+                const totalOTHours = monthAtts.filter((a) => a.isOvertime || a.status === 'Lembur').reduce((acc, curr) => acc + (curr.overtimeHours || curr.hoursWorked || 0), 0);
+                const totalAbsences = monthAtts.filter((a) => a.status === 'Sakit' || a.status === 'Izin' || a.status === 'Alpha').length;
 
-            {/* Monthly Schedule Roster Grid Table */}
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Realisasi Hadir Kerja</span>
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-950 rounded-xl text-emerald-600 dark:text-emerald-400">
+                          <UserCheck className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                        {totalWorkingSessions} <span className="text-xs font-semibold text-slate-500">Hari Hadir</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Presensi Digital Terverifikasi
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Keterlambatan Masuk</span>
+                        <div className="p-2 bg-amber-100 dark:bg-amber-950 rounded-xl text-amber-600 dark:text-amber-400">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-amber-600 dark:text-amber-400">
+                        {totalLateSessions} <span className="text-xs font-semibold text-slate-400">Kali Terlambat</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Terekam Log Presensi Masuk
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Total Lembur Terlaksana</span>
+                        <div className="p-2 bg-purple-100 dark:bg-purple-950 rounded-xl text-purple-600 dark:text-amber-400">
+                          <Flame className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-purple-600 dark:text-amber-300">
+                        {totalOTHours} <span className="text-xs font-semibold text-slate-500">Jam Lembur</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Terintegrasi Upah Penggajian
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1f0e30] p-4 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-500 dark:text-slate-400">Izin, Sakit & Alpha</span>
+                        <div className="p-2 bg-rose-100 dark:bg-rose-950 rounded-xl text-rose-600 dark:text-rose-400">
+                          <AlertCircle className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-black text-rose-600 dark:text-rose-400">
+                        {totalAbsences} <span className="text-xs font-semibold text-slate-500">Catatan Absen</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Terekam dalam Digital Log
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+            })()}
+
+            {/* Color Coding Legend Pill */}
+            {scheduleViewMode === 'ROSTER' ? (
+              <div className="flex items-center gap-2 flex-wrap p-3 bg-white dark:bg-[#1f0e30] rounded-2xl border border-slate-200 dark:border-purple-900/50 text-xs">
+                <span className="font-extrabold text-slate-700 dark:text-amber-300 flex items-center gap-1.5 shrink-0">
+                  <MapPin className="w-3.5 h-3.5 text-amber-500" /> Kode Warna Outlet:
+                </span>
+                {locations.map((loc) => {
+                  const badgeStyle = getOutletBadgeStyle(loc.name, false);
+                  return (
+                    <div key={loc.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] shadow-2xs ${badgeStyle}`}>
+                      <span className="w-2 h-2 rounded-full bg-current opacity-80 shrink-0" />
+                      <span>{loc.name.replace(/^Steak\s*11,?\s*/i, '')}</span>
+                      <span className="text-[9.5px] opacity-75 font-mono font-normal">({loc.startWorkTime || '14:00'}-{loc.endWorkTime || '23:00'})</span>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-extrabold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                  <span>OFF / Libur</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap p-3 bg-white dark:bg-[#1f0e30] rounded-2xl border border-slate-200 dark:border-purple-900/50 text-xs">
+                <span className="font-extrabold text-slate-700 dark:text-amber-300 flex items-center gap-1.5 shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-emerald-500" /> Status Realisasi Presensi:
+                </span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span>Hadir Tepat Waktu</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800 font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span>Terlambat Masuk</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-purple-50 text-purple-900 border-purple-300 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800 font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+                  <span>Lembur (+OT)</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-blue-50 text-blue-900 border-blue-300 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800 font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                  <span>Sakit</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-amber-100 text-amber-900 border-amber-400 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700 font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
+                  <span>Izin</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-rose-50 text-rose-900 border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800 font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                  <span>Alpha</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 font-semibold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                  <span>Belum Presensi / Libur</span>
+                </div>
+              </div>
+            )}
+
+            {/* Monthly Schedule & Attendance Matrix Grid Table */}
             <div className="bg-white dark:bg-[#1f0e30] rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-slate-100 dark:border-purple-900/40 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-100 dark:border-purple-900/40 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-amber-500" />
+                  {scheduleViewMode === 'ROSTER' ? (
+                    <Calendar className="w-4 h-4 text-amber-500" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-emerald-500" />
+                  )}
                   <span className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 font-baloo">
-                    Matriks Roster Shift Kerja Bulan {schedulePeriod}
+                    {scheduleViewMode === 'ROSTER'
+                      ? `Matriks Roster Shift Kerja Bulan ${schedulePeriod}`
+                      : `Matriks Realisasi Presensi Digital Fix Bulan ${schedulePeriod}`}
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400 italic hidden sm:inline">
-                  💡 Klik sel tanggal pada baris karyawan untuk mengubah shift secara langsung.
+                <span className="text-[11px] text-slate-400 italic">
+                  {scheduleViewMode === 'ROSTER'
+                    ? '💡 Klik sel tanggal pada baris karyawan untuk mengatur/mengubah shift roster.'
+                    : '💡 Klik sel tanggal pada baris karyawan untuk melihat rincian foto selfie, jam presensi, dan log lengkap.'}
                 </span>
               </div>
 
@@ -9147,106 +9436,243 @@ function doPost(e) {
                 const daysInMonth = new Date(year, month, 0).getDate();
                 const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-                return (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 dark:bg-purple-950/80 text-slate-700 dark:text-amber-300 font-bold border-b border-slate-200 dark:border-purple-900 text-[11px]">
-                          <th className="p-3 min-w-[220px] sticky left-0 bg-slate-50 dark:bg-purple-950 z-10">Karyawan & Status Roster</th>
-                          {daysArray.map((dayNum) => {
-                            const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                            const dayOfWeekStr = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][new Date(year, month - 1, dayNum).getDay()];
-                            const isWeekend = dayOfWeekStr === 'Min' || dayOfWeekStr === 'Sab';
+                if (scheduleViewMode === 'ROSTER') {
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-purple-950/80 text-slate-700 dark:text-amber-300 font-bold border-b border-slate-200 dark:border-purple-900 text-[11px]">
+                            <th className="p-3 min-w-[220px] sticky left-0 bg-slate-50 dark:bg-purple-950 z-10">Karyawan & Status Roster</th>
+                            {daysArray.map((dayNum) => {
+                              const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                              const dayOfWeekStr = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][new Date(year, month - 1, dayNum).getDay()];
+                              const isWeekend = dayOfWeekStr === 'Min' || dayOfWeekStr === 'Sab';
 
-                            return (
-                              <th key={dayNum} className={`p-2 text-center min-w-[45px] border-l border-slate-100 dark:border-purple-900/40 ${isWeekend ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : ''}`}>
-                                <div>{dayNum}</div>
-                                <div className="text-[9px] text-slate-400 font-normal">{dayOfWeekStr}</div>
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-purple-900/30">
-                        {targetEmps.length === 0 ? (
-                          <tr>
-                            <td colSpan={daysInMonth + 1} className="p-8 text-center text-slate-400">
-                              Belum ada karyawan terdaftar pada outlet ini.
-                            </td>
+                              return (
+                                <th key={dayNum} className={`p-2 text-center min-w-[45px] border-l border-slate-100 dark:border-purple-900/40 ${isWeekend ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : ''}`}>
+                                  <div>{dayNum}</div>
+                                  <div className="text-[9px] text-slate-400 font-normal">{dayOfWeekStr}</div>
+                                </th>
+                              );
+                            })}
                           </tr>
-                        ) : (
-                          targetEmps.map((emp) => {
-                            const isOffRoster = Boolean(emp.isScheduleOff || emp.status === 'Non-Aktif');
-                            return (
-                              <tr key={emp.id} className={`hover:bg-slate-50 dark:hover:bg-purple-950/40 transition-colors ${isOffRoster ? 'opacity-75 bg-rose-50/20 dark:bg-rose-950/10' : ''}`}>
-                                <td className="p-2.5 sticky left-0 bg-white dark:bg-[#1f0e30] z-10 border-r border-slate-100 dark:border-purple-900/40">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0 flex-1">
-                                      <span className="font-extrabold text-[#3D1259] dark:text-amber-400 block truncate text-xs">
-                                        {emp.name}
-                                      </span>
-                                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
-                                        {emp.role} • <strong className="text-amber-600">{emp.outlet}</strong>
-                                      </span>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleToggleEmployeeRoster(emp.id);
-                                      }}
-                                      className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer border transition-all shrink-0 flex items-center gap-1 shadow-2xs ${
-                                        emp.isScheduleOff
-                                          ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800 hover:bg-rose-200'
-                                          : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-200'
-                                      }`}
-                                      title={emp.isScheduleOff ? 'Karyawan di-OFF-kan dari Roster. Klik untuk mengaktifkan kembali.' : 'Karyawan Aktif Roster. Klik untuk men-OFF-kan dari roster.'}
-                                    >
-                                      {emp.isScheduleOff ? '🔴 OFF' : '🟢 ON'}
-                                    </button>
-                                  </div>
-                                </td>
-
-                              {daysArray.map((dayNum) => {
-                                const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                                const sch = schedules.find((s) => s.employeeId === emp.id && s.date === dateStr);
-
-                                const rawOutlet = (sch?.outlet || emp.outlet || '').trim();
-                                const cleanOutlet = rawOutlet.replace(/^Steak\s*11,?\s*/i, '').trim();
-                                const isOff = Boolean(sch?.isOff || sch?.shiftName?.toLowerCase().includes('off') || sch?.shiftName?.toLowerCase().includes('libur'));
-
-                                const colorBg = getOutletBadgeStyle(cleanOutlet || rawOutlet, isOff);
-                                const displayText = !sch
-                                  ? '+ Atur'
-                                  : isOff
-                                    ? 'OFF'
-                                    : (cleanOutlet || sch.shiftName.replace('Shift ', '') || 'Masuk');
-
-                                return (
-                                  <td
-                                    key={dayNum}
-                                    onClick={() => handleOpenAssignSchedule(emp.id, dateStr)}
-                                    className="p-1 text-center border-l border-slate-100 dark:border-purple-900/40 cursor-pointer hover:scale-105 transition-all"
-                                    title={
-                                      sch
-                                        ? `${sch.employeeName} (${cleanOutlet || rawOutlet}): ${isOff ? 'OFF / Libur' : `${sch.startTime || '14:00'} - ${sch.endTime || '23:00'}`}`
-                                        : `Klik untuk atur shift ${emp.name}`
-                                    }
-                                  >
-                                    <div className={`p-1 rounded-lg border text-[9.5px] truncate shadow-2xs ${colorBg}`}>
-                                      {displayText}
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-purple-900/30">
+                          {targetEmps.length === 0 ? (
+                            <tr>
+                              <td colSpan={daysInMonth + 1} className="p-8 text-center text-slate-400">
+                                Belum ada karyawan terdaftar pada outlet ini.
+                              </td>
+                            </tr>
+                          ) : (
+                            targetEmps.map((emp) => {
+                              const isOffRoster = Boolean(emp.isScheduleOff || emp.status === 'Non-Aktif');
+                              return (
+                                <tr key={emp.id} className={`hover:bg-slate-50 dark:hover:bg-purple-950/40 transition-colors ${isOffRoster ? 'opacity-75 bg-rose-50/20 dark:bg-rose-950/10' : ''}`}>
+                                  <td className="p-2.5 sticky left-0 bg-white dark:bg-[#1f0e30] z-10 border-r border-slate-100 dark:border-purple-900/40">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-extrabold text-[#3D1259] dark:text-amber-400 block truncate text-xs">
+                                          {emp.name}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+                                          {emp.role} • <strong className="text-amber-600">{emp.outlet}</strong>
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleEmployeeRoster(emp.id);
+                                        }}
+                                        className={`px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer border transition-all shrink-0 flex items-center gap-1 shadow-2xs ${
+                                          emp.isScheduleOff
+                                            ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800 hover:bg-rose-200'
+                                            : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-200'
+                                        }`}
+                                        title={emp.isScheduleOff ? 'Karyawan di-OFF-kan dari Roster. Klik untuk mengaktifkan kembali.' : 'Karyawan Aktif Roster. Klik untuk men-OFF-kan dari roster.'}
+                                      >
+                                        {emp.isScheduleOff ? '🔴 OFF' : '🟢 ON'}
+                                      </button>
                                     </div>
                                   </td>
-                                );
-                              })}
+
+                                  {daysArray.map((dayNum) => {
+                                    const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                    const sch = schedules.find((s) => s.employeeId === emp.id && s.date === dateStr);
+
+                                    const rawOutlet = (sch?.outlet || emp.outlet || '').trim();
+                                    const cleanOutlet = rawOutlet.replace(/^Steak\s*11,?\s*/i, '').trim();
+                                    const isOff = Boolean(sch?.isOff || sch?.shiftName?.toLowerCase().includes('off') || sch?.shiftName?.toLowerCase().includes('libur'));
+
+                                    const colorBg = getOutletBadgeStyle(cleanOutlet || rawOutlet, isOff);
+                                    const displayText = !sch
+                                      ? '+ Atur'
+                                      : isOff
+                                        ? 'OFF'
+                                        : (cleanOutlet || sch.shiftName.replace('Shift ', '') || 'Masuk');
+
+                                    return (
+                                      <td
+                                        key={dayNum}
+                                        onClick={() => handleOpenAssignSchedule(emp.id, dateStr)}
+                                        className="p-1 text-center border-l border-slate-100 dark:border-purple-900/40 cursor-pointer hover:scale-105 transition-all"
+                                        title={
+                                          sch
+                                            ? `${sch.employeeName} (${cleanOutlet || rawOutlet}): ${isOff ? 'OFF / Libur' : `${sch.startTime || '14:00'} - ${sch.endTime || '23:00'}`}`
+                                            : `Klik untuk atur shift ${emp.name}`
+                                        }
+                                      >
+                                        <div className={`p-1 rounded-lg border text-[9.5px] truncate shadow-2xs ${colorBg}`}>
+                                          {displayText}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                } else {
+                  // ACTUAL ATTENDANCE MATRIX TABLE (FIX / REALISASI)
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-purple-950/80 text-slate-700 dark:text-amber-300 font-bold border-b border-slate-200 dark:border-purple-900 text-[11px]">
+                            <th className="p-3 min-w-[260px] sticky left-0 bg-slate-50 dark:bg-purple-950 z-10">Karyawan & Ringkasan Kehadiran</th>
+                            {daysArray.map((dayNum) => {
+                              const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                              const dayOfWeekStr = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][new Date(year, month - 1, dayNum).getDay()];
+                              const isWeekend = dayOfWeekStr === 'Min' || dayOfWeekStr === 'Sab';
+
+                              return (
+                                <th key={dayNum} className={`p-2 text-center min-w-[70px] border-l border-slate-100 dark:border-purple-900/40 ${isWeekend ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : ''}`}>
+                                  <div>{dayNum}</div>
+                                  <div className="text-[9px] text-slate-400 font-normal">{dayOfWeekStr}</div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-purple-900/30">
+                          {targetEmps.length === 0 ? (
+                            <tr>
+                              <td colSpan={daysInMonth + 1} className="p-8 text-center text-slate-400">
+                                Belum ada karyawan terdaftar pada outlet ini.
+                              </td>
                             </tr>
-                          );
-                        })
-                      )}
-                      </tbody>
-                    </table>
-                  </div>
-                );
+                          ) : (
+                            targetEmps.map((emp) => {
+                              const empMonthAtts = (attendance || []).filter((a) => a.employeeId === emp.id && a.date.startsWith(schedulePeriod));
+                              const totalHadirDays = empMonthAtts.filter((a) => !a.isOvertime && a.status !== 'Lembur' && a.status !== 'Sakit' && a.status !== 'Izin' && a.status !== 'Alpha').length;
+                              const totalLateDays = empMonthAtts.filter((a) => !a.isOvertime && ((a.lateMinutes && a.lateMinutes > 0) || a.status === 'Terlambat' || a.clockInStatus === 'Terlambat Masuk')).length;
+                              const totalOTHours = empMonthAtts.filter((a) => a.isOvertime || a.status === 'Lembur').reduce((acc, curr) => acc + (curr.overtimeHours || curr.hoursWorked || 0), 0);
+
+                              return (
+                                <tr key={emp.id} className="hover:bg-slate-50 dark:hover:bg-purple-950/40 transition-colors">
+                                  <td className="p-2.5 sticky left-0 bg-white dark:bg-[#1f0e30] z-10 border-r border-slate-100 dark:border-purple-900/40">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="font-extrabold text-[#3D1259] dark:text-amber-400 block truncate text-xs">
+                                          {emp.name}
+                                        </span>
+                                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-amber-300 font-bold">
+                                          {emp.outlet?.replace(/^Steak\s*11,?\s*/i, '')}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-wrap text-[9.5px]">
+                                        <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800">
+                                          ✅ {totalHadirDays} Hadir
+                                        </span>
+                                        {totalLateDays > 0 && (
+                                          <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800">
+                                            ⚠️ {totalLateDays} Telat
+                                          </span>
+                                        )}
+                                        {totalOTHours > 0 && (
+                                          <span className="px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 font-extrabold border border-purple-200 dark:border-purple-800">
+                                            ⚡ {totalOTHours}j OT
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  {daysArray.map((dayNum) => {
+                                    const dateStr = `${yearStr}-${monthStr.padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                    const dayAtts = (attendance || []).filter((a) => a.employeeId === emp.id && a.date === dateStr);
+                                    const regAtt = dayAtts.find((a) => !a.isOvertime && a.status !== 'Lembur');
+                                    const otAtt = dayAtts.find((a) => a.isOvertime || a.status === 'Lembur');
+
+                                    return (
+                                      <td
+                                        key={dayNum}
+                                        onClick={() => setSelectedAttDetail({ emp, date: dateStr, records: dayAtts })}
+                                        className="p-1 text-center border-l border-slate-100 dark:border-purple-900/40 cursor-pointer hover:scale-105 transition-all align-middle"
+                                        title={
+                                          dayAtts.length > 0
+                                            ? `Klik untuk melihat detail presensi ${emp.name} pada ${dateStr}`
+                                            : `Belum ada presensi untuk ${emp.name} pada ${dateStr}`
+                                        }
+                                      >
+                                        {dayAtts.length === 0 ? (
+                                          <div className="py-1 text-slate-300 dark:text-slate-600 font-mono text-[10px]">
+                                            -
+                                          </div>
+                                        ) : (
+                                          <div className="space-y-1">
+                                            {regAtt && (
+                                              <div
+                                                className={`p-1 rounded-lg border text-[9px] font-extrabold leading-tight shadow-2xs ${
+                                                  regAtt.status === 'Sakit'
+                                                    ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800'
+                                                    : regAtt.status === 'Izin'
+                                                      ? 'bg-amber-100 text-amber-900 border-amber-400 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700'
+                                                      : regAtt.status === 'Alpha'
+                                                        ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800'
+                                                        : (regAtt.lateMinutes && regAtt.lateMinutes > 0) || regAtt.status === 'Terlambat'
+                                                          ? 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                                                          : 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                                                }`}
+                                              >
+                                                {regAtt.status === 'Sakit' && '🩺 Sakit'}
+                                                {regAtt.status === 'Izin' && '📝 Izin'}
+                                                {regAtt.status === 'Alpha' && '❌ Alpha'}
+                                                {regAtt.status !== 'Sakit' && regAtt.status !== 'Izin' && regAtt.status !== 'Alpha' && (
+                                                  <div>
+                                                    <div>{regAtt.clockInTime?.substring(0, 5) || '14:00'}-{regAtt.clockOutTime?.substring(0, 5) || '23:00'}</div>
+                                                    {regAtt.lateMinutes && regAtt.lateMinutes > 0 ? (
+                                                      <span className="text-[8px] text-amber-700 dark:text-amber-300 block font-black">+{regAtt.lateMinutes}m</span>
+                                                    ) : null}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+
+                                            {otAtt && (
+                                              <div className="p-0.5 rounded-md bg-purple-100 text-purple-950 border border-purple-300 dark:bg-purple-950 dark:text-amber-300 dark:border-purple-700 text-[8.5px] font-black shadow-2xs truncate">
+                                                ⏱️ +{otAtt.overtimeHours || otAtt.hoursWorked || 1}j OT
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                }
               })()}
             </div>
           </div>
@@ -15046,6 +15472,140 @@ function doPost(e) {
                 className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-md cursor-pointer flex items-center gap-1.5 transition-all active:scale-95"
               >
                 <Sparkles className="w-4 h-4" /> 🚀 Terbitkan Roster Shift
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RINCIAN PRESENSI DIGITAL HARIAN KARYAWAN */}
+      {selectedAttDetail && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#1a0c28] text-slate-800 dark:text-slate-100 rounded-2xl p-6 shadow-2xl border border-purple-900/50 space-y-4 text-xs max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-purple-900 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <h3 className="font-extrabold text-base text-[#3D1259] dark:text-amber-400 font-baloo">
+                    Detail Presensi: {selectedAttDetail.emp.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {selectedAttDetail.emp.role} • {selectedAttDetail.emp.outlet} — Tanggal: <strong className="text-amber-600 dark:text-amber-300">{selectedAttDetail.date}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedAttDetail(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {selectedAttDetail.records.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 bg-slate-50 dark:bg-purple-950/40 rounded-xl border border-slate-200 dark:border-purple-900 space-y-3">
+                <p>Belum ada rekaman presensi digital pada tanggal ini.</p>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const emp = selectedAttDetail.emp;
+                      const d = selectedAttDetail.date;
+                      setSelectedAttDetail(null);
+                      handleOpenAddOvertime();
+                      setOtEmployeeId(emp.id);
+                      setOtDate(d);
+                      setOtOutlet(emp.outlet);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-purple-600 text-white font-extrabold hover:bg-purple-700 shadow-md cursor-pointer"
+                  >
+                    + Catat Presensi Lembur
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedAttDetail.records.map((rec, idx) => (
+                  <div
+                    key={rec.id || idx}
+                    className={`p-4 rounded-xl border space-y-2.5 ${
+                      rec.isOvertime || rec.status === 'Lembur'
+                        ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
+                        : 'bg-slate-50 dark:bg-purple-950/30 border-slate-200 dark:border-purple-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                        rec.isOvertime || rec.status === 'Lembur'
+                          ? 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950 dark:text-amber-300 dark:border-purple-700'
+                          : rec.status === 'Hadir'
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700'
+                            : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700'
+                      }`}>
+                        {rec.isOvertime || rec.status === 'Lembur' ? '⏱️ Presensi Lembur' : `📋 Status: ${rec.status || 'Hadir'}`}
+                      </span>
+
+                      <span className="font-mono text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
+                        {rec.clockInTime || '-'} s/d {rec.clockOutTime || '-'} ({rec.hoursWorked || 0} Jam Kerja)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Outlet Cabang:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{rec.outlet || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Keterlambatan:</span>
+                        <span className={`font-bold ${rec.lateMinutes && rec.lateMinutes > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                          {rec.lateMinutes && rec.lateMinutes > 0 ? `+${rec.lateMinutes} Menit` : 'Tepat Waktu'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {rec.notes && (
+                      <div className="p-2 rounded-lg bg-white dark:bg-purple-950 border border-slate-200 dark:border-purple-900 text-[11px]">
+                        <span className="font-bold text-slate-400 block text-[10px]">Catatan / Alasan:</span>
+                        <span className="text-slate-700 dark:text-slate-300">{rec.notes}</span>
+                      </div>
+                    )}
+
+                    {(rec.selfieUrl || rec.clockOutSelfieUrl) && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        {rec.selfieUrl && (
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 block mb-1">Foto Masuk:</span>
+                            <img
+                              src={rec.selfieUrl}
+                              alt="Selfie Masuk"
+                              className="w-full h-28 object-cover rounded-lg border border-slate-300 dark:border-purple-800"
+                            />
+                          </div>
+                        )}
+                        {rec.clockOutSelfieUrl && (
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 block mb-1">Foto Pulang:</span>
+                            <img
+                              src={rec.clockOutSelfieUrl}
+                              alt="Selfie Pulang"
+                              className="w-full h-28 object-cover rounded-lg border border-slate-300 dark:border-purple-800"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-purple-900">
+              <button
+                type="button"
+                onClick={() => setSelectedAttDetail(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-purple-900/50 text-slate-700 dark:text-slate-300 font-bold cursor-pointer hover:bg-slate-300"
+              >
+                Tutup
               </button>
             </div>
           </div>
