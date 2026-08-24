@@ -29,7 +29,8 @@ import {
   Smartphone,
   Layers,
   Sparkles,
-  Store
+  Store,
+  ShoppingBag
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem } from '../types';
 import { formatRupiah, isRegisteredAdmin } from '../utils';
