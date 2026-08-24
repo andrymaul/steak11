@@ -562,6 +562,22 @@ export function saveLatePenaltyThreshold(minutes: number): void {
   syncUserDataToFirestore('late_penalty_threshold', minutes);
 }
 
+// --- OVERTIME RATE SETTINGS STORAGE ---
+export function getStoredOvertimeRate(): number {
+  const stored = localStorage.getItem('steak11_default_overtime_rate');
+  if (stored !== null) {
+    const val = Number(stored);
+    if (!isNaN(val) && val >= 0) return val;
+  }
+  return 15000; // Default Rp 15.000 / jam
+}
+
+export function saveOvertimeRate(rate: number): void {
+  localStorage.setItem('steak11_default_overtime_rate', String(rate));
+  window.dispatchEvent(new Event('overtime_rate_updated'));
+  syncUserDataToFirestore('overtime_rate', rate);
+}
+
 // --- INVENTORY STORAGE ---
 export function getStoredInventory(): InventoryItem[] {
   const stored = localStorage.getItem('steak11_inventory');

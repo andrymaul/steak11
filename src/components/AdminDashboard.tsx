@@ -140,7 +140,9 @@ import {
   saveReceiptSettings,
   getNextReceiptNumber,
   getStoredLatePenaltyThreshold,
-  saveLatePenaltyThreshold
+  saveLatePenaltyThreshold,
+  getStoredOvertimeRate,
+  saveOvertimeRate
 } from '../utils';
 import { REVIEWS } from '../data/initialData';
 import { ThermalReceiptModal } from './ThermalReceiptModal';
@@ -943,6 +945,11 @@ function doPost(e) {
   const [editLatePenalty, setEditLatePenalty] = useState<number>(0);
   const [editLoanDeduction, setEditLoanDeduction] = useState<number>(0);
   const [editOtherDeductions, setEditOtherDeductions] = useState<number>(0);
+
+  // Overtime Rate Settings State
+  const [defaultOvertimeRate, setDefaultOvertimeRate] = useState<number>(() => getStoredOvertimeRate());
+  const [showOvertimeRateSettingsModal, setShowOvertimeRateSettingsModal] = useState<boolean>(false);
+  const [tempOtRate, setTempOtRate] = useState<number>(() => getStoredOvertimeRate());
 
   // Inventory State
   const [inventory, setInventory] = useState<InventoryItem[]>(() => getStoredInventory());
@@ -2680,14 +2687,10 @@ function doPost(e) {
         const totalLateMinutes = regularAtt.reduce((sum, a) => sum + (a.lateMinutes || 0), 0);
 
         const totalRegularHours = regularAtt.reduce((sum, a) => sum + (a.hoursWorked || 8), 0);
+        // Upah lembur HANYA BERLAKU bagi karyawan yang melakukan presensi lembur
         const totalExplicitOvertimeHours = overtimeAtt.reduce((sum, a) => sum + (a.overtimeHours || a.hoursWorked || 0), 0);
-        const regularShiftExcessHours = regularAtt.reduce((acc, a) => {
-          const shiftHrs = a.hoursWorked || 8;
-          return acc + (shiftHrs > 8 ? Math.round(shiftHrs - 8) : 0);
-        }, 0);
-
-        const totalOvertimeHours = Math.round(totalExplicitOvertimeHours + regularShiftExcessHours);
-        const hourlyRate = emp.hourlyRate ?? 0;
+        const totalOvertimeHours = Math.round(totalExplicitOvertimeHours);
+        const hourlyRate = (emp.hourlyRate !== undefined && emp.hourlyRate > 0) ? emp.hourlyRate : (defaultOvertimeRate || 15000);
         const overtimePay = Math.round(totalOvertimeHours * hourlyRate);
         const totalHours = Math.round(totalRegularHours + totalExplicitOvertimeHours);
 
@@ -2746,6 +2749,42 @@ function doPost(e) {
     setPayrollSlips(generatedSlips);
     savePayroll(generatedSlips);
     showToast(`Berhasil menghitung otomatis slip penggajian untuk periode ${periodLabelMonth}!`);
+  };
+
+  const handleSyncOvertimeRateToAllEmployees = async (newRate: number) => {
+    if (checkReadOnlyPermission()) return;
+    if (newRate <= 0) {
+      showToast('Masukkan nominal rate lembur yang valid (> 0)!');
+      return;
+    }
+
+    const updatedEmployees = (employees || []).map((emp) => ({
+      ...emp,
+      hourlyRate: newRate,
+      updatedAt: new Date().toISOString()
+    }));
+
+    setEmployees(updatedEmployees);
+    saveEmployees(updatedEmployees);
+    saveOvertimeRate(newRate);
+    setDefaultOvertimeRate(newRate);
+
+    // Sync all employees to Cloud Firestore
+    try {
+      for (const emp of updatedEmployees) {
+        await updateEmployeeInCloud(emp);
+      }
+    } catch (err) {
+      console.warn('Sync cloud error:', err);
+    }
+
+    setShowOvertimeRateSettingsModal(false);
+    showToast(`✅ Berhasil menyinkronkan Rate Lembur ${formatRupiah(newRate)}/jam ke ${updatedEmployees.length} data karyawan!`);
+
+    // Auto-recalculate payroll if currently viewing payroll
+    setTimeout(() => {
+      handleCalculatePayroll();
+    }, 200);
   };
 
   const syncPayrollSheets = (silent = false) => {
@@ -7599,6 +7638,17 @@ function doPost(e) {
                 </button>
 
                 <button
+                  onClick={() => {
+                    setTempOtRate(defaultOvertimeRate);
+                    setShowOvertimeRateSettingsModal(true);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
+                  title="Pengaturan Rate Lembur Terintegrasi & Sinkronisasi Karyawan"
+                >
+                  <Clock className="w-4 h-4 text-white" /> Aturan & Rate Lembur
+                </button>
+
+                <button
                   onClick={handleOpenAddEmp}
                   className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-2 cursor-pointer shrink-0"
                 >
@@ -8471,6 +8521,17 @@ function doPost(e) {
                   title="Pengaturan Batas Toleransi Menit Keterlambatan Denda"
                 >
                   <Sliders className="w-3.5 h-3.5 text-purple-700 dark:text-amber-400" /> Toleransi Telat ({latePenaltyThresholdMinutes}m)
+                </button>
+
+                <button
+                  onClick={() => {
+                    setTempOtRate(defaultOvertimeRate);
+                    setShowOvertimeRateSettingsModal(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                  title="Pengaturan Rate Lembur Terintegrasi & Sinkronisasi Karyawan"
+                >
+                  <Clock className="w-3.5 h-3.5 text-white" /> Aturan & Rate Lembur
                 </button>
 
                 <button
@@ -11559,6 +11620,117 @@ function doPost(e) {
                   <Save className="w-4 h-4" /> Simpan Pengaturan
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PENGATURAN ATURAN & RATE LEMBUR */}
+      {showOvertimeRateSettingsModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-purple-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1a0c28] border border-amber-300 dark:border-purple-800 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-amber-200 dark:border-purple-900">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl text-white shadow-md">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-[#3D1259] dark:text-amber-400 font-baloo">
+                    Pengaturan Aturan & Rate Lembur
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Sinkronisasi otomatis dengan Data Karyawan & Menu Penggajian
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOvertimeRateSettingsModal(false)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Alert Notice: Aturan Ketat Presensi Lembur */}
+              <div className="p-3.5 bg-amber-50/80 dark:bg-purple-950/70 rounded-2xl border border-amber-300 dark:border-purple-800 space-y-1.5">
+                <div className="flex items-center gap-2 font-black text-amber-900 dark:text-amber-300 text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span>Aturan Baku Perhitungan Upah Lembur:</span>
+                </div>
+                <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                  Upah lembur <strong>HANYA BERLAKU & DIHITUNG</strong> untuk karyawan yang memiliki catatan <strong>Presensi Lembur</strong> resmi di sistem (melalui tombol <em>+ Catat Presensi Lembur</em>). Shift reguler biasa tidak akan dihitung lembur tanpa presensi lembur.
+                </p>
+              </div>
+
+              {/* Form Input Rate Lembur Standar */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-purple-950/50 border border-slate-200 dark:border-purple-900 space-y-3">
+                <label className="font-extrabold text-slate-800 dark:text-slate-200 block text-xs">
+                  Rate Lembur Standar Perusahaan (Rp / Jam)
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-500 font-mono text-sm">Rp</span>
+                  <input
+                    type="number"
+                    min={1000}
+                    step={1000}
+                    value={tempOtRate}
+                    onChange={(e) => setTempOtRate(Math.max(0, Number(e.target.value)))}
+                    className="w-full px-3 py-2 text-sm font-black rounded-xl border border-amber-300 dark:border-purple-700 bg-white dark:bg-purple-900 text-slate-900 dark:text-slate-100"
+                  />
+                  <span className="text-xs font-bold text-slate-500 whitespace-nowrap">/ jam</span>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Rate ini digunakan sebagai acuan standar saat membuat presensi lembur dan menghitung upah lembur pada slip gaji.
+                </p>
+              </div>
+
+              {/* Rincian Rate Lembur Karyawan Terkini */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300">
+                  <span>Pratinjau Data Karyawan & Rate Lembur:</span>
+                  <span className="text-[10px] text-purple-700 dark:text-amber-400 font-extrabold">
+                    {(employees || []).filter((e) => e.status === 'Aktif').length} Karyawan Aktif
+                  </span>
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                  {(employees || []).filter((e) => e.status === 'Aktif').map((emp) => (
+                    <div
+                      key={emp.id}
+                      className="p-2.5 rounded-xl bg-white dark:bg-purple-950/60 border border-slate-200 dark:border-purple-900/60 flex items-center justify-between text-[11px]"
+                    >
+                      <div>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">{emp.name}</span>
+                        <span className="text-[10px] text-slate-500">{emp.role} • {emp.outlet}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-black text-amber-600 dark:text-amber-400 block">
+                          {formatRupiah(emp.hourlyRate || tempOtRate || 15000)}/jam
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-purple-900">
+              <button
+                type="button"
+                onClick={() => setShowOvertimeRateSettingsModal(false)}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 cursor-pointer"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSyncOvertimeRateToAllEmployees(tempOtRate)}
+                className="w-full sm:w-auto px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" /> Terapkan & Sinkronkan ke Semua Karyawan
+              </button>
             </div>
           </div>
         </div>
