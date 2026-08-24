@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Banknote,
   Calculator,
@@ -54,6 +54,8 @@ interface FinanceControlManagerProps {
   employeeLoans?: EmployeeLoan[];
   setEmployeeLoans?: React.Dispatch<React.SetStateAction<EmployeeLoan[]>>;
   saveEmployeeLoansData?: (data: EmployeeLoan[]) => void;
+  initialSubTab?: 'closing_audit' | 'petty_cash' | 'cash_flow' | 'monthly_net_profit' | 'payment_methods';
+  activeParentTab?: 'shifts' | 'expenses' | string;
 }
 
 export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
@@ -73,9 +75,21 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   employees: propEmployees = [],
   employeeLoans: propEmployeeLoans = [],
   setEmployeeLoans = (_: any) => {},
-  saveEmployeeLoansData = (_: any) => {}
+  saveEmployeeLoansData = (_: any) => {},
+  initialSubTab,
+  activeParentTab = 'shifts'
 }) => {
-  const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'monthly_net_profit' | 'payment_methods'>('closing_audit');
+  const [subTab, setSubTab] = useState<'closing_audit' | 'petty_cash' | 'cash_flow' | 'monthly_net_profit' | 'payment_methods'>(
+    () => (activeParentTab === 'expenses' ? 'petty_cash' : (initialSubTab || 'closing_audit'))
+  );
+
+  useEffect(() => {
+    if (activeParentTab === 'shifts') {
+      setSubTab('closing_audit');
+    } else if (activeParentTab === 'expenses' && subTab === 'closing_audit') {
+      setSubTab('petty_cash');
+    }
+  }, [activeParentTab]);
 
   // Active Employees & Loans fallback
   const activeEmployeesList = propEmployees && propEmployees.length > 0 ? propEmployees : getStoredEmployees();

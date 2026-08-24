@@ -5299,12 +5299,34 @@ function doPost(e) {
                   </button>
                 )}
 
-                {(canAccessTab('shifts') || canAccessTab('expenses')) && (
+                {canAccessTab('shifts') && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('shifts'); setIsMobileDrawerOpen(false); }}
                     className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
-                      activeTab === 'shifts' || activeTab === 'expenses'
+                      activeTab === 'shifts'
+                        ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-900/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Receipt className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>Audit Closing Shift</span>
+                    </div>
+                    {cashierShifts && cashierShifts.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        {cashierShifts.length}
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {(canAccessTab('expenses') || canAccessTab('shifts')) && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('expenses'); setIsMobileDrawerOpen(false); }}
+                    className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
+                      activeTab === 'expenses'
                         ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
                         : 'text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-900/40'
                     }`}
@@ -9971,6 +9993,7 @@ function doPost(e) {
             employeeLoans={employeeLoans}
             setEmployeeLoans={setEmployeeLoans}
             saveEmployeeLoansData={saveEmployeeLoans}
+            activeParentTab={activeTab}
           />
         )}
 
