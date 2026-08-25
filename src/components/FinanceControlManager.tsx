@@ -31,7 +31,8 @@ import {
   Sparkles,
   Store,
   ShoppingBag,
-  RefreshCw
+  RefreshCw,
+  Send
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
 import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans, getStoredMonthlyDeductions, saveMonthlyDeductions } from '../utils';
@@ -1703,6 +1704,54 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }, 250);
   };
 
+  // Send Closing Shift Report to WhatsApp 081223233299
+  const handleSendClosingShiftWhatsApp = (shift: CashierShiftRecord) => {
+    const targetWaNumber = '6281223233299';
+    let waMessage = `*LAPORAN AUDIT & CLOSING SHIFT KASIR*\n`;
+    waMessage += `*STEAK 11 - MYTHIC CHICKEN TASTE*\n`;
+    waMessage += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    waMessage += `📌 *No. Audit Shift*: ${shift.id}\n`;
+    waMessage += `🏢 *Outlet*: ${shift.outlet}\n`;
+    waMessage += `📅 *Tanggal*: ${shift.date} (${shift.closedAt || 'WIB'})\n`;
+    waMessage += `👤 *Kasir*: ${shift.cashierName}\n`;
+    waMessage += `🏷️ *Shift*: ${shift.shiftName}\n\n`;
+
+    waMessage += `💵 *RINGKASAN OMSET SHIFT*:\n`;
+    waMessage += `• Modal Awal Laci: ${formatRupiah(shift.startingCash)}\n`;
+    waMessage += `• Kasir Tunai (Cash): ${formatRupiah(shift.cashRevenue)}\n`;
+    waMessage += `• QRIS: ${formatRupiah(shift.qrisRevenue || shift.actualQrisRevenue || 0)}\n`;
+    waMessage += `• Transfer Bank: ${formatRupiah(shift.transferRevenue || shift.actualTransferRevenue || 0)}\n`;
+    if (shift.onlineFoodRevenue) {
+      waMessage += `• Online Food: ${formatRupiah(shift.onlineFoodRevenue)}\n`;
+    }
+    waMessage += `👉 *TOTAL OMSET*: *${formatRupiah(shift.totalRevenue)}*\n\n`;
+
+    waMessage += `💸 *PENGELUARAN OPERASIONAL*:\n`;
+    waMessage += `• Total Kas Keluar: ${formatRupiah(shift.operationalExpenses || 0)}\n`;
+    if (shift.expenseItems && shift.expenseItems.length > 0) {
+      shift.expenseItems.forEach((itm, idx) => {
+        waMessage += `  ${idx + 1}. ${itm.description} (${itm.category || 'Kas Keluar'}): ${formatRupiah(itm.amount)}\n`;
+      });
+    }
+    waMessage += `\n`;
+
+    waMessage += `💼 *AUDIT FISIK LACI KAS*:\n`;
+    waMessage += `• Laci Teoretis (Sistem): ${formatRupiah(shift.expectedCashInDrawer || 0)}\n`;
+    waMessage += `• Hitung Fisik Kasir: ${formatRupiah(shift.actualCashInDrawer || shift.actualCashTotal || 0)}\n`;
+    waMessage += `• Selisih Kas: *${formatRupiah(shift.cashDifference || 0)}*\n`;
+    waMessage += `• Status Audit: *${shift.auditStatus || 'Sesuai (Balance)'}*\n\n`;
+
+    if (shift.notes) {
+      waMessage += `📝 *Catatan Kasir*: ${shift.notes}\n\n`;
+    }
+
+    waMessage += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    waMessage += `_Laporan otomatis terkirim dari Sistem POS Steak 11._`;
+
+    const waUrl = `https://wa.me/${targetWaNumber}?text=${encodeURIComponent(waMessage)}`;
+    window.open(waUrl, '_blank');
+  };
+
   const isReadOnlyVisitor = currentUser?.role?.toLowerCase() === 'pengunjung' || currentUser?.role?.toLowerCase().includes('visitor');
   const checkReadOnlyPermission = (): boolean => {
     if (isReadOnlyVisitor) {
@@ -1847,8 +1896,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     showToast(
       `✅ Closing Shift Kasir ${newShift.id} berhasil disimpan!${
         kasbonCount > 0 ? ` ${kasbonCount} Kasbon Karyawan otomatis disinkronkan ke Menu Penggajian.` : ''
-      }`
+      } Mengarahkan ke WhatsApp 081223233299...`
     );
+
+    // Otomatis arahkan pengiriman laporan ke WhatsApp 081223233299
+    try {
+      handleSendClosingShiftWhatsApp(newShift);
+    } catch (err) {
+      console.warn('Error opening WhatsApp:', err);
+    }
   };
 
   // Handle Save Expense
@@ -2355,6 +2411,14 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                             </span>
                           </td>
                           <td className="p-2.5 text-right flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleSendClosingShiftWhatsApp(shf)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer transition-all"
+                              title="Kirim Laporan Closing Shift ke WhatsApp 081223233299"
+                            >
+                              <Send className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                              Kirim WA
+                            </button>
                             <button
                               onClick={() => handlePrintClosingSummary(shf)}
                               className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-950 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
