@@ -183,7 +183,11 @@ export interface PayrollSlip {
   outlet: string;
   period?: string;
   periodMonth: string; // e.g. "2026-08"
-  periodLabel: string; // e.g. "Agustus 2026"
+  periodLabel: string; // e.g. "Agustus 2026 (Cut-off 25)"
+  cutoffStartDate?: string; // e.g. "2026-07-25"
+  cutoffEndDate?: string; // e.g. "2026-08-24"
+  cutoffPeriodLabel?: string; // e.g. "25 Jul 2026 - 24 Agu 2026"
+  cutoffMode?: 'CUTOFF_25' | 'CALENDAR_MONTH' | 'CUSTOM';
   totalDaysPresent: number;
   totalDaysLate: number;
   totalLateMinutes?: number;
@@ -197,7 +201,9 @@ export interface PayrollSlip {
   punctualityAllowance?: number; // totalDaysOnTime * punctualityAllowancePerDay
   outletBonus?: number; // totalDaysPresent * outletBonus (Bonus Outlet per hari hadir)
   bonus: number; // Bonus kinerja / omset / lembur
-  deductions: number; // Potongan keterlambatan / kasbon
+  deductions: number; // Total Potongan keterlambatan + kasbon
+  latePenalty?: number; // Rincian potongan keterlambatan
+  loanDeduction?: number; // Rincian potongan kasbon
   netSalary: number; // (baseSalary + totalAllowance + punctualityAllowance + overtimePay + outletBonus + bonus) - deductions
   paymentStatus: 'Draft' | 'Disetujui' | 'Lunas / Terbayar';
   paymentDate?: string;

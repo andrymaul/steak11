@@ -317,6 +317,90 @@ export function savePayroll(slips: PayrollSlip[]): void {
   syncAllPayrollToFirebase(slips);
 }
 
+/**
+ * Calculates start, end, payment date and human labels for a payroll cutoff cycle.
+ * Default mode: 'CUTOFF_25' (25th of previous month to 24th of current month, pay day on 25th)
+ */
+export function getPayrollCutoffDates(
+  periodMonth: string,
+  mode: 'CUTOFF_25' | 'CALENDAR_MONTH' | 'CUSTOM' = 'CUTOFF_25',
+  customStart?: string,
+  customEnd?: string,
+  customPayDate?: string
+): {
+  startDate: string;
+  endDate: string;
+  paymentDate: string;
+  periodLabel: string;
+  cutoffRangeLabel: string;
+  monthName: string;
+} {
+  const [yearStr, monthStr] = (periodMonth || new Date().toISOString().substring(0, 7)).split('-');
+  const year = parseInt(yearStr, 10) || new Date().getFullYear();
+  const month = parseInt(monthStr, 10) || (new Date().getMonth() + 1); // 1-12
+
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  const shortMonthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+
+  const currentMonthName = monthNames[month - 1] || 'Bulan';
+
+  if (mode === 'CUSTOM' && customStart && customEnd) {
+    return {
+      startDate: customStart,
+      endDate: customEnd,
+      paymentDate: customPayDate || customEnd,
+      periodLabel: `${currentMonthName} ${year} (Custom)`,
+      cutoffRangeLabel: `${customStart} s/d ${customEnd}`,
+      monthName: currentMonthName
+    };
+  }
+
+  if (mode === 'CALENDAR_MONTH') {
+    const lastDayOfMonth = new Date(year, month, 0).getDate();
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')}`;
+    const paymentDate = endDate;
+    return {
+      startDate,
+      endDate,
+      paymentDate,
+      periodLabel: `${currentMonthName} ${year}`,
+      cutoffRangeLabel: `01 ${shortMonthNames[month - 1]} - ${lastDayOfMonth} ${shortMonthNames[month - 1]} ${year}`,
+      monthName: currentMonthName
+    };
+  }
+
+  // CUTOFF_25: 25th of previous month to 24th of current month
+  let prevYear = year;
+  let prevMonth = month - 1;
+  if (prevMonth === 0) {
+    prevMonth = 12;
+    prevYear = year - 1;
+  }
+
+  const startDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-25`;
+  const endDate = `${year}-${String(month).padStart(2, '0')}-24`;
+  const paymentDate = `${year}-${String(month).padStart(2, '0')}-25`;
+
+  const prevMonthShort = shortMonthNames[prevMonth - 1];
+  const curMonthShort = shortMonthNames[month - 1];
+
+  return {
+    startDate,
+    endDate,
+    paymentDate,
+    periodLabel: `${currentMonthName} ${year} (Cut-off 25)`,
+    cutoffRangeLabel: `${prevYear !== year ? `25 ${prevMonthShort} ${prevYear}` : `25 ${prevMonthShort}`} – 24 ${curMonthShort} ${year}`,
+    monthName: currentMonthName
+  };
+}
+
 // --- MENU CATEGORIES STORAGE ---
 export function getStoredMenuCategories(): { id: string; name: string; description: string }[] {
   const stored = localStorage.getItem('steak11_menu_categories');

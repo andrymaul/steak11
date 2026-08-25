@@ -142,7 +142,8 @@ import {
   getStoredLatePenaltyThreshold,
   saveLatePenaltyThreshold,
   getStoredOvertimeRate,
-  saveOvertimeRate
+  saveOvertimeRate,
+  getPayrollCutoffDates
 } from '../utils';
 import { REVIEWS } from '../data/initialData';
 import { ThermalReceiptModal } from './ThermalReceiptModal';
@@ -944,9 +945,13 @@ function doPost(e) {
   const [otNotes, setOtNotes] = useState('');
   const [attTypeFilter, setAttTypeFilter] = useState<'ALL' | 'REGULAR' | 'OVERTIME'>('ALL');
 
-  // Payroll State
+  // Payroll State with Cut-off 25 Cycle
   const [payrollSlips, setPayrollSlips] = useState<PayrollSlip[]>(() => getStoredPayroll());
   const [payrollPeriod, setPayrollPeriod] = useState('2026-08');
+  const [payrollCutoffMode, setPayrollCutoffMode] = useState<'CUTOFF_25' | 'CALENDAR_MONTH' | 'CUSTOM'>('CUTOFF_25');
+  const [payrollStartDate, setPayrollStartDate] = useState<string>(() => getPayrollCutoffDates('2026-08', 'CUTOFF_25').startDate);
+  const [payrollEndDate, setPayrollEndDate] = useState<string>(() => getPayrollCutoffDates('2026-08', 'CUTOFF_25').endDate);
+  const [payrollPayDate, setPayrollPayDate] = useState<string>(() => getPayrollCutoffDates('2026-08', 'CUTOFF_25').paymentDate);
   const [payrollSearchTerm, setPayrollSearchTerm] = useState('');
   const [payrollOutletFilter, setPayrollOutletFilter] = useState('ALL');
   const [editingSlipId, setEditingSlipId] = useState<string | null>(null);
@@ -959,6 +964,17 @@ function doPost(e) {
   const [editDeductions, setEditDeductions] = useState(0);
   const [editNote, setEditNote] = useState('');
   const [syncToEmployeeMaster, setSyncToEmployeeMaster] = useState(true);
+
+  const handlePeriodOrModeChange = (newPeriod: string, newMode: 'CUTOFF_25' | 'CALENDAR_MONTH' | 'CUSTOM') => {
+    setPayrollPeriod(newPeriod);
+    setPayrollCutoffMode(newMode);
+    if (newMode !== 'CUSTOM') {
+      const dates = getPayrollCutoffDates(newPeriod, newMode);
+      setPayrollStartDate(dates.startDate);
+      setPayrollEndDate(dates.endDate);
+      setPayrollPayDate(dates.paymentDate);
+    }
+  };
 
   // Work Schedule & Roster State
   const [shiftTemplates, setShiftTemplates] = useState<WorkShiftTemplate[]>(() => getStoredShiftTemplates());
@@ -2777,20 +2793,31 @@ function doPost(e) {
   };
 
   // --- Payroll Logic & Actions ---
-  // Generate or recalculate payroll slips for active employees based on real attendance records
+  // Generate or recalculate payroll slips for active employees based on real attendance records within Cut-Off Range
   const handleCalculatePayroll = () => {
-    const periodLabelMonth = new Date(payrollPeriod + '-01').toLocaleDateString('id-ID', {
-      month: 'long',
-      year: 'numeric',
-    });
+    const dates = getPayrollCutoffDates(
+      payrollPeriod,
+      payrollCutoffMode,
+      payrollStartDate,
+      payrollEndDate,
+      payrollPayDate
+    );
+
+    const effectiveStartDate = payrollStartDate || dates.startDate;
+    const effectiveEndDate = payrollEndDate || dates.endDate;
+    const effectivePayDate = payrollPayDate || dates.paymentDate;
+    const cutoffLabel = dates.cutoffRangeLabel;
+    const periodLabelMonth = dates.periodLabel;
 
     const generatedSlips: PayrollSlip[] = (employees || [])
       .filter((emp) => emp.status === 'Aktif')
       .map((emp) => {
-        // Find attendance for this employee in the selected YYYY-MM period
-        const empAtt = (attendance || []).filter(
-          (a) => (a.employeeId === emp.id || (emp.name && (a.employeeName || '').toLowerCase() === emp.name.toLowerCase())) && a.date.startsWith(payrollPeriod)
-        );
+        // Find attendance for this employee in the selected Cut-off Date Range
+        const empAtt = (attendance || []).filter((a) => {
+          const isEmp = a.employeeId === emp.id || (emp.name && (a.employeeName || '').toLowerCase() === emp.name.toLowerCase());
+          if (!isEmp) return false;
+          return a.date >= effectiveStartDate && a.date <= effectiveEndDate;
+        });
 
         const regularAtt = empAtt.filter((a) => !a.isOvertime && a.status !== 'Lembur');
         const overtimeAtt = empAtt.filter((a) => a.isOvertime || a.status === 'Lembur' || (a.overtimeHours && a.overtimeHours > 0));
@@ -2825,7 +2852,7 @@ function doPost(e) {
 
         // Check if existing slip preserved custom bonus
         const existingSlip = payrollSlips.find(
-          (s) => s.employeeId === emp.id && s.periodMonth === payrollPeriod
+          (s) => s.employeeId === emp.id && (s.periodMonth === payrollPeriod || s.cutoffStartDate === effectiveStartDate)
         );
         const activeLoan = employeeLoans.find((l) => l.employeeId === emp.id && l.status === 'ACTIVE' && l.remainingAmount > 0);
         const loanDeduction = activeLoan ? Math.min(activeLoan.monthlyInstallment, activeLoan.remainingAmount) : 0;
@@ -2845,6 +2872,10 @@ function doPost(e) {
           outlet: emp.outlet,
           periodMonth: payrollPeriod,
           periodLabel: periodLabelMonth,
+          cutoffStartDate: effectiveStartDate,
+          cutoffEndDate: effectiveEndDate,
+          cutoffPeriodLabel: cutoffLabel,
+          cutoffMode: payrollCutoffMode,
           totalDaysPresent: daysPresent,
           totalDaysLate: daysLate,
           totalLateMinutes: totalLateMinutes,
@@ -2859,16 +2890,18 @@ function doPost(e) {
           outletBonus: outletBonus,
           bonus: bonus,
           deductions: deductions,
+          latePenalty: latePenalty,
+          loanDeduction: loanDeduction,
           netSalary: net > 0 ? net : 0,
           paymentStatus: existingSlip ? existingSlip.paymentStatus : 'Draft',
-          paymentDate: existingSlip?.paymentDate || new Date().toISOString().split('T')[0],
-          note: existingSlip?.note || 'Gaji Pokok + Uang Makan + Upah Lembur + Tunjangan Tepat Waktu + Bonus Outlet + Bonus Kinerja',
+          paymentDate: existingSlip?.paymentDate || effectivePayDate,
+          note: existingSlip?.note || `Slip Gaji Periode: ${cutoffLabel}. Gaji Pokok + Uang Makan + Upah Lembur + Tunjangan Tepat Waktu + Bonus Outlet + Bonus Kinerja`,
         };
       });
 
     setPayrollSlips(generatedSlips);
     savePayroll(generatedSlips);
-    showToast(`Berhasil menghitung otomatis slip penggajian untuk periode ${periodLabelMonth}!`);
+    showToast(`✅ Berhasil menghitung otomatis slip gaji periode ${cutoffLabel} (${periodLabelMonth})!`);
   };
 
   const handleSyncOvertimeRateToAllEmployees = async (newRate: number) => {
@@ -2989,10 +3022,8 @@ function doPost(e) {
     doc.setTextColor(255, 193, 7);
     doc.text('STEAK 11 • LAPORAN REKAPITULASI PENGGAJIAN BULANAN', 14, 15);
 
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(235, 230, 245);
-    doc.text(`Periode: ${periodLabelMonth} | Total Slip Gaji: ${filteredPayroll.length} Karyawan | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 23);
+    const activeCutoffInfo = getPayrollCutoffDates(payrollPeriod, payrollCutoffMode, payrollStartDate, payrollEndDate, payrollPayDate);
+    doc.text(`Periode: ${activeCutoffInfo.cutoffRangeLabel} (${activeCutoffInfo.periodLabel}) | Tanggal Gajian: ${payrollPayDate} | Total: ${filteredPayroll.length} Karyawan`, 14, 23);
 
     // Summary Metric Cards
     const totalNetBudget = filteredPayroll.reduce((acc, c) => acc + c.netSalary, 0);
@@ -3136,7 +3167,11 @@ function doPost(e) {
       'Nama Karyawan': rec.employeeName,
       'Jabatan': rec.employeeRole,
       'Outlet': rec.outlet,
-      'Periode': rec.period,
+      'Periode Bulan': rec.periodMonth,
+      'Periode Cut-Off': rec.cutoffPeriodLabel || rec.periodLabel,
+      'Cut-Off Mulai': rec.cutoffStartDate || '-',
+      'Cut-Off Selesai': rec.cutoffEndDate || '-',
+      'Tanggal Bayar': rec.paymentDate || '-',
       'Hari Hadir': rec.totalDaysPresent,
       'Hari Telat': rec.totalDaysLate,
       'Total Menit Telat': rec.totalLateMinutes || 0,
@@ -3149,10 +3184,11 @@ function doPost(e) {
       'Tunjangan Tepat Waktu': rec.punctualityAllowance || 0,
       'Bonus Outlet': rec.outletBonus || 0,
       'Bonus Kinerja': rec.bonus,
-      'Potongan / Denda': rec.deductions,
-      'Gaji Bersih': rec.netSalary,
-      'Status Pembayaran': rec.paymentStatus,
-      'Tanggal Bayar': rec.paymentDate || '-'
+      'Potongan Denda Telat': rec.latePenalty || 0,
+      'Potongan Kasbon': rec.loanDeduction || 0,
+      'Total Potongan': rec.deductions,
+      'Gaji Bersih (Take Home Pay)': rec.netSalary,
+      'Status Pembayaran': rec.paymentStatus
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -3336,7 +3372,7 @@ function doPost(e) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(230, 220, 245);
-    doc.text(`Periode Slip: ${slip.periodLabel}  |  No. Dokumen: SLIP/${slip.periodMonth}/${slip.employeeId}`, 14, 31);
+    doc.text(`Periode Cut-Off: ${slip.cutoffPeriodLabel || slip.periodLabel}  |  No. Dokumen: SLIP/${slip.periodMonth}/${slip.employeeId}`, 14, 31);
 
     // Right Header Badge (Payment Status)
     const statusColor = slip.paymentStatus === 'Lunas / Terbayar' ? [16, 185, 129] : slip.paymentStatus === 'Disetujui' ? [59, 130, 246] : [245, 158, 11];
@@ -3357,7 +3393,7 @@ function doPost(e) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(61, 18, 89);
-    doc.text('INFORMASI DATA KARYAWAN', 20, 51);
+    doc.text('INFORMASI DATA KARYAWAN & PERIODE CUT-OFF', 20, 51);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
@@ -3374,7 +3410,7 @@ function doPost(e) {
     doc.text(slip.outlet, 145, 58);
 
     doc.setFont('helvetica', 'normal');
-    doc.text(`Tanggal Cetak   : ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, 115, 65);
+    doc.text(`Tanggal Gajian  : ${slip.paymentDate || new Date().toLocaleDateString('id-ID')}`, 115, 65);
 
     // Table breakdown
     const breakdownData = [
@@ -3480,9 +3516,11 @@ function doPost(e) {
 
     const message =
       `Halo *${slip.employeeName}*,\n\n` +
-      `Berikut adalah rincian *SLIP GAJI RESMI STEAK 11* periode *${slip.periodLabel}*:\n\n` +
+      `Berikut adalah rincian *SLIP GAJI RESMI STEAK 11*:\n` +
+      `📅 *Periode Cut-Off:* ${slip.cutoffPeriodLabel || slip.periodLabel}\n` +
+      `💳 *Tanggal Pembayaran:* ${slip.paymentDate || '-'}\n\n` +
       `👤 *Jabatan:* ${slip.employeeRole} (${slip.outlet})\n` +
-      `📅 *Total Hadir:* ${slip.totalDaysPresent} Hari (${slip.totalHoursWorked} Jam)\n` +
+      `📅 *Total Hadir:* ${slip.totalDaysPresent} Hari (${slip.totalHoursWorked} Jam Kerja)\n` +
       `⏰ *Tepat Waktu:* ${slip.totalDaysOnTime ?? (slip.totalDaysPresent - slip.totalDaysLate)} Hari\n` +
       `💵 *Gaji Pokok:* ${formatRupiah(slip.baseSalary)}\n` +
       `🍱 *Tunjangan Makan:* ${formatRupiah(slip.totalAllowance)}\n` +
@@ -3490,11 +3528,11 @@ function doPost(e) {
       overtimeText +
       outletBonusText +
       `⭐ *Bonus Kinerja:* ${formatRupiah(slip.bonus)}\n` +
-      `🔻 *Potongan:* ${formatRupiah(slip.deductions)}\n` +
+      `🔻 *Total Potongan:* -${formatRupiah(slip.deductions)}\n` +
       `----------------------------------------\n` +
-      `💰 *TOTAL GAJI BERSIH:* *${formatRupiah(slip.netSalary)}*\n` +
+      `💰 *TOTAL GAJI BERSIH (TAKE HOME PAY):* *${formatRupiah(slip.netSalary)}*\n` +
       `📌 *Status:* ${slip.paymentStatus}\n\n` +
-      `Terima kasih atas kerja keras dan kedisiplinanmu untuk Steak 11! 🔥🍗`;
+      `Terima kasih atas dedikasi dan kerja kerasmu untuk kemajuan Steak 11! 🔥🍗`;
 
     const rawPhone = emp.phone;
     const phoneClean = rawPhone.startsWith('62') ? rawPhone : '62' + rawPhone.replace(/^0+/, '');
@@ -8753,93 +8791,188 @@ function doPost(e) {
         {/* TAB 4: FITUR PENGGAJIAN / PAYROLL */}
         {activeTab === 'penggajian' && (
           <div className="space-y-6">
-            {/* Header Control & Period Picker */}
-            <div className="bg-white dark:bg-[#1f0e30] p-5 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-black text-[#3D1259] dark:text-amber-400 font-baloo">
-                    Fitur Penggajian & Payroll Karyawan Terintegrasi
-                  </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                    Auto-Absensi Real-Time
-                  </span>
+            {/* Header Control & Period Picker with Cut-Off 25 Cycle */}
+            <div className="bg-white dark:bg-[#1f0e30] p-5 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black text-[#3D1259] dark:text-amber-400 font-baloo">
+                      Fitur Penggajian & Payroll Karyawan Terintegrasi
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                      Siklus Cut-Off 25 Aktif
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Kalkulasi otomatis Gaji Bersih berdasarkan rentang tanggal cut-off (25 bulan lalu s/d 24 bulan berjalan), integrasi lembur, denda telat, kasbon, slip WhatsApp & cetak PDF executive.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Kalkulasi otomatis Gaji Bersih (Pokok + Uang Makan + Tunjangan Tepat Waktu + Upah Lembur + Bonus - Potongan Kasbon), rincian slip karyawan, WhatsApp & cetak PDF executive.
-                </p>
+
+                {/* Cut-off Mode Pill Selector */}
+                <div className="flex items-center bg-purple-50 dark:bg-purple-950/80 p-1 rounded-xl border border-purple-200 dark:border-purple-800 shadow-2xs shrink-0 flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handlePeriodOrModeChange(payrollPeriod, 'CUTOFF_25')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      payrollCutoffMode === 'CUTOFF_25'
+                        ? 'bg-[#3D1259] text-amber-300 dark:bg-amber-400 dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-purple-900 dark:hover:text-amber-300'
+                    }`}
+                    title="Siklus 25: Menghitung absensi tgl 25 bulan lalu s/d 24 bulan ini. Pembayaran gaji di tgl 25."
+                  >
+                    <span>⭐ Siklus Cut-Off 25</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePeriodOrModeChange(payrollPeriod, 'CALENDAR_MONTH')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      payrollCutoffMode === 'CALENDAR_MONTH'
+                        ? 'bg-[#3D1259] text-amber-300 dark:bg-amber-400 dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-purple-900 dark:hover:text-amber-300'
+                    }`}
+                    title="Bulan Kalender Penuh: 01 s/d Akhir Bulan"
+                  >
+                    <span>🗓️ Bulan Kalender (1–Akhir)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePeriodOrModeChange(payrollPeriod, 'CUSTOM')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      payrollCutoffMode === 'CUSTOM'
+                        ? 'bg-[#3D1259] text-amber-300 dark:bg-amber-400 dark:text-purple-950 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-purple-900 dark:hover:text-amber-300'
+                    }`}
+                    title="Pilih tanggal mulai dan tanggal akhir secara bebas"
+                  >
+                    <span>⚙️ Kustom Rentang</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 block mb-0.5">
-                    Periode Bulan:
-                  </label>
-                  <input
-                    type="month"
-                    value={payrollPeriod}
-                    onChange={(e) => setPayrollPeriod(e.target.value)}
-                    className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-purple-900 bg-slate-50 dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-sm"
-                  />
+              {/* Date Controls & Action Buttons */}
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-purple-900/40 text-xs">
+                {/* Dynamic Date Controls */}
+                <div className="flex items-center gap-2.5 flex-wrap bg-slate-50 dark:bg-purple-950/60 p-2 rounded-xl border border-slate-200 dark:border-purple-800/80">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-purple-300 block mb-0.5">
+                      Bulan Gaji:
+                    </label>
+                    <input
+                      type="month"
+                      value={payrollPeriod}
+                      onChange={(e) => handlePeriodOrModeChange(e.target.value, payrollCutoffMode)}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-purple-300 block mb-0.5">
+                      Cut-Off Mulai:
+                    </label>
+                    <input
+                      type="date"
+                      value={payrollStartDate}
+                      disabled={payrollCutoffMode !== 'CUSTOM'}
+                      onChange={(e) => setPayrollStartDate(e.target.value)}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-xs disabled:opacity-80"
+                    />
+                  </div>
+
+                  <span className="text-slate-400 font-bold self-end pb-2">s/d</span>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 dark:text-purple-300 block mb-0.5">
+                      Cut-Off Selesai:
+                    </label>
+                    <input
+                      type="date"
+                      value={payrollEndDate}
+                      disabled={payrollCutoffMode !== 'CUSTOM'}
+                      onChange={(e) => setPayrollEndDate(e.target.value)}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-purple-700 bg-white dark:bg-purple-950 text-slate-800 dark:text-slate-100 shadow-xs disabled:opacity-80"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 block mb-0.5">
+                      💳 Tgl Pembayaran:
+                    </label>
+                    <input
+                      type="date"
+                      value={payrollPayDate}
+                      onChange={(e) => setPayrollPayDate(e.target.value)}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-purple-950 text-emerald-700 dark:text-emerald-300 shadow-xs"
+                    />
+                  </div>
+
+                  <div className="self-end pb-1">
+                    <span className="px-2.5 py-1 rounded-lg bg-purple-100 dark:bg-purple-900/80 text-[#3D1259] dark:text-amber-300 font-black text-[11px] inline-flex items-center gap-1">
+                      📅 {getPayrollCutoffDates(payrollPeriod, payrollCutoffMode, payrollStartDate, payrollEndDate, payrollPayDate).cutoffRangeLabel}
+                    </span>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => setShowLoanLedgerModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-900 text-amber-300 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-800 border border-purple-700 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Kelola & Lihat Riwayat Pinjaman Kasbon Berkelanjutan Karyawan"
-                >
-                  <Banknote className="w-3.5 h-3.5 text-amber-400" /> Riwayat Kasbon
-                </button>
+                {/* Action Buttons Toolbar */}
+                <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-end">
+                  <button
+                    onClick={() => setShowLoanLedgerModal(true)}
+                    className="px-3 py-2 rounded-xl bg-purple-900 text-amber-300 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-800 border border-purple-700 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Kelola & Lihat Riwayat Pinjaman Kasbon Berkelanjutan Karyawan"
+                  >
+                    <Banknote className="w-3.5 h-3.5 text-amber-400" /> Riwayat Kasbon
+                  </button>
 
-                <button
-                  onClick={() => setShowLatePenaltySettingsModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Pengaturan Batas Toleransi Menit Keterlambatan Denda"
-                >
-                  <Sliders className="w-3.5 h-3.5 text-purple-700 dark:text-amber-400" /> Toleransi Telat ({latePenaltyThresholdMinutes}m)
-                </button>
+                  <button
+                    onClick={() => setShowLatePenaltySettingsModal(true)}
+                    className="px-3 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Pengaturan Batas Toleransi Menit Keterlambatan Denda"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-purple-700 dark:text-amber-400" /> Toleransi Telat ({latePenaltyThresholdMinutes}m)
+                  </button>
 
-                <button
-                  onClick={() => {
-                    setTempOtRate(defaultOvertimeRate);
-                    setShowOvertimeRateSettingsModal(true);
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Pengaturan Rate Lembur Terintegrasi & Sinkronisasi Karyawan"
-                >
-                  <Clock className="w-3.5 h-3.5 text-white" /> Aturan & Rate Lembur
-                </button>
+                  <button
+                    onClick={() => {
+                      setTempOtRate(defaultOvertimeRate);
+                      setShowOvertimeRateSettingsModal(true);
+                    }}
+                    className="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Pengaturan Rate Lembur Terintegrasi & Sinkronisasi Karyawan"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-white" /> Aturan & Rate Lembur
+                  </button>
 
-                <button
-                  onClick={handleCalculatePayroll}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Kalkulasi ulang slip gaji karyawan berdasarkan data absensi terkini"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-purple-950" /> Hitung Ulang
-                </button>
+                  <button
+                    onClick={handleCalculatePayroll}
+                    className="px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-black text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ring-2 ring-amber-300"
+                    title="Kalkulasi otomatis seluruh slip gaji karyawan berdasarkan rentang tanggal cut-off yang aktif"
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-950 animate-spin" /> Hitung Otomatis Cut-Off
+                  </button>
 
-                <button
-                  onClick={() => syncPayrollSheets(false)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Sinkronisasi slip penggajian langsung ke Google Sheets"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" /> Sync Sheet
-                </button>
+                  <button
+                    onClick={() => syncPayrollSheets(false)}
+                    className="px-3 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Sinkronisasi slip penggajian langsung ke Google Sheets"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> Sync Sheet
+                  </button>
 
-                <button
-                  onClick={handlePrintMonthlyPayrollReport}
-                  className="px-3.5 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Cetak Laporan Rekapitulasi Penggajian Bulanan dalam format PDF"
-                >
-                  <Printer className="w-3.5 h-3.5" /> Cetak PDF
-                </button>
+                  <button
+                    onClick={handlePrintMonthlyPayrollReport}
+                    className="px-3 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Cetak Laporan Rekapitulasi Penggajian Bulanan dalam format PDF"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Cetak PDF
+                  </button>
 
-                <button
-                  onClick={handleDownloadExcelPayroll}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                  title="Ekspor Rekapitulasi Penggajian Bulanan ke file Excel .xlsx"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" /> Ekspor Excel
-                </button>
+                  <button
+                    onClick={handleDownloadExcelPayroll}
+                    className="px-3 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Ekspor Rekapitulasi Penggajian Bulanan ke file Excel .xlsx"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> Ekspor Excel
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -9006,8 +9139,11 @@ function doPost(e) {
                             <span className="font-extrabold text-[#3D1259] dark:text-amber-400 block text-sm">
                               {slip.employeeName}
                             </span>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
                               {slip.employeeRole} • <span className="font-semibold text-amber-600 dark:text-amber-400">{slip.outlet}</span>
+                            </span>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-amber-300 font-black text-[9.5px] border border-purple-200 dark:border-purple-800">
+                              📅 {slip.cutoffPeriodLabel || slip.periodLabel}
                             </span>
                           </td>
                           <td className="p-4 align-top space-y-0.5">
@@ -9053,7 +9189,13 @@ function doPost(e) {
                               const emp = employees.find((e) => e.id === slip.employeeId);
                               const lateRate = emp?.latePenaltyPerDay ?? latePenaltyRate ?? 15000;
                               const empAtt = (attendance || []).filter(
-                                (a) => (a.employeeId === slip.employeeId || (slip.employeeName && (a.employeeName || '').toLowerCase() === slip.employeeName.toLowerCase())) && a.date.startsWith(slip.periodMonth)
+                                (a) =>
+                                  (a.employeeId === slip.employeeId ||
+                                    (slip.employeeName &&
+                                      (a.employeeName || '').toLowerCase() === slip.employeeName.toLowerCase())) &&
+                                  (slip.cutoffStartDate && slip.cutoffEndDate
+                                    ? a.date >= slip.cutoffStartDate && a.date <= slip.cutoffEndDate
+                                    : a.date.startsWith(slip.periodMonth))
                               );
                               const daysPenalized = empAtt.length > 0
                                 ? empAtt.filter((a) => (a.lateMinutes && a.lateMinutes > latePenaltyThresholdMinutes)).length
