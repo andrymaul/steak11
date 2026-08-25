@@ -2471,31 +2471,28 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                           <td className="p-2.5 text-right flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleOpenEditClosingShift(shf)}
-                              className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer transition-all"
-                              title="Edit Data Audit Closing Shift Ini"
+                              className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              title="Edit Data Audit Closing Shift"
                             >
-                              <Edit className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                              Edit
+                              <Edit className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleSendClosingShiftWhatsApp(shf)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer transition-all"
+                              className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                               title="Kirim Laporan Closing Shift ke WhatsApp 081223233299"
                             >
-                              <Send className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                              Kirim WA
+                              <Send className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handlePrintClosingSummary(shf)}
-                              className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-950 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                              className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/80 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                               title="Cetak Struk Audit Closing Shift"
                             >
-                              <Printer className="w-3 h-3" />
-                              Cetak Audit
+                              <Printer className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteShift(shf.id, `${shf.id} - ${shf.date} (${shf.shiftName})`)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/80 hover:text-rose-700 transition-all cursor-pointer"
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                               title="Hapus Record Closing Shift Ini"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -2584,7 +2581,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                         <td className="p-2.5 text-right">
                           <button
                             onClick={() => handleDeleteExpense(exp.id, exp.description)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                            className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                             title="Hapus Pengeluaran"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -3390,7 +3387,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                           <td className="p-2.5 text-right">
                             <button
                               onClick={() => handleDeleteDeduction(ded.id, ded.name)}
-                              className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                               title="Hapus pos pengurang ini"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

@@ -7329,16 +7329,16 @@ function doPost(e) {
 
                           <td className="p-3 align-top text-center">
                             <div className="flex items-center justify-center gap-1.5">
-                              {/* Cetak Struk PDF (Warna Merah) */}
+                              {/* Cetak Struk PDF */}
                               <button
                                 onClick={() => handleDownloadSingleOrderPdf(o)}
-                                className="p-2 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700 shadow-xs inline-flex items-center justify-center cursor-pointer transition-all"
+                                className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/80 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Cetak / Unduh Struk PDF"
                               >
-                                <FileText className="w-4 h-4" />
+                                <FileText className="w-3.5 h-3.5" />
                               </button>
 
-                              {/* Print Struk Thermal */}
+                              {/* Print Struk Thermal Bluetooth */}
                               <button
                                 onClick={() => {
                                   const ordItem: OrderItem = {
@@ -7357,7 +7357,6 @@ function doPost(e) {
                                     serviceType: (o.serviceType as any) || 'Dine In',
                                     addressOrNotes: o.addressOrNotes || 'Order via System',
                                     paymentMethod: o.paymentMethod || 'Cash',
-                                    cashierName: o.cashierName || 'Kasir POS',
                                     subtotal: o.subtotal || o.total || o.totalPrice || 0,
                                     discountAmount: o.discountAmount || 0,
                                     taxAmount: o.taxAmount || 0,
@@ -7368,37 +7367,37 @@ function doPost(e) {
                                   setReceiptOrder(ordItem);
                                   setShowReceiptModal(true);
                                 }}
-                                className="p-2 rounded-xl bg-amber-400 text-purple-950 font-black hover:bg-amber-300 shadow-xs inline-flex items-center justify-center cursor-pointer transition-all"
+                                className="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Print Struk Thermal Bluetooth (58/80mm)"
                               >
-                                <Printer className="w-4 h-4" />
+                                <Printer className="w-3.5 h-3.5" />
                               </button>
 
                               {/* WhatsApp */}
                               <button
                                 onClick={() => handleSendViaWhatsApp(o.id)}
-                                className="p-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-xs inline-flex items-center justify-center cursor-pointer transition-all"
+                                className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Kirim Struk via WhatsApp"
                               >
-                                <Send className="w-4 h-4" />
+                                <Send className="w-3.5 h-3.5" />
                               </button>
 
                               {/* Edit Order Button */}
                               <button
                                 onClick={() => handleOpenEditOrder(o)}
-                                className="p-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-purple-950 font-black shadow-xs inline-flex items-center justify-center cursor-pointer transition-all border border-amber-400"
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Edit Rincian Pesanan"
                               >
-                                <Edit className="w-4 h-4" />
+                                <Edit className="w-3.5 h-3.5" />
                               </button>
 
                               {/* Delete Order Button */}
                               <button
                                 onClick={() => handleDeleteOrder(o.id)}
-                                className="p-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-xs inline-flex items-center justify-center cursor-pointer transition-all"
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Hapus Pesanan Ini"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -7670,18 +7669,20 @@ function doPost(e) {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="p-3 bg-slate-50 dark:bg-purple-950/40 border-t border-slate-100 dark:border-purple-900/40 flex items-center justify-end gap-2">
+                      <div className="p-3 bg-slate-50 dark:bg-purple-950/40 border-t border-slate-100 dark:border-purple-900/40 flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleEditMenu(item)}
-                          className="px-3 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                          title="Edit Menu"
                         >
-                          <Edit className="w-3.5 h-3.5" /> Edit
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteMenu(item.id)}
-                          className="px-3 py-1.5 rounded-xl bg-red-100 hover:bg-red-200 dark:bg-red-950/80 dark:hover:bg-red-900 text-red-700 dark:text-red-300 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                          title="Hapus Menu"
                         >
-                          <Trash2 className="w-3.5 h-3.5" /> Hapus
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -7750,18 +7751,20 @@ function doPost(e) {
                         {ch.description}
                       </p>
                     </div>
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60 dark:border-purple-900/40">
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-200/60 dark:border-purple-900/40">
                       <button
                         onClick={() => handleEditRacik('chicken', ch)}
-                        className="px-2.5 py-1 rounded-lg bg-amber-100 text-purple-950 hover:bg-amber-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Edit Pilihan Daging"
                       >
-                        <Edit className="w-3.5 h-3.5" /> Edit
+                        <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteRacik('chicken', ch.id)}
-                        className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Hapus Pilihan Daging"
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -7809,18 +7812,20 @@ function doPost(e) {
                         {s.description}
                       </p>
                     </div>
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60 dark:border-purple-900/40">
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-200/60 dark:border-purple-900/40">
                       <button
                         onClick={() => handleEditRacik('sauce', s)}
-                        className="px-2.5 py-1 rounded-lg bg-amber-100 text-purple-950 hover:bg-amber-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Edit Saus Signature"
                       >
-                        <Edit className="w-3.5 h-3.5" /> Edit
+                        <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteRacik('sauce', s.id)}
-                        className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Hapus Saus Signature"
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -7866,18 +7871,20 @@ function doPost(e) {
                         {a.description}
                       </p>
                     </div>
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60 dark:border-purple-900/40">
+                    <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-200/60 dark:border-purple-900/40">
                       <button
                         onClick={() => handleEditRacik('addon', a)}
-                        className="px-2.5 py-1 rounded-lg bg-amber-100 text-purple-950 hover:bg-amber-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Edit Add On"
                       >
-                        <Edit className="w-3.5 h-3.5" /> Edit
+                        <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteRacik('addon', a.id)}
-                        className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Hapus Add On"
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -8076,18 +8083,20 @@ function doPost(e) {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-1">
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
                     <button
                       onClick={() => handleEditEmp(emp)}
-                      className="px-3 py-1.5 rounded-lg bg-amber-100 text-purple-950 hover:bg-amber-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Edit Data Karyawan"
                     >
-                      <Edit className="w-3.5 h-3.5" /> Edit
+                      <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteEmp(emp.id)}
-                      className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Hapus Karyawan"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Hapus
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -8697,7 +8706,7 @@ function doPost(e) {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditAttendance(rec)}
-                                className="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-300 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Edit Data Absensi"
                               >
                                 <Edit className="w-3.5 h-3.5" />
@@ -8705,7 +8714,7 @@ function doPost(e) {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteAttendance(rec.id)}
-                                className="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-950/80 dark:hover:bg-red-900 text-red-600 dark:text-red-300 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                 title="Hapus Data Absensi"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -9224,28 +9233,30 @@ function doPost(e) {
                               <option value="Lunas / Terbayar">Lunas / Terbayar</option>
                             </select>
                           </td>
-                          <td className="p-4 align-top text-center space-x-1.5">
-                            <button
-                              onClick={() => handleOpenEditPayroll(slip)}
-                              title="Edit Bonus & Potongan"
-                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-purple-900 cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
-                            >
-                              <Edit className="w-3.5 h-3.5" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handlePrintPayrollPdf(slip)}
-                              title="Download Slip Gaji PDF"
-                              className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
-                            >
-                              <Printer className="w-3.5 h-3.5" /> PDF
-                            </button>
-                            <button
-                              onClick={() => handleSendPayrollWhatsApp(slip)}
-                              title="Kirim Slip Gaji via WhatsApp"
-                              className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
-                            >
-                              <Send className="w-3.5 h-3.5" /> WA
-                            </button>
+                          <td className="p-4 align-top text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenEditPayroll(slip)}
+                                title="Edit Bonus & Potongan Slip Gaji"
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handlePrintPayrollPdf(slip)}
+                                title="Download Slip Gaji PDF"
+                                className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/80 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleSendPayrollWhatsApp(slip)}
+                                title="Kirim Slip Gaji via WhatsApp"
+                                className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -10005,16 +10016,17 @@ function doPost(e) {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 dark:border-purple-900/40 flex items-center gap-2">
+                  <div className="pt-3 border-t border-slate-100 dark:border-purple-900/40 flex items-center justify-end gap-1.5">
                     <button
                       onClick={() => handleEditOutlet(loc)}
-                      className="flex-1 py-2 rounded-xl bg-purple-900/30 text-amber-300 hover:bg-purple-900/60 font-extrabold text-xs flex items-center justify-center gap-1 cursor-pointer border border-purple-700/50"
+                      className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Edit Outlet & Aturan Shift"
                     >
-                      <Edit className="w-3.5 h-3.5" /> Edit Outlet & Shift
+                      <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteOutlet(loc.id)}
-                      className="p-2 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 hover:bg-red-200 font-bold text-xs cursor-pointer border border-red-300 dark:border-red-800"
+                      className="p-2 rounded-xl bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                       title="Hapus Outlet"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -10181,15 +10193,17 @@ function doPost(e) {
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => handleEditAdmin(admin)}
-                                className="px-2.5 py-1.5 rounded-lg bg-amber-400/20 text-purple-950 dark:text-amber-300 font-bold hover:bg-amber-400 hover:text-purple-950 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                title="Edit Akun Admin & ID"
                               >
-                                Edit ID & Data
+                                <Edit className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteAdmin(admin.id)}
-                                className="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold hover:bg-rose-600 hover:text-white transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                title="Hapus Akun Admin"
                               >
-                                Hapus
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -10273,18 +10287,20 @@ function doPost(e) {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-purple-900/40">
+                      <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-purple-900/40">
                         <button
                           onClick={() => handleEditRole(role)}
-                          className="px-3 py-1.5 rounded-xl bg-amber-400/20 text-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-amber-400 hover:text-purple-950 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                          title="Edit Hak Akses Menu Role"
                         >
-                          Edit Hak Akses
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteRole(role.id)}
-                          className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold text-xs hover:bg-rose-600 hover:text-white transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                          title="Hapus Role Jabatan"
                         >
-                          Hapus
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -10379,11 +10395,10 @@ function doPost(e) {
                             <button
                               type="button"
                               onClick={() => handleDeleteAdmin(visitor.id)}
-                              className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold hover:bg-rose-600 hover:text-white transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                               title="Hapus Data Pengunjung Ini"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>Hapus</span>
                             </button>
                           </td>
                         </tr>
@@ -10920,15 +10935,17 @@ function doPost(e) {
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => handleEditPromo(promo)}
-                              className="px-2.5 py-1.5 rounded-lg bg-amber-400/20 text-purple-950 dark:text-amber-300 font-bold hover:bg-amber-400 hover:text-purple-950 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              title="Edit Voucher & Promo"
                             >
-                              Edit
+                              <Edit className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeletePromo(promo.id)}
-                              className="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold hover:bg-rose-600 hover:text-white transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              title="Hapus Voucher & Promo"
                             >
-                              Hapus
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -15044,19 +15061,19 @@ function doPost(e) {
                             {tpl.isOff ? 'Hari Libur Karyawan' : `${tpl.startTime} s/d ${tpl.endTime}`}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleEditShiftTemplate(tpl)}
-                            className="p-1 rounded bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-slate-200 hover:bg-amber-400 hover:text-purple-950 transition-all cursor-pointer"
-                            title="Edit Master Shift Ini"
+                            className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                            title="Edit Master Shift"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteShiftTemplate(tpl.id)}
-                            className="p-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                             title="Hapus Master Shift"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -15336,7 +15353,7 @@ function doPost(e) {
                                 <button
                                   type="button"
                                   onClick={() => handleEditLoan(loan)}
-                                  className="p-1 rounded bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-slate-200 hover:bg-amber-400 hover:text-purple-950 cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                   title="Edit Data Kasbon"
                                 >
                                   <Edit className="w-3.5 h-3.5" />
@@ -15344,7 +15361,7 @@ function doPost(e) {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteLoan(loan.id)}
-                                  className="p-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                                   title="Hapus Record Kasbon"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />

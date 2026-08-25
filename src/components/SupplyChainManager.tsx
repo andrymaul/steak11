@@ -1208,28 +1208,30 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
                             <button
                               onClick={() => handleOpenOpname(item)}
                               title="Audit Stock Opname"
-                              className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] hover:bg-emerald-500 hover:text-white cursor-pointer"
+                              className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                             >
-                              Opname
+                              <ClipboardList className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleOpenTransfer(item)}
-                              title="Transfer Stok Outlet"
-                              className="px-2 py-1 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold text-[10px] hover:bg-blue-600 hover:text-white cursor-pointer"
+                              title="Transfer Stok Antar Outlet"
+                              className="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                             >
-                              Transfer
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleOpenEditInventory(item)}
-                              className="px-2 py-1 rounded bg-amber-400/20 text-purple-950 dark:text-amber-300 font-bold text-[10px] hover:bg-amber-400 cursor-pointer"
+                              title="Edit Bahan Baku"
+                              className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                             >
-                              Edit
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteInventory(item.id, item.name)}
-                              className="px-2 py-1 rounded bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-[10px] hover:bg-rose-600 hover:text-white cursor-pointer"
+                              title="Hapus Bahan Baku"
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
                             >
-                              Hapus
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -1758,25 +1760,27 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
                     <span>WhatsApp</span>
                   </button>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleOpenAddPo(sup.id)}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-purple-950 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Buat Purchase Order (PO)"
                     >
                       <ShoppingCart className="w-3.5 h-3.5" />
-                      Buat PO
                     </button>
                     <button
                       onClick={() => handleOpenEditSupplier(sup)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-purple-900 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Edit Data Supplier"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteSupplier(sup.id, sup.name)}
-                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Hapus Supplier"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -1847,9 +1851,10 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
 
                     <button
                       onClick={() => handleSendWaPo(po)}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs flex items-center gap-1 cursor-pointer"
+                      className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                      title="Kirim PO ke WhatsApp Supplier"
                     >
-                      <Send className="w-3.5 h-3.5" /> WA Supplier
+                      <Send className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
