@@ -197,17 +197,21 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       category: 'payroll',
       categoryLabel: 'Penggajian & Payroll',
       categoryIcon: FileSpreadsheet,
-      title: '7. Kalkulasi Gaji Otomatis Terintegrasi Presensi Digital',
-      summary: 'Perhitungan gaji pokok, tunjangan tepat waktu, denda keterlambatan, kasbon, dan cetak slip gaji PDF.',
-      badge: 'Payroll System',
+      title: '7. Siklus Cut-Off 25 & Kalkulasi Gaji Otomatis Terintegrasi Presensi Digital',
+      summary: 'Perhitungan gaji pokok, lembur, tunjangan tepat waktu, denda keterlambatan, kasbon dengan siklus cut-off 25 ketemu 25, dan cetak slip gaji PDF / WA.',
+      badge: 'Siklus Cut-Off 25',
       targetTab: 'penggajian',
       steps: [
         'Buka menu "Penggajian / Payroll" di Dashboard Admin.',
-        'Pilih Periode Bulan yang ingin dihitung (contoh: 2026-08).',
-        'Klik tombol "Hitung Ulang Gaji" (Berikon Bintang Sparkles).',
-        'Sistem akan otomatis mengkalkulasi: Gaji Pokok Harian x Total Hadir, Tunjangan Kehadiran Tepat Waktu (Rp 15.000/hari), Potongan Denda Terlambat, dan Potongan Kasbon Pinjaman.',
-        'Klik ikon Printer pada baris nama karyawan untuk mencetak Slip Gaji PDF resmi.',
-        'Gunakan tombol "Ekspor Rekap Excel" untuk menyimpan laporan penggajian bulanan.'
+        'Pilih Mode Siklus: "⭐ Siklus Cut-Off 25" (tgl 25 bulan lalu s/d 24 bulan berjalan) atau "🗓️ Bulan Kalender (1–Akhir)".',
+        'Pilih Bulan Gaji (contoh: September 2026). Tanggal Cut-off (25/08 s/d 24/09) dan Tanggal Bayar (25/09) akan terisi otomatis.',
+        'Klik tombol "Hitung Otomatis Cut-Off" (Berikon Bintang Sparkles).',
+        'Sistem akan otomatis menghitung: Total Hari Hadir, Presensi Tepat Waktu (Rp 15.000/hari), Upah Lembur, Potongan Denda Terlambat, dan Potongan Cicilan Kasbon Pinjaman dalam rentang tgl 25 s/d 24.',
+        'Klik ikon "PDF" untuk mencetak Slip Gaji resmi, atau klik "WA" untuk mengirim rincian slip langsung ke nomor WhatsApp karyawan.',
+        'Gunakan tombol "Ekspor Excel" untuk mengunduh rekapitulasi penggajian lengkap dengan rincian periode cut-off.'
+      ],
+      tips: [
+        'Pilih mode "⚙️ Kustom Rentang" jika ingin menghitung gaji dengan rentang tanggal khusus di luar tanggal 25.'
       ]
     },
 
