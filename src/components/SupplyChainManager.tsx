@@ -55,7 +55,8 @@ import {
   saveMenuItems,
   getStoredStockMutations,
   saveStockMutations,
-  isRegisteredAdmin
+  isRegisteredAdmin,
+  recordAuditLog
 } from '../utils';
 
 interface SupplyChainManagerProps {
@@ -487,6 +488,17 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
     saveStockOpnames(updatedOpnames);
 
     setShowOpnameModal(false);
+
+    recordAuditLog({
+      user: currentUser?.name || opnameUser.trim() || 'Auditor Dapur',
+      role: currentUser?.role || 'Staff Logistik',
+      outlet: opnameOutlet,
+      category: 'Kelola Stok',
+      action: 'Stock Opname',
+      details: `Opname ${inv.name}: Fisik ${opnameActualStock} ${inv.unit} (Selisih: ${diff > 0 ? '+' : ''}${diff})`,
+      status: 'Berhasil',
+    });
+
     showToast(`📋 Stock Opname "${inv.name}" berhasil dicatat (Selisih: ${diff > 0 ? '+' : ''}${diff} ${inv.unit}).`);
   };
 
@@ -559,6 +571,17 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
     saveStockMutations(updatedMutations);
 
     setShowTransferModal(false);
+
+    recordAuditLog({
+      user: currentUser?.name || transferUser || 'Staff Logistik',
+      role: currentUser?.role || 'Staff Logistik',
+      outlet: transferFrom,
+      category: 'Kelola Stok',
+      action: 'Transfer Stok',
+      details: `Transfer ${inv.name} (${transferQty} ${inv.unit}) dari ${transferFrom} ke ${transferTo}`,
+      status: 'Berhasil',
+    });
+
     showToast(`🚚 Transfer Stok "${inv.name}" sebesar ${transferQty} ${inv.unit} berhasil dicatat.`);
   };
 
@@ -812,6 +835,17 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
     setPurchaseOrders(updatedPos);
     savePurchaseOrdersData(updatedPos);
     setShowPoModal(false);
+
+    recordAuditLog({
+      user: currentUser?.name || 'Manager Operasional',
+      role: currentUser?.role || 'Manager Operasional',
+      outlet: newPo.outlet,
+      category: 'Kelola Stok',
+      action: 'Buat Purchase Order',
+      details: `PO #${newPo.id} (${newPo.supplierName}) senilai ${formatRupiah(newPo.totalAmount)}`,
+      status: 'Berhasil',
+    });
+
     showToast(`📦 Purchase Order "${newPo.id}" berhasil dibuat.`);
   };
 

@@ -145,7 +145,8 @@ import {
   saveLatePenaltyThreshold,
   getStoredOvertimeRate,
   saveOvertimeRate,
-  getPayrollCutoffDates
+  getPayrollCutoffDates,
+  recordAuditLog
 } from '../utils';
 import { REVIEWS } from '../data/initialData';
 import { ThermalReceiptModal } from './ThermalReceiptModal';
@@ -1680,27 +1681,72 @@ function doPost(e) {
       saveLocations(updated);
       setShowOutletModal(false);
       setEditingOutletId(null);
+      recordAuditLog({
+        user: currentUser?.name || 'Super Admin',
+        role: currentUser?.role || 'Super Admin',
+        outlet: 'Semua Cabang',
+        category: 'Kelola Outlet',
+        action: 'Hapus Outlet',
+        details: `Outlet ID "${id}" telah dihapus`,
+        status: 'Berhasil',
+      });
       showToast('Data outlet berhasil dihapus!');
     } else if (type === 'employee') {
       deleteEmployeeFromCloud(id).then((updated) => {
         setEmployees(updated);
       });
       setShowAddEmpModal(false);
+      recordAuditLog({
+        user: currentUser?.name || 'Admin',
+        role: currentUser?.role || 'Admin',
+        outlet: 'Semua Cabang',
+        category: 'Data Karyawan',
+        action: 'Hapus Karyawan',
+        details: `Karyawan ID "${id}" telah dihapus dari Cloud Firestore`,
+        status: 'Berhasil',
+      });
       showToast('✅ Data karyawan berhasil dihapus dari Cloud Firestore!');
     } else if (type === 'attendance') {
       deleteAttendanceRecordFromCloud(id).then((updated) => {
         setAttendance(updated);
+      });
+      recordAuditLog({
+        user: currentUser?.name || 'Admin',
+        role: currentUser?.role || 'Admin',
+        outlet: 'Semua Cabang',
+        category: 'Absensi Staff',
+        action: 'Hapus Absensi',
+        details: `Rekam absensi ID "${id}" telah dihapus`,
+        status: 'Berhasil',
       });
       showToast('Rekam absensi berhasil dihapus dari Cloud Firestore!');
     } else if (type === 'menu') {
       const updated = menuItems.filter((m) => m.id !== id);
       setMenuItems(updated);
       saveMenuItems(updated);
+      recordAuditLog({
+        user: currentUser?.name || 'Admin',
+        role: currentUser?.role || 'Admin',
+        outlet: 'Semua Cabang',
+        category: 'Kelola Menu',
+        action: 'Hapus Menu',
+        details: `Menu ID "${id}" telah dihapus`,
+        status: 'Berhasil',
+      });
       showToast('Menu berhasil dihapus dari sistem!');
     } else if (type === 'order') {
       const updated = orders.filter((o) => o.id !== id);
       setOrders(updated);
       saveOrders(updated);
+      recordAuditLog({
+        user: currentUser?.name || 'Admin',
+        role: currentUser?.role || 'Admin',
+        outlet: 'Semua Cabang',
+        category: 'Transaksi POS',
+        action: 'Hapus Pesanan',
+        details: `Pesanan #${id} telah dihapus dari riwayat`,
+        status: 'Berhasil',
+      });
       showToast(`Pesanan #${id} berhasil dihapus!`);
     } else if (type === 'racik-chicken') {
       const updated = chickenOptions.filter((c) => c.id !== id);
@@ -1723,12 +1769,30 @@ function doPost(e) {
       const updated = adminUsers.filter((a) => a.id !== id);
       saveAdmins(updated);
       setAdminUsers(updated);
+      recordAuditLog({
+        user: currentUser?.name || 'Super Admin',
+        role: currentUser?.role || 'Super Admin',
+        outlet: 'Semua Cabang',
+        category: 'Admin System',
+        action: 'Hapus Akun Admin/Pengunjung',
+        details: `Akun "${target?.fullName || id}" (${target?.role || 'User'}) telah dihapus`,
+        status: 'Berhasil',
+      });
       showToast(`🗑️ Akun ${isVisitor ? 'Pengunjung' : 'Admin'} "${target?.fullName || id}" berhasil dihapus dari sistem & Cloud Firestore!`);
     } else if (type === 'role') {
       const targetRole = roleSettings.find((r) => r.id === id);
       const updatedRoles = roleSettings.filter((r) => r.id !== id);
       saveRoleSettings(updatedRoles);
       setRoleSettings(updatedRoles);
+      recordAuditLog({
+        user: currentUser?.name || 'Super Admin',
+        role: currentUser?.role || 'Super Admin',
+        outlet: 'Semua Cabang',
+        category: 'Admin System',
+        action: 'Hapus Role',
+        details: `Role "${targetRole?.name || id}" telah dihapus`,
+        status: 'Berhasil',
+      });
 
       // Re-assign employees/admins with deleted role to first remaining role
       if (targetRole && updatedRoles.length > 0) {
@@ -1883,6 +1947,16 @@ function doPost(e) {
     setMenuItems(updatedList);
     saveMenuItems(updatedList);
     setShowMenuModal(false);
+
+    recordAuditLog({
+      user: currentUser?.name || 'Admin',
+      role: currentUser?.role || 'Admin',
+      outlet: 'Semua Cabang',
+      category: 'Kelola Menu',
+      action: editingMenuItemId ? 'Edit Menu' : 'Tambah Menu',
+      details: `Menu "${menuName}" (${menuCategory}) harga ${formatRupiah(Number(menuPrice))}`,
+      status: 'Berhasil',
+    });
   };
 
   const handleDeleteMenu = (id: string) => {
@@ -2212,6 +2286,17 @@ function doPost(e) {
     }
 
     setShowAddEmpModal(false);
+
+    recordAuditLog({
+      user: currentUser?.name || 'Admin',
+      role: currentUser?.role || 'Admin',
+      outlet: empOutlet,
+      category: 'Data Karyawan',
+      action: editingEmpId ? 'Edit Karyawan' : 'Tambah Karyawan',
+      details: `Karyawan "${empName.trim()}" (Role: ${empRole}, Outlet: ${empOutlet})`,
+      status: 'Berhasil',
+    });
+
     showToast(`✅ Data Karyawan "${empName.trim()}" & sinkronisasi Penggajian berhasil diperbarui realtime!`);
   };
 
@@ -2889,7 +2974,17 @@ function doPost(e) {
 
     setPayrollSlips(generatedSlips);
     savePayroll(generatedSlips);
-    showToast(`✅ Berhasil menghitung otomatis slip gaji periode ${cutoffLabel} (${periodLabelMonth})!`);
+    showToast(`✅ Berhasil mengalkulasi gaji ${generatedSlips.length} karyawan aktif untuk periode ${cutoffLabel}!`);
+
+    recordAuditLog({
+      user: currentUser?.name || 'Admin / HR',
+      role: currentUser?.role || 'Admin',
+      outlet: 'Semua Cabang',
+      category: 'Penggajian',
+      action: 'Kalkulasi Gaji Cut-Off',
+      details: `Kalkulasi gaji otomatis ${generatedSlips.length} karyawan periode ${cutoffLabel}`,
+      status: 'Berhasil',
+    });
   };
 
   const handleSyncOvertimeRateToAllEmployees = async (newRate: number) => {
@@ -3233,6 +3328,17 @@ function doPost(e) {
     if (newStatus === 'Lunas / Terbayar' && slip) {
       processLoanDeductionOnPayrollPaid(slip, employeeLoans);
     }
+
+    recordAuditLog({
+      user: currentUser?.name || 'Admin / HR',
+      role: currentUser?.role || 'Admin',
+      outlet: slip?.outlet || 'Semua Cabang',
+      category: 'Penggajian',
+      action: 'Update Status Gaji',
+      details: `Status slip gaji ${slip?.employeeName || id} diubah menjadi "${newStatus}"`,
+      status: 'Berhasil',
+    });
+
     showToast('Status pembayaran gaji diperbarui!');
   };
 
@@ -3831,6 +3937,17 @@ function doPost(e) {
     setSchedules(updated);
     saveSchedules(updated);
     setShowGenerateScheduleModal(false);
+
+    recordAuditLog({
+      user: currentUser?.name || 'Admin / HR',
+      role: currentUser?.role || 'Admin',
+      outlet: scheduleOutletFilter === 'ALL' ? 'Semua Cabang' : scheduleOutletFilter,
+      category: 'Jadwal Shift',
+      action: 'Generate Roster Jadwal',
+      details: `Generate roster ${schedulePeriod} (${generated.length} penugasan, model: ${getGenModelName(scheduleGenModel)})`,
+      status: 'Berhasil',
+    });
+
     showToast(`🎉 Roster berhasil diterbitkan (${generated.length} penugasan) menggunakan model: ${getGenModelName(scheduleGenModel)}!`);
   };
 
@@ -5282,6 +5399,17 @@ function doPost(e) {
     setPosDiscountAmount(0);
     setPosDiscountCode('');
     setPosCashPaid(0);
+
+    recordAuditLog({
+      user: currentCashierName,
+      role: currentUser?.role || 'Kasir',
+      outlet: cashierOutlet,
+      category: 'Transaksi POS',
+      action: 'Order POS Selesai',
+      details: `Pesanan #${orderId} (${cashierServiceType}) senilai ${formatRupiah(grandTotal)} [${posPaymentMethod}] - ${cartItemsStr}`,
+      status: 'Berhasil',
+    });
+
     showToast(`Transaksi POS ${orderId} Berhasil Diproses!`);
   };
 

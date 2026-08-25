@@ -38,7 +38,7 @@ import {
   Upload
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
-import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans, getStoredMonthlyDeductions, saveMonthlyDeductions } from '../utils';
+import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans, getStoredMonthlyDeductions, saveMonthlyDeductions, recordAuditLog } from '../utils';
 import { pullCashierShiftsFromFirestore, pullExpensesFromFirestore } from '../lib/firebaseServices';
 import * as XLSX from 'xlsx';
 
@@ -1959,6 +1959,17 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       } Mengarahkan ke WhatsApp 081223233299...`
     );
 
+    // Record Audit Log
+    recordAuditLog({
+      user: currentUser?.name || newShift.cashierName,
+      role: currentUser?.role || 'Kasir',
+      outlet: newShift.outlet,
+      category: 'Closing Kasir',
+      action: isEdit ? 'Edit Closing Shift' : 'Verifikasi Closing Shift',
+      details: `Audit shift ${newShift.shiftName} kasir ${newShift.cashierName}. Omset: ${formatRupiah(newShift.totalRevenue)}, Selisih Kas: ${formatRupiah(newShift.cashDifference)} (${newShift.auditStatus})`,
+      status: 'Berhasil',
+    });
+
     // Otomatis arahkan pengiriman laporan ke WhatsApp 081223233299
     try {
       handleSendClosingShiftWhatsApp(newShift);
@@ -1993,6 +2004,17 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     const updated = [newExp, ...expenses];
     setExpenses(updated);
     saveExpensesData(updated);
+
+    recordAuditLog({
+      user: currentUser?.name || 'Kasir / Staff',
+      role: currentUser?.role || 'Kasir',
+      outlet: newExp.outlet,
+      category: 'Kas Kecil',
+      action: expenseModalSource === 'cash_flow' ? 'Catat Beban Usaha' : 'Catat Pengeluaran Kas Kecil',
+      details: `${newExp.description} (${newExp.category}) - ${formatRupiah(newExp.amount)}`,
+      status: 'Berhasil',
+    });
+
     setShowExpenseModal(false);
     setExpDescription('');
     setExpAmount(20000);

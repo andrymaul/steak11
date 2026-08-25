@@ -26,7 +26,8 @@ import {
   getStoredLocations,
   getStoredWaSettings,
   getStoredBranding,
-  getLocalDateStr
+  getLocalDateStr,
+  recordAuditLog
 } from '../utils';
 import {
   pullAttendanceFromFirestore,
@@ -628,6 +629,17 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
       setSuccessMsg(`Berhasil Presensi Masuk untuk ${currentEmp.name} pukul ${timeStr} WIB (${evalResult.badgeText})!`);
       setCapturedSelfie(null);
       setNotes('');
+
+      recordAuditLog({
+        user: currentEmp.name,
+        role: currentEmp.role,
+        outlet: selectedOutlet,
+        category: 'Absensi Staff',
+        action: 'Clock In Absensi',
+        details: `Presensi Masuk (${evalResult.badgeText}) di ${selectedOutlet}`,
+        status: 'Berhasil',
+      });
+
       if (showToast) showToast('✅ Presensi Masuk berhasil tersimpan di Cloud Firestore!');
     } catch (err: any) {
       console.error('Attendance submit error:', err);
@@ -725,9 +737,20 @@ export const PresensiKameraManager: React.FC<PresensiKameraManagerProps> = ({
         waMessage: waMsg
       });
 
-      setSuccessMsg(`Berhasil Absen Pulang untuk ${currentEmp.name} pukul ${timeStr} WIB (Durasi: ${hours} Jam)!`);
+      setSuccessMsg(`Berhasil Presensi Pulang untuk ${currentEmp.name} pukul ${timeStr} WIB (Total: ${hours} Jam, ${evalResult.badgeText})!`);
       setCapturedSelfie(null);
       setNotes('');
+
+      recordAuditLog({
+        user: currentEmp.name,
+        role: currentEmp.role,
+        outlet: selectedOutlet,
+        category: 'Absensi Staff',
+        action: 'Clock Out Absensi',
+        details: `Presensi Pulang (${evalResult.badgeText}) total ${hours} jam di ${selectedOutlet}`,
+        status: 'Berhasil',
+      });
+
       if (showToast) showToast('✅ Absen Pulang berhasil tersimpan di Cloud Firestore!');
     } catch (err: any) {
       console.error('Clock out submit error:', err);

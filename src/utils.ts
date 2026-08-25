@@ -1049,34 +1049,42 @@ export function getStoredAuditLogs(): AuditLogItem[] {
 }
 
 export function saveAuditLogs(logs: AuditLogItem[]): void {
-  localStorage.setItem('steak11_audit_logs', JSON.stringify(logs));
+  try {
+    localStorage.setItem('steak11_audit_logs', JSON.stringify(logs));
+  } catch (err) {
+    console.error('Failed to save audit logs to localStorage:', err);
+  }
   window.dispatchEvent(new Event('audit_logs_updated'));
   syncUserDataToFirestore('audit_logs', logs);
 }
 
-export function recordAuditLog(log: Omit<AuditLogItem, 'id' | 'timestamp'> & { id?: string; timestamp?: string }): void {
-  const existing = getStoredAuditLogs();
-  const now = new Date();
-  const timeStr = now.toTimeString().split(' ')[0];
-  const dateStr = now.toISOString().split('T')[0];
-  const idStr = `AUD-${dateStr.replace(/-/g, '')}-${String(existing.length + 1).padStart(3, '0')}`;
+export function recordAuditLog(log: Omit<AuditLogItem, 'id' | 'timestamp' | 'date'> & { id?: string; timestamp?: string; date?: string }): void {
+  try {
+    const existing = getStoredAuditLogs();
+    const now = new Date();
+    const timeStr = now.toTimeString().split(' ')[0];
+    const dateStr = now.toISOString().split('T')[0];
+    const idStr = `AUD-${dateStr.replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
 
-  const newLog: AuditLogItem = {
-    id: log.id || idStr,
-    timestamp: log.timestamp || `${dateStr} ${timeStr}`,
-    date: log.date || dateStr,
-    user: log.user || 'Admin / Kasir',
-    role: log.role || 'Kasir',
-    outlet: log.outlet || 'Steak 11, Cibubur',
-    category: log.category,
-    action: log.action,
-    details: log.details,
-    status: log.status || 'Berhasil',
-    ipAddress: log.ipAddress || '127.0.0.1'
-  };
+    const newLog: AuditLogItem = {
+      id: log.id || idStr,
+      timestamp: log.timestamp || `${dateStr} ${timeStr}`,
+      date: log.date || dateStr,
+      user: log.user || 'Admin / Kasir',
+      role: log.role || 'Kasir',
+      outlet: log.outlet || 'Steak 11, Cibubur',
+      category: log.category,
+      action: log.action,
+      details: log.details,
+      status: log.status || 'Berhasil',
+      ipAddress: log.ipAddress || '127.0.0.1'
+    };
 
-  const updated = [newLog, ...existing];
-  saveAuditLogs(updated);
+    const updated = [newLog, ...existing].slice(0, 500);
+    saveAuditLogs(updated);
+  } catch (err) {
+    console.error('Error recording audit log:', err);
+  }
 }
 
 // --- STOCK MUTATION / KARTU STOK STORAGE ---
