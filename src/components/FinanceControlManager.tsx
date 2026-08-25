@@ -32,7 +32,8 @@ import {
   Store,
   ShoppingBag,
   RefreshCw,
-  Send
+  Send,
+  Edit
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
 import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans, getStoredMonthlyDeductions, saveMonthlyDeductions } from '../utils';
@@ -204,6 +205,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   };
 
   const [showClosingModal, setShowClosingModal] = useState(false);
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
   const [closingDate, setClosingDate] = useState<string>(todayStr);
   const [auditDateFilterMode, setAuditDateFilterMode] = useState<'semua' | 'harian' | 'bulanan'>('semua');
   const [auditFilterDate, setAuditFilterDate] = useState<string>(todayStr);
@@ -449,6 +451,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   });
 
   const handleOpenInputClosingShift = () => {
+    setEditingShiftId(null);
     const initialOutlet = (locations && locations[0]?.name) || (outletsList && outletsList[0]) || 'Steak 11, Cibubur';
     const availableShifts = getShiftsForOutlet(initialOutlet);
     setClosingDate(todayStr);
@@ -477,6 +480,52 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     });
     setManualActualCash(0);
     setUseDenominationCalc(true);
+    setShowClosingModal(true);
+  };
+
+  const handleOpenEditClosingShift = (shift: CashierShiftRecord) => {
+    if (checkReadOnlyPermission()) return;
+    setEditingShiftId(shift.id);
+    setClosingDate(shift.date);
+    setOutlet(shift.outlet);
+    setShiftName(shift.shiftName);
+    setCashierName(shift.cashierName);
+    setStartingCash(shift.startingCash);
+    setManualCashAdjustment(shift.manualCashAdjustment || 0);
+    setManualExpenseItems(
+      (shift.expenseItems || []).map((itm, idx) => ({
+        id: itm.id || `exp-item-${Date.now()}-${idx}`,
+        category: itm.category,
+        description: itm.description,
+        amount: itm.amount,
+        employeeId: itm.employeeId,
+        employeeName: itm.employeeName,
+      }))
+    );
+    setTempExpenseDesc('');
+    setTempExpenseAmount('');
+    setActualQrisRevenue(shift.actualQrisRevenue ?? shift.qrisRevenue ?? 0);
+    setActualTransferRevenue(shift.actualTransferRevenue ?? shift.transferRevenue ?? 0);
+    setOnlineFoodRevenue(shift.actualOnlineFoodRevenue ?? shift.onlineFoodRevenue ?? 0);
+    setNotes(shift.notes || '');
+
+    if (shift.denominations && Object.keys(shift.denominations).length > 0) {
+      setDenominations({
+        '100000': shift.denominations['100000'] || 0,
+        '50000': shift.denominations['50000'] || 0,
+        '20000': shift.denominations['20000'] || 0,
+        '10000': shift.denominations['10000'] || 0,
+        '5000': shift.denominations['5000'] || 0,
+        '2000': shift.denominations['2000'] || 0,
+        '1000': shift.denominations['1000'] || 0,
+        'koin': shift.denominations['koin'] || 0,
+      });
+      setManualActualCash(shift.actualCashInDrawer || shift.actualCashTotal || 0);
+      setUseDenominationCalc(true);
+    } else {
+      setManualActualCash(shift.actualCashInDrawer || shift.actualCashTotal || 0);
+      setUseDenominationCalc(false);
+    }
     setShowClosingModal(true);
   };
 
@@ -1773,8 +1822,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       generatedId = `${datePrefix}-${Date.now().toString().slice(-4)}`;
     }
 
+    const shiftIdToSave = editingShiftId || generatedId;
+
     const newShift: CashierShiftRecord = {
-      id: generatedId,
+      id: shiftIdToSave,
       date: effectiveDate,
       shiftName,
       cashierName: currentUser?.name || cashierName,
@@ -1800,11 +1851,16 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
       auditStatus,
       notes: notes.trim() || 'Closing shift tercatat otomatis.',
       status: 'Closed',
-      closedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      closedAt: editingShiftId
+        ? (shifts.find((s) => s.id === editingShiftId)?.closedAt || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }))
+        : new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       denominations,
     };
 
-    const updated = [newShift, ...shifts.filter(s => s.id !== generatedId)];
+    const updated = editingShiftId
+      ? (shifts || []).map((s) => (s.id === editingShiftId ? newShift : s))
+      : [newShift, ...(shifts || []).filter(s => s.id !== generatedId)];
+
     setShifts(updated);
     saveShiftsData(updated);
     try {
@@ -1892,9 +1948,11 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }
 
     setShowClosingModal(false);
+    const isEdit = Boolean(editingShiftId);
+    setEditingShiftId(null);
     const kasbonCount = kasbonItems.length;
     showToast(
-      `✅ Closing Shift Kasir ${newShift.id} berhasil disimpan!${
+      `✅ ${isEdit ? 'Perubahan data' : 'Data'} Closing Shift Kasir ${newShift.id} berhasil disimpan!${
         kasbonCount > 0 ? ` ${kasbonCount} Kasbon Karyawan otomatis disinkronkan ke Menu Penggajian.` : ''
       } Mengarahkan ke WhatsApp 081223233299...`
     );
@@ -2411,6 +2469,14 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                             </span>
                           </td>
                           <td className="p-2.5 text-right flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditClosingShift(shf)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer transition-all"
+                              title="Edit Data Audit Closing Shift Ini"
+                            >
+                              <Edit className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                              Edit
+                            </button>
                             <button
                               onClick={() => handleSendClosingShiftWhatsApp(shf)}
                               className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer transition-all"
@@ -3877,10 +3943,12 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
             <div>
               <h3 className="font-extrabold text-lg text-[#3D1259] dark:text-amber-400 font-baloo flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-emerald-500" />
-                Audit & Closing Shift Kasir Terpadu
+                {editingShiftId ? `Edit Audit Closing Shift (${editingShiftId})` : 'Audit & Closing Shift Kasir Terpadu'}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Rekonsiliasi kas laci fisik, arus modal, penjualan tunai/nontunai, online food, serta pengeluaran operasional per outlet.
+                {editingShiftId
+                  ? 'Perbarui rekonsiliasi kas laci fisik, arus modal, penjualan tunai/nontunai, atau pengeluaran operasional shift ini.'
+                  : 'Rekonsiliasi kas laci fisik, arus modal, penjualan tunai/nontunai, online food, serta pengeluaran operasional per outlet.'}
               </p>
             </div>
 
@@ -4395,7 +4463,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                   onClick={handleSaveClosingShift}
                   className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black cursor-pointer shadow-lg hover:shadow-emerald-500/20 transition-all"
                 >
-                  Simpan Closing Shift
+                  {editingShiftId ? 'Simpan Perubahan Closing Shift' : 'Simpan Closing Shift'}
                 </button>
               </div>
             </div>
