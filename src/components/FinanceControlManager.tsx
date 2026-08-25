@@ -33,7 +33,9 @@ import {
   ShoppingBag,
   RefreshCw,
   Send,
-  Edit
+  Edit,
+  FileSpreadsheet,
+  Upload
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
 import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans, getStoredMonthlyDeductions, saveMonthlyDeductions } from '../utils';
@@ -2189,10 +2191,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
               setExpenseModalSource('petty_cash');
               setShowExpenseModal(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Catat Kas Kecil Laci</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Catat Pengeluaran</span>
           </button>
         )}
 
@@ -2203,24 +2205,24 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                 setExpenseModalSource('cash_flow');
                 setShowExpenseModal(true);
               }}
-              className="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Catat Beban Cash Flow</span>
+              <span>Catat Beban</span>
             </button>
             <button
               onClick={handlePrintCashFlowReport}
-              className="px-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-[#3D1259] dark:text-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Cetak</span>
+              <span>Cetak Laporan</span>
             </button>
             <button
               onClick={handleExportCashFlowExcel}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Excel</span>
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Ekspor Excel</span>
             </button>
           </div>
         )}
@@ -2233,24 +2235,24 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                 setDedOutlet(monthlyPnlOutlet === 'ALL' ? 'Semua Cabang (Konsolidasi)' : monthlyPnlOutlet);
                 setShowDeductionModal(true);
               }}
-              className="px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Biaya Pengurang</span>
+              <span>Tambah Beban Usaha</span>
             </button>
             <button
               onClick={handlePrintMonthlyNetProfitReport}
-              className="px-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-[#3D1259] dark:text-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Cetak</span>
+              <span>Cetak Laporan</span>
             </button>
             <button
               onClick={handleExportMonthlyNetProfitExcel}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Excel</span>
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Ekspor Excel</span>
             </button>
           </div>
         )}
@@ -2259,17 +2261,17 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrintPaymentMethodsReport}
-              className="px-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-[#3D1259] dark:text-amber-300 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Cetak</span>
+              <span>Cetak Laporan</span>
             </button>
             <button
               onClick={handleExportPaymentMethodsExcel}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Excel</span>
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Ekspor Excel</span>
             </button>
           </div>
         )}

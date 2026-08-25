@@ -7202,32 +7202,30 @@ function doPost(e) {
                 <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
                   <button
                     onClick={loadAllData}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-950/80 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700/60 font-extrabold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                    <RefreshCw className="w-3.5 h-3.5" /> <span>Refresh Data</span>
                   </button>
 
                   <button
                     onClick={() => syncFromSheets(false)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-xs cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-slate-700 dark:text-purple-200 border border-slate-300 dark:border-purple-800 font-extrabold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
-                    <CloudDownload className="w-3.5 h-3.5 text-purple-950" /> Sync Sheet
+                    <CloudDownload className="w-3.5 h-3.5" /> <span>Sync Sheet</span>
                   </button>
 
-                  {/* Ekspor Excel (Warna Hijau) */}
                   <button
                     onClick={handleDownloadExcel}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-xs cursor-pointer transition-all"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-white" /> Ekspor Excel
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Excel</span>
                   </button>
 
-                  {/* Cetak PDF (Warna Merah) */}
                   <button
                     onClick={handleDownloadPdf}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-xs cursor-pointer transition-all"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
-                    <FileText className="w-3.5 h-3.5 text-white" /> Cetak PDF
+                    <Printer className="w-3.5 h-3.5" /> <span>Cetak PDF</span>
                   </button>
                 </div>
               </div>
@@ -7942,23 +7940,25 @@ function doPost(e) {
                 <button
                   onClick={handleRefreshEmployees}
                   disabled={isRefreshingEmployees}
-                  className="px-3.5 py-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 font-extrabold text-xs hover:bg-purple-200 dark:hover:bg-purple-800 border border-purple-300 dark:border-purple-700 shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                  className="px-3.5 py-2 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-950/80 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95 disabled:opacity-50"
                   title="Refresh Data Karyawan dari Cloud Firestore"
                 >
-                  <RefreshCw className={`w-4 h-4 text-purple-700 dark:text-purple-300 ${isRefreshingEmployees ? 'animate-spin' : ''}`} />
-                  {isRefreshingEmployees ? 'Memuat Data...' : 'Refresh Data'}
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingEmployees ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshingEmployees ? 'Memuat Data...' : 'Refresh Data'}</span>
                 </button>
 
                 <button
                   onClick={handleDownloadEmployeeTemplate}
-                  className="px-3.5 py-2.5 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer shrink-0 transition-all"
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-slate-700 dark:text-purple-200 border border-slate-300 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                   title="Unduh Template Excel untuk Impor Data Karyawan"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-amber-400" /> Download Template
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Unduh Template</span>
                 </button>
 
-                <label className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors">
-                  <Upload className="w-4 h-4 text-white" /> Impor Excel / CSV
+                <label className="px-3.5 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Impor Excel</span>
                   <input
                     type="file"
                     accept=".xlsx, .xls, .csv"
@@ -7969,10 +7969,11 @@ function doPost(e) {
 
                 <button
                   onClick={handleExportEmployeesXlsx}
-                  className="px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                   title="Ekspor Seluruh Data Karyawan ke File Excel"
                 >
-                  <Download className="w-4 h-4 text-white" /> Ekspor Data Excel
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Ekspor Excel</span>
                 </button>
 
                 <button
@@ -7980,17 +7981,19 @@ function doPost(e) {
                     setTempOtRate(defaultOvertimeRate);
                     setShowOvertimeRateSettingsModal(true);
                   }}
-                  className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
+                  className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                   title="Pengaturan Rate Lembur Terintegrasi & Sinkronisasi Karyawan"
                 >
-                  <Clock className="w-4 h-4 text-white" /> Aturan & Rate Lembur
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Aturan Lembur</span>
                 </button>
 
                 <button
                   onClick={handleOpenAddEmp}
-                  className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-2 cursor-pointer shrink-0"
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                 >
-                  <PlusCircle className="w-4 h-4" /> Tambah Karyawan Baru
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah Karyawan</span>
                 </button>
               </div>
             </div>
@@ -8153,54 +8156,54 @@ function doPost(e) {
                   </p>
                 </div>
 
-                {/* Toolbar Action Buttons: Refresh, XLSX, PDF, Sync Sheet, Lembur */}
+                {/* Toolbar Action Buttons: Lembur, Kamera, Refresh, Excel, PDF, Sync Sheet */}
                 <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                   <button
                     onClick={handleOpenAddOvertime}
-                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
                     title="Catat Presensi Lembur Karyawan (Tanpa Foto Selfie)"
                   >
-                    <Clock className="w-3.5 h-3.5" /> + Catat Presensi Lembur
+                    <Plus className="w-3.5 h-3.5" /> <span>Catat Lembur</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('presensi_kamera')}
-                    className="px-3.5 py-2 rounded-xl bg-[#3D1259] dark:bg-amber-400 text-amber-300 dark:text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-purple-900/80 hover:bg-purple-900 text-amber-300 border border-purple-700 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                     title="Buka Menu Presensi Kamera Selfie"
                   >
-                    <Camera className="w-3.5 h-3.5 text-emerald-400 dark:text-purple-950" /> Kamera Selfie Live
+                    <Camera className="w-3.5 h-3.5" /> <span>Kamera Selfie Live</span>
                   </button>
 
                   <button
                     onClick={handleRefreshAttendance}
-                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-900/50 hover:bg-slate-200 dark:hover:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-950/80 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700/60 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                     title="Refresh data dari memori"
                   >
-                    <RefreshCw className="w-3.5 h-3.5 text-amber-500" /> Refresh Data
+                    <RefreshCw className="w-3.5 h-3.5" /> <span>Refresh Data</span>
                   </button>
 
                   <button
                     onClick={handleDownloadAttendanceXlsx}
-                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                     title="Ekspor data .xlsx"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5" /> Ekspor Excel
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Excel</span>
                   </button>
 
                   <button
                     onClick={handleDownloadAttendancePdf}
-                    className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                     title="Cetak data PDF"
                   >
-                    <FileText className="w-3.5 h-3.5" /> Cetak PDF
+                    <Printer className="w-3.5 h-3.5" /> <span>Cetak PDF</span>
                   </button>
 
                   <button
                     onClick={() => syncAttendanceSheets(false)}
-                    className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-extrabold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-slate-700 dark:text-purple-200 border border-slate-300 dark:border-purple-800 font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                     title="Sinkronisasi dengan Google Apps Script"
                   >
-                    <CloudDownload className="w-3.5 h-3.5 text-purple-950" /> Sync Sheet
+                    <CloudDownload className="w-3.5 h-3.5" /> <span>Sync Sheet</span>
                   </button>
                 </div>
               </div>
@@ -8934,19 +8937,27 @@ function doPost(e) {
                 {/* Action Buttons Toolbar */}
                 <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-end">
                   <button
+                    onClick={handleCalculatePayroll}
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+                    title="Kalkulasi otomatis seluruh slip gaji karyawan berdasarkan rentang tanggal cut-off yang aktif"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" /> <span>Hitung Otomatis</span>
+                  </button>
+
+                  <button
                     onClick={() => setShowLoanLedgerModal(true)}
-                    className="px-3 py-2 rounded-xl bg-purple-900 text-amber-300 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-800 border border-purple-700 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    className="px-3.5 py-2 rounded-xl bg-purple-900/80 hover:bg-purple-900 text-amber-300 border border-purple-700 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                     title="Kelola & Lihat Riwayat Pinjaman Kasbon Berkelanjutan Karyawan"
                   >
-                    <Banknote className="w-3.5 h-3.5 text-amber-400" /> Riwayat Kasbon
+                    <Banknote className="w-3.5 h-3.5 text-amber-400" /> <span>Riwayat Kasbon</span>
                   </button>
 
                   <button
                     onClick={() => setShowLatePenaltySettingsModal(true)}
-                    className="px-3 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                     title="Pengaturan Batas Toleransi Menit Keterlambatan Denda"
                   >
-                    <Sliders className="w-3.5 h-3.5 text-purple-700 dark:text-amber-400" /> Toleransi Telat ({latePenaltyThresholdMinutes}m)
+                    <Sliders className="w-3.5 h-3.5" /> <span>Toleransi Telat ({latePenaltyThresholdMinutes}m)</span>
                   </button>
 
                   <button
@@ -8954,42 +8965,34 @@ function doPost(e) {
                       setTempOtRate(defaultOvertimeRate);
                       setShowOvertimeRateSettingsModal(true);
                     }}
-                    className="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                     title="Pengaturan Rate Lembur Terintegrasi & Sinkronisasi Karyawan"
                   >
-                    <Clock className="w-3.5 h-3.5 text-white" /> Aturan & Rate Lembur
-                  </button>
-
-                  <button
-                    onClick={handleCalculatePayroll}
-                    className="px-4 py-2 rounded-xl bg-amber-400 text-purple-950 font-black text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ring-2 ring-amber-300"
-                    title="Kalkulasi otomatis seluruh slip gaji karyawan berdasarkan rentang tanggal cut-off yang aktif"
-                  >
-                    <Sparkles className="w-4 h-4 text-purple-950 animate-spin" /> Hitung Otomatis Cut-Off
-                  </button>
-
-                  <button
-                    onClick={() => syncPayrollSheets(false)}
-                    className="px-3 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                    title="Sinkronisasi slip penggajian langsung ke Google Sheets"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5" /> Sync Sheet
+                    <Clock className="w-3.5 h-3.5" /> <span>Aturan Lembur</span>
                   </button>
 
                   <button
                     onClick={handlePrintMonthlyPayrollReport}
-                    className="px-3 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                     title="Cetak Laporan Rekapitulasi Penggajian Bulanan dalam format PDF"
                   >
-                    <Printer className="w-3.5 h-3.5" /> Cetak PDF
+                    <Printer className="w-3.5 h-3.5" /> <span>Cetak PDF</span>
                   </button>
 
                   <button
                     onClick={handleDownloadExcelPayroll}
-                    className="px-3 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                     title="Ekspor Rekapitulasi Penggajian Bulanan ke file Excel .xlsx"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5" /> Ekspor Excel
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Excel</span>
+                  </button>
+
+                  <button
+                    onClick={() => syncPayrollSheets(false)}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-slate-700 dark:text-purple-200 border border-slate-300 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+                    title="Sinkronisasi slip penggajian langsung ke Google Sheets"
+                  >
+                    <CloudDownload className="w-3.5 h-3.5" /> <span>Sync Sheet</span>
                   </button>
                 </div>
               </div>
@@ -9389,47 +9392,47 @@ function doPost(e) {
                     <>
                       <button
                         onClick={() => setShowGenerateScheduleModal(true)}
-                        className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                         title="Pilih model & generate jadwal shift roster otomatis 1 bulan penuh"
                       >
-                        <Sparkles className="w-3.5 h-3.5" /> Generate Otomatis
-                      </button>
-
-                      <button
-                        onClick={() => setShowShiftTemplateModal(true)}
-                        className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                      >
-                        <Sliders className="w-3.5 h-3.5" /> Master Shift
+                        <Sparkles className="w-3.5 h-3.5" /> <span>Generate Otomatis</span>
                       </button>
 
                       <button
                         onClick={() => handleOpenAssignSchedule()}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Tambah Shift
+                        <Plus className="w-3.5 h-3.5" /> <span>Tambah Shift</span>
+                      </button>
+
+                      <button
+                        onClick={() => setShowShiftTemplateModal(true)}
+                        className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+                      >
+                        <Sliders className="w-3.5 h-3.5" /> <span>Master Shift</span>
                       </button>
 
                       <button
                         onClick={handleDownloadExcelScheduleRoster}
-                        className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                         title="Ekspor Roster Shift ke Excel Profesional"
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Ekspor Roster
+                        <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Excel</span>
                       </button>
 
                       <button
                         onClick={handleDownloadExcelImportScheduleTemplate}
-                        className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-200 border border-slate-200 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-slate-700 dark:text-purple-200 border border-slate-300 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                         title="Unduh Format Template Excel Roster Shift untuk Diimpor"
                       >
-                        <Download className="w-3.5 h-3.5 text-blue-500" /> Template
+                        <Download className="w-3.5 h-3.5" /> <span>Unduh Template</span>
                       </button>
 
                       <label
-                        className="px-3 py-2 rounded-xl bg-blue-600 text-white font-extrabold text-xs hover:bg-blue-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                         title="Unggah & Impor Roster Shift dari File Excel (.xlsx)"
                       >
-                        <Upload className="w-3.5 h-3.5" /> Impor
+                        <Upload className="w-3.5 h-3.5" /> <span>Impor Excel</span>
                         <input
                           type="file"
                           accept=".xlsx, .xls, .csv"
@@ -9442,10 +9445,10 @@ function doPost(e) {
                     <>
                       <button
                         onClick={handleDownloadExcelActualAttendanceMatrix}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
                         title="Ekspor Matriks Realisasi Presensi Digital ke File Excel"
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5" /> Ekspor Matriks Realisasi (Excel)
+                        <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Matriks Realisasi (Excel)</span>
                       </button>
 
                       <button
@@ -10084,16 +10087,16 @@ function doPost(e) {
                 {adminActiveSubTab === 'accounts' ? (
                   <button
                     onClick={handleOpenAddAdmin}
-                    className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> Tambah Admin Baru
+                    <Plus className="w-3.5 h-3.5" /> <span>Tambah Admin</span>
                   </button>
                 ) : (
                   <button
                     onClick={handleOpenAddRole}
-                    className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> Tambah Master Role
+                    <Plus className="w-3.5 h-3.5" /> <span>Tambah Role</span>
                   </button>
                 )}
               </div>

@@ -558,15 +558,15 @@ app.listen(PORT, () => console.log(\`🚀 WA Gateway Server running on port \${P
           <div className="flex items-center gap-2">
             <button
               onClick={handleSyncFromOrders}
-              className="px-4 py-2.5 bg-amber-400 text-purple-950 hover:bg-amber-300 font-bold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 shadow-sm"
+              className="px-3.5 py-2 bg-purple-100 hover:bg-purple-200 text-purple-950 font-extrabold text-xs rounded-xl transition-all active:scale-95 flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
-              <RefreshCw className="w-4 h-4" /> Sync dari POS
+              <RefreshCw className="w-3.5 h-3.5" /> <span>Sync dari POS</span>
             </button>
             <button
               onClick={handleOpenAddCustomer}
-              className="px-4 py-2.5 bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase tracking-wider rounded-xl transition flex items-center gap-2 shadow-sm"
+              className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs rounded-xl transition-all active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <UserPlus className="w-4 h-4 text-purple-600" /> Pelanggan Baru
+              <UserPlus className="w-3.5 h-3.5" /> <span>Tambah Pelanggan</span>
             </button>
           </div>
         </div>
