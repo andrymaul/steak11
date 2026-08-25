@@ -6775,9 +6775,9 @@ function doPost(e) {
                     doc.save(`Laporan_Laba_Rugi_Steak11_${new Date().toISOString().split('T')[0]}.pdf`);
                     showToast('Laporan Laba Rugi berhasil diekspor ke PDF!');
                   }}
-                  className="px-3 py-2 rounded-xl bg-purple-900 text-amber-300 font-bold text-xs hover:bg-purple-800 transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileText className="w-4 h-4" /> Unduh PDF
+                  <Printer className="w-3.5 h-3.5" /> <span>Cetak PDF</span>
                 </button>
               </div>
             </div>
@@ -7518,16 +7518,16 @@ function doPost(e) {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowCategoryModal(true)}
-                    className="px-3.5 py-2.5 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                   >
-                    <Folder className="w-4 h-4" /> Pengaturan Kategori
+                    <Folder className="w-3.5 h-3.5" /> <span>Aturan Kategori</span>
                   </button>
 
                   <button
                     onClick={handleOpenAddMenu}
-                    className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0 transition-all active:scale-95"
                   >
-                    <Plus className="w-4 h-4 text-purple-950" /> Tambah Menu Baru
+                    <Plus className="w-3.5 h-3.5" /> <span>Tambah Menu</span>
                   </button>
                 </div>
               </div>
@@ -7752,9 +7752,9 @@ function doPost(e) {
                 </div>
                 <button
                   onClick={() => handleOpenAddRacik('chicken')}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  <Plus className="w-4 h-4" /> Tambah Pilihan Daging
+                  <Plus className="w-3.5 h-3.5" /> <span>Tambah Daging</span>
                 </button>
               </div>
 
@@ -7811,9 +7811,9 @@ function doPost(e) {
                 </div>
                 <button
                   onClick={() => handleOpenAddRacik('sauce')}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  <Plus className="w-4 h-4" /> Tambah Saus Signature
+                  <Plus className="w-3.5 h-3.5" /> <span>Tambah Saus</span>
                 </button>
               </div>
 
@@ -7872,9 +7872,9 @@ function doPost(e) {
                 </div>
                 <button
                   onClick={() => handleOpenAddRacik('addon')}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  <Plus className="w-4 h-4" /> Tambah Add On
+                  <Plus className="w-3.5 h-3.5" /> <span>Tambah Add On</span>
                 </button>
               </div>
 
@@ -9445,26 +9445,26 @@ function doPost(e) {
                     <>
                       <button
                         onClick={handleDownloadExcelActualAttendanceMatrix}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                         title="Ekspor Matriks Realisasi Presensi Digital ke File Excel"
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Matriks Realisasi (Excel)</span>
+                        <FileSpreadsheet className="w-3.5 h-3.5" /> <span>Ekspor Excel</span>
                       </button>
 
                       <button
                         onClick={handleOpenAddOvertime}
-                        className="px-3.5 py-2 rounded-xl bg-indigo-600 text-white font-extrabold text-xs hover:bg-indigo-700 shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                         title="Catat Presensi Lembur Karyawan"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Catat Lembur
+                        <Plus className="w-3.5 h-3.5" /> <span>Catat Lembur</span>
                       </button>
 
                       <button
                         onClick={() => setActiveTab('absensi')}
-                        className="px-3.5 py-2 rounded-xl bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-amber-300 font-extrabold text-xs hover:bg-purple-200 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 border border-purple-300 dark:border-purple-700 font-extrabold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
                         title="Buka Tabel Rekap Presensi Digital Lengkap"
                       >
-                        <UserCheck className="w-3.5 h-3.5 text-emerald-500" /> Rekap Presensi Lengkap
+                        <UserCheck className="w-3.5 h-3.5" /> <span>Rekap Presensi</span>
                       </button>
                     </>
                   )}
@@ -9975,9 +9975,9 @@ function doPost(e) {
 
               <button
                 onClick={handleOpenAddOutlet}
-                className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
               >
-                <Plus className="w-4 h-4" /> Tambah Outlet Baru
+                <Plus className="w-3.5 h-3.5" /> <span>Tambah Outlet</span>
               </button>
             </div>
 
@@ -10263,9 +10263,9 @@ function doPost(e) {
                   </div>
                   <button
                     onClick={handleOpenAddRole}
-                    className="px-3.5 py-2 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
-                    <Plus className="w-4 h-4" /> Tambah Role Baru
+                    <Plus className="w-3.5 h-3.5" /> <span>Tambah Role</span>
                   </button>
                 </div>
 
@@ -10906,9 +10906,9 @@ function doPost(e) {
 
               <button
                 onClick={handleOpenAddPromo}
-                className="px-4 py-2.5 rounded-xl bg-amber-400 text-purple-950 font-extrabold text-xs hover:bg-amber-300 shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
-                <Plus className="w-4 h-4" /> Terbitkan Promo Baru
+                <Plus className="w-3.5 h-3.5" /> <span>Tambah Promo</span>
               </button>
             </div>
 

@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Eye,
   Trash2,
-  Layers
+  Layers,
+  FileSpreadsheet
 } from 'lucide-react';
 import { AuditLogItem } from '../types';
 import { getStoredAuditLogs, saveAuditLogs } from '../utils';
@@ -143,17 +144,17 @@ export const AuditLogManager: React.FC<AuditLogManagerProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-purple-950 hover:bg-slate-200 dark:hover:bg-purple-900 border border-slate-200 dark:border-purple-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-950/80 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-purple-600 dark:text-amber-400" />
-            <span>Refresh</span>
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Data</span>
           </button>
 
           <button
             onClick={handleExportExcel}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-extrabold text-xs shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
           >
-            <Download className="w-4 h-4" />
+            <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Ekspor Excel</span>
           </button>
         </div>

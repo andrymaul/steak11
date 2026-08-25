@@ -1031,39 +1031,39 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
         {subTab === 'inventory' && (
           <button
             onClick={handleOpenAddInventory}
-            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-extrabold text-xs flex items-center gap-1.5 shadow cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Bahan Baku</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Tambah Bahan</span>
           </button>
         )}
 
         {subTab === 'stock_opname' && (
           <button
             onClick={() => handleOpenOpname()}
-            className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs flex items-center gap-1.5 shadow cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Input Stock Opname</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Catat Opname</span>
           </button>
         )}
 
         {subTab === 'stock_transfers' && (
           <button
             onClick={() => handleOpenTransfer()}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Kirim Transfer Stok</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Transfer Stok</span>
           </button>
         )}
 
         {subTab === 'suppliers' && (
           <button
             onClick={handleOpenAddSupplier}
-            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-extrabold text-xs flex items-center gap-1.5 shadow cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Tambah Supplier</span>
           </button>
         )}
@@ -1071,10 +1071,10 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
         {subTab === 'purchase_orders' && (
           <button
             onClick={() => handleOpenAddPo()}
-            className="px-3.5 py-2 rounded-xl bg-purple-800 hover:bg-purple-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4 text-amber-400" />
-            <span>Buat PO Restock</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Tambah PO</span>
           </button>
         )}
       </div>
