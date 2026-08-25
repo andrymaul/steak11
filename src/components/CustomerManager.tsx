@@ -125,6 +125,15 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({ onShowToast, c
 
   useEffect(() => {
     loadData();
+    const handleCustomerUpdate = () => {
+      loadData();
+    };
+    window.addEventListener('customers_updated', handleCustomerUpdate);
+    window.addEventListener('orders_updated', handleCustomerUpdate);
+    return () => {
+      window.removeEventListener('customers_updated', handleCustomerUpdate);
+      window.removeEventListener('orders_updated', handleCustomerUpdate);
+    };
   }, []);
 
   const loadData = () => {

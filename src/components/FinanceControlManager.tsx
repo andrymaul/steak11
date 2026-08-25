@@ -34,7 +34,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
-import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans } from '../utils';
+import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans, getStoredMonthlyDeductions, saveMonthlyDeductions } from '../utils';
 import { pullCashierShiftsFromFirestore, pullExpensesFromFirestore } from '../lib/firebaseServices';
 import * as XLSX from 'xlsx';
 
@@ -340,46 +340,19 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   const [dedNotes, setDedNotes] = useState('');
 
   // Stored Monthly Deductions
-  const [monthlyDeductions, setMonthlyDeductions] = useState<MonthlyDeductionItem[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('steak11_monthly_deductions');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
-        } catch {}
-      }
-    }
-    return [
-      {
-        id: 'DED-202608-01',
-        month: todayStr.substring(0, 7),
-        outlet: 'Steak 11, Cibubur',
-        category: 'Sewa Tempat & Gedung',
-        name: 'Biaya Sewa Ruko & Lokasi Cabang Cibubur',
-        amount: 3500000,
-        notes: 'Sewa bulanan ruko operasional',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'DED-202608-02',
-        month: todayStr.substring(0, 7),
-        outlet: 'Semua Cabang (Konsolidasi)',
-        category: 'Marketing & Promo',
-        name: 'Biaya Marketing, Iklan Ads & Konten Medsos',
-        amount: 500000,
-        notes: 'Budget promosi bulanan',
-        createdAt: new Date().toISOString()
-      }
-    ];
-  });
+  const [monthlyDeductions, setMonthlyDeductions] = useState<MonthlyDeductionItem[]>(() => getStoredMonthlyDeductions());
+
+  useEffect(() => {
+    const handleDeductionsUpdate = () => {
+      setMonthlyDeductions(getStoredMonthlyDeductions());
+    };
+    window.addEventListener('monthly_deductions_updated', handleDeductionsUpdate);
+    return () => window.removeEventListener('monthly_deductions_updated', handleDeductionsUpdate);
+  }, []);
 
   const saveMonthlyDeductionsData = (data: MonthlyDeductionItem[]) => {
     setMonthlyDeductions(data);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('steak11_monthly_deductions', JSON.stringify(data));
-      window.dispatchEvent(new Event('monthly_deductions_updated'));
-    }
+    saveMonthlyDeductions(data);
   };
 
   const handleDeleteDeduction = (id: string, name: string) => {

@@ -1116,6 +1116,8 @@ function doPost(e) {
     setPurchaseOrders(getStoredPurchaseOrders());
     setExpenses(getStoredExpenses());
     setEmployeeLoans(getStoredEmployeeLoans());
+    setShiftTemplates(getStoredShiftTemplates());
+    setSchedules(getStoredSchedules());
   };
 
   useEffect(() => {
@@ -1161,7 +1163,6 @@ function doPost(e) {
           setExpenses(liveExpenses);
         }
       });
-      syncFromSheets(true);
     }
     const handleUpdate = () => {
       loadAllData();
@@ -1170,7 +1171,10 @@ function doPost(e) {
       'orders_updated', 'menu_items_updated', 'menu_categories_updated', 'employees_updated', 'attendance_updated',
       'payroll_updated', 'locations_updated', 'admins_updated', 'inventory_updated',
       'promos_updated', 'cashier_shifts_updated', 'reviews_updated', 'suppliers_updated',
-      'purchase_orders_updated', 'expenses_updated', 'employee_loans_updated', 'schedules_updated'
+      'purchase_orders_updated', 'expenses_updated', 'employee_loans_updated', 'schedules_updated',
+      'shift_templates_updated', 'recipes_updated', 'monthly_deductions_updated', 'branding_updated',
+      'wa_settings_updated', 'role_settings_updated', 'payment_settings_updated', 'receipt_settings_updated',
+      'late_penalty_threshold_updated', 'overtime_rate_updated'
     ];
     events.forEach((evt) => window.addEventListener(evt, handleUpdate));
     return () => {
@@ -1218,11 +1222,12 @@ function doPost(e) {
 
     if (!silent) showToast('Menghubungkan ke Google Sheets untuk sinkronisasi pesanan...');
 
-    // Try posting current local orders first to sync up
+    const currentOrders = getStoredOrders();
+    // Post current local orders to Google Sheets
     fetch(gasUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'sync_orders', orders: orders })
+      body: JSON.stringify({ action: 'sync_orders', orders: currentOrders })
     })
       .then((res) => res.json())
       .then((data) => {
@@ -1230,38 +1235,15 @@ function doPost(e) {
           saveOrders(data.orders);
           setOrders(data.orders);
           if (!silent) showToast('Berhasil sinkronisasi pesanan dengan Google Spreadsheet!');
+        } else if (data && (data.status === 'success' || data.message)) {
+          if (!silent) showToast('✅ Pesanan berhasil disinkronkan ke Google Spreadsheet!');
         } else {
-          // Fetch latest GET
-          return fetch(gasUrl)
-            .then((r) => r.json())
-            .then((getOrders) => {
-              if (Array.isArray(getOrders) && getOrders.length > 0) {
-                saveOrders(getOrders);
-                setOrders(getOrders);
-                if (!silent) showToast('Berhasil sinkronisasi pesanan dari Google Sheets!');
-              } else {
-                if (!silent) showToast('Pesanan tersinkronisasi dengan Spreadsheet.');
-              }
-            });
+          if (!silent) showToast('Pesanan tersinkronisasi dengan Spreadsheet.');
         }
       })
       .catch((err) => {
         console.error('GAS Order Sync Error:', err);
-        // Fallback GET fetch
-        fetch(gasUrl)
-          .then((res) => res.json())
-          .then((data) => {
-            if (Array.isArray(data) && data.length > 0) {
-              saveOrders(data);
-              setOrders(data);
-              if (!silent) showToast('Berhasil menarik data pesanan dari Google Sheets!');
-            } else {
-              if (!silent) showToast('Koneksi Google Sheets aktif.');
-            }
-          })
-          .catch(() => {
-            if (!silent) showToast('Gagal terhubung ke Google Sheets.');
-          });
+        if (!silent) showToast('Gagal terhubung ke Google Sheets.');
       });
   };
 

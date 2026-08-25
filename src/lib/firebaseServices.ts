@@ -1049,6 +1049,30 @@ export const getInitialDataForKey = (key: string): any => {
     case 'shift_templates': return DEFAULT_SHIFT_TEMPLATES;
     case 'schedules': return [];
     case 'employee_loans': return [];
+    case 'monthly_deductions': return [
+      {
+        id: 'DED-202608-01',
+        month: new Date().toISOString().substring(0, 7),
+        outlet: 'Steak 11, Cibubur',
+        category: 'Sewa Tempat & Gedung',
+        name: 'Biaya Sewa Ruko & Lokasi Cabang Cibubur',
+        amount: 3500000,
+        notes: 'Sewa bulanan ruko operasional',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'DED-202608-02',
+        month: new Date().toISOString().substring(0, 7),
+        outlet: 'Semua Cabang (Konsolidasi)',
+        category: 'Marketing & Promo',
+        name: 'Biaya Marketing, Iklan Ads & Konten Medsos',
+        amount: 500000,
+        notes: 'Budget promosi bulanan',
+        createdAt: new Date().toISOString()
+      }
+    ];
+    case 'late_penalty_threshold': return 30;
+    case 'overtime_rate': return 15000;
     default: return [];
   }
 };
@@ -1067,12 +1091,21 @@ export const pushAllLocalDataToFirestore = async () => {
     'role_settings', 'wa_settings', 'branding', 'inventory', 'promos', 'cashier_shifts',
     'reviews', 'suppliers', 'purchase_orders', 'expenses', 'recipes', 'stock_opnames',
     'stock_transfers', 'audit_logs', 'stock_mutations', 'customers', 'wa_gateway_config',
-    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url'
+    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url',
+    'monthly_deductions', 'late_penalty_threshold', 'overtime_rate'
   ];
 
   for (const key of keys) {
     try {
-      const rawLocal = localStorage.getItem('steak11_' + key);
+      let rawLocal = localStorage.getItem('steak11_' + key);
+      if (key === 'recipes' && !rawLocal) {
+        rawLocal = localStorage.getItem('steak11_menu_recipes');
+      } else if (key === 'schedules' && !rawLocal) {
+        rawLocal = localStorage.getItem('steak11_employee_schedules');
+      } else if (key === 'overtime_rate' && !rawLocal) {
+        rawLocal = localStorage.getItem('steak11_default_overtime_rate');
+      }
+
       let data: any;
       if (rawLocal !== null) {
         try {
@@ -1107,7 +1140,8 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
     'role_settings', 'wa_settings', 'branding', 'inventory', 'promos', 'cashier_shifts',
     'reviews', 'suppliers', 'purchase_orders', 'expenses', 'recipes', 'stock_opnames',
     'stock_transfers', 'audit_logs', 'stock_mutations', 'customers', 'wa_gateway_config',
-    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url'
+    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url',
+    'monthly_deductions', 'late_penalty_threshold', 'overtime_rate'
   ];
 
   let count = 0;
@@ -1131,7 +1165,17 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
         } else if (key === 'expenses' && Array.isArray(finalData)) {
           finalData = finalData.filter((e: any) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
         }
-        localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
+        
+        const jsonVal = JSON.stringify(finalData);
+        localStorage.setItem('steak11_' + key, jsonVal);
+        if (key === 'recipes') {
+          localStorage.setItem('steak11_menu_recipes', jsonVal);
+        } else if (key === 'schedules') {
+          localStorage.setItem('steak11_employee_schedules', jsonVal);
+        } else if (key === 'overtime_rate') {
+          localStorage.setItem('steak11_default_overtime_rate', jsonVal);
+        }
+
         window.dispatchEvent(new Event(key + '_updated'));
         if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
           window.dispatchEvent(new Event('racik_options_updated'));
@@ -1166,7 +1210,8 @@ export const cleanUpLegacyUserDocs = async (): Promise<{ success: boolean; delet
     'role_settings', 'wa_settings', 'branding', 'inventory', 'promos', 'cashier_shifts',
     'reviews', 'suppliers', 'purchase_orders', 'expenses', 'recipes', 'stock_opnames',
     'stock_transfers', 'audit_logs', 'stock_mutations', 'customers', 'wa_gateway_config',
-    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url'
+    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url',
+    'monthly_deductions', 'late_penalty_threshold', 'overtime_rate'
   ];
 
   let deletedCount = 0;
@@ -1238,7 +1283,8 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
     'role_settings', 'wa_settings', 'branding', 'inventory', 'promos', 'cashier_shifts',
     'reviews', 'suppliers', 'purchase_orders', 'expenses', 'recipes', 'stock_opnames',
     'stock_transfers', 'audit_logs', 'stock_mutations', 'customers', 'wa_gateway_config',
-    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url'
+    'shift_templates', 'schedules', 'employee_loans', 'payment_settings', 'receipt_settings', 'gas_url',
+    'monthly_deductions', 'late_penalty_threshold', 'overtime_rate'
   ];
 
   const unsubscribes: (() => void)[] = [];
@@ -1251,6 +1297,12 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
         window.dispatchEvent(new Event(keyName + '_updated'));
         if (keyName === 'chicken_options' || keyName === 'sauce_options' || keyName === 'addon_options') {
           window.dispatchEvent(new Event('racik_options_updated'));
+        }
+        if (keyName === 'menu_recipes' || keyName === 'recipes') {
+          window.dispatchEvent(new Event('recipes_updated'));
+        }
+        if (keyName === 'employee_schedules' || keyName === 'schedules') {
+          window.dispatchEvent(new Event('schedules_updated'));
         }
       }
     };
@@ -1292,6 +1344,14 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           if (finalJson !== currentLocal || finalJson !== lastRemoteJson) {
             lastRemoteJson = finalJson;
             localStorage.setItem('steak11_' + key, finalJson);
+            if (key === 'recipes') {
+              localStorage.setItem('steak11_menu_recipes', finalJson);
+            } else if (key === 'schedules') {
+              localStorage.setItem('steak11_employee_schedules', finalJson);
+            } else if (key === 'overtime_rate') {
+              localStorage.setItem('steak11_default_overtime_rate', finalJson);
+            }
+
             window.dispatchEvent(new Event(key + '_updated'));
             if (key === 'chicken_options' || key === 'sauce_options' || key === 'addon_options') {
               window.dispatchEvent(new Event('racik_options_updated'));
@@ -1299,7 +1359,15 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           }
         } else {
           // Document does not exist in Firestore yet: seed from initial / local data once
-          const rawLocal = localStorage.getItem('steak11_' + key);
+          let rawLocal = localStorage.getItem('steak11_' + key);
+          if (key === 'recipes' && !rawLocal) {
+            rawLocal = localStorage.getItem('steak11_menu_recipes');
+          } else if (key === 'schedules' && !rawLocal) {
+            rawLocal = localStorage.getItem('steak11_employee_schedules');
+          } else if (key === 'overtime_rate' && !rawLocal) {
+            rawLocal = localStorage.getItem('steak11_default_overtime_rate');
+          }
+
           let initialData: any;
           if (rawLocal !== null) {
             try {

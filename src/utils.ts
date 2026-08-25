@@ -1,4 +1,4 @@
-import { OrderItem, Employee, AttendanceRecord, PayrollSlip, LocationItem, MenuItem, ChickenOption, SauceOption, AddonOption, AdminUser, RoleSetting, WaNotificationSettings, StoreBrandingSettings, InventoryItem, PromoVoucher, CashierShiftRecord, ReviewItem, Supplier, PurchaseOrder, PettyCashExpense, MenuRecipe, StockOpnameLog, StockTransfer, PaymentMethodSettings, ReceiptSettings, AuditLogItem, StockMutation, Customer, WaGatewayConfig, WorkShiftTemplate, EmployeeSchedule, EmployeeLoan } from './types';
+import { OrderItem, Employee, AttendanceRecord, PayrollSlip, LocationItem, MenuItem, ChickenOption, SauceOption, AddonOption, AdminUser, RoleSetting, WaNotificationSettings, StoreBrandingSettings, InventoryItem, PromoVoucher, CashierShiftRecord, ReviewItem, Supplier, PurchaseOrder, PettyCashExpense, MenuRecipe, StockOpnameLog, StockTransfer, PaymentMethodSettings, ReceiptSettings, AuditLogItem, StockMutation, Customer, WaGatewayConfig, WorkShiftTemplate, EmployeeSchedule, EmployeeLoan, MonthlyDeductionItem } from './types';
 import {
   DEFAULT_ORDERS,
   DEFAULT_GAS_URL,
@@ -824,7 +824,7 @@ export function saveExpenses(expenses: PettyCashExpense[]): void {
 
 // --- MENU RECIPES (BOM) STORAGE ---
 export function getStoredRecipes(): MenuRecipe[] {
-  const stored = localStorage.getItem('steak11_menu_recipes');
+  const stored = localStorage.getItem('steak11_menu_recipes') ?? localStorage.getItem('steak11_recipes');
   if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
@@ -838,9 +838,11 @@ export function getStoredRecipes(): MenuRecipe[] {
 
 export function saveRecipes(recipes: MenuRecipe[]): void {
   localStorage.setItem('steak11_menu_recipes', JSON.stringify(recipes));
+  localStorage.setItem('steak11_recipes', JSON.stringify(recipes));
   window.dispatchEvent(new Event('recipes_updated'));
   syncUserDataToFirestore('recipes', recipes);
 }
+
 
 // --- STOCK OPNAME LOGS STORAGE ---
 export function getStoredStockOpnames(): StockOpnameLog[] {
@@ -1223,10 +1225,12 @@ export function getStoredShiftTemplates(): WorkShiftTemplate[] {
 
 export function saveShiftTemplates(data: WorkShiftTemplate[]): void {
   localStorage.setItem('steak11_shift_templates', JSON.stringify(data));
+  window.dispatchEvent(new Event('shift_templates_updated'));
+  syncUserDataToFirestore('shift_templates', data);
 }
 
 export function getStoredSchedules(): EmployeeSchedule[] {
-  const stored = localStorage.getItem('steak11_employee_schedules');
+  const stored = localStorage.getItem('steak11_employee_schedules') ?? localStorage.getItem('steak11_schedules');
   if (stored !== null) {
     try {
       const parsed = JSON.parse(stored);
@@ -1240,7 +1244,55 @@ export function getStoredSchedules(): EmployeeSchedule[] {
 
 export function saveSchedules(data: EmployeeSchedule[]): void {
   localStorage.setItem('steak11_employee_schedules', JSON.stringify(data));
+  localStorage.setItem('steak11_schedules', JSON.stringify(data));
+  window.dispatchEvent(new Event('schedules_updated'));
+  syncUserDataToFirestore('schedules', data);
 }
+
+// --- MONTHLY DEDUCTIONS STORAGE ---
+export type { MonthlyDeductionItem };
+
+export function getStoredMonthlyDeductions(): MonthlyDeductionItem[] {
+  const stored = localStorage.getItem('steak11_monthly_deductions');
+  if (stored !== null) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return [];
+    }
+  }
+  const todayMonth = new Date().toISOString().substring(0, 7);
+  return [
+    {
+      id: 'DED-202608-01',
+      month: todayMonth,
+      outlet: 'Steak 11, Cibubur',
+      category: 'Sewa Tempat & Gedung',
+      name: 'Biaya Sewa Ruko & Lokasi Cabang Cibubur',
+      amount: 3500000,
+      notes: 'Sewa bulanan ruko operasional',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'DED-202608-02',
+      month: todayMonth,
+      outlet: 'Semua Cabang (Konsolidasi)',
+      category: 'Marketing & Promo',
+      name: 'Biaya Marketing, Iklan Ads & Konten Medsos',
+      amount: 500000,
+      notes: 'Budget promosi bulanan',
+      createdAt: new Date().toISOString()
+    }
+  ];
+}
+
+export function saveMonthlyDeductions(data: MonthlyDeductionItem[]): void {
+  localStorage.setItem('steak11_monthly_deductions', JSON.stringify(data));
+  window.dispatchEvent(new Event('monthly_deductions_updated'));
+  syncUserDataToFirestore('monthly_deductions', data);
+}
+
 
 export function getStoredEmployeeLoans(): EmployeeLoan[] {
   const stored = localStorage.getItem('steak11_employee_loans');
