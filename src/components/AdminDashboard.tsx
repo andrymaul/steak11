@@ -7,6 +7,8 @@ import {
   RefreshCw,
   CloudDownload,
   FileSpreadsheet,
+  Sun,
+  Moon,
   FileText,
   Send,
   Users,
@@ -178,6 +180,8 @@ interface AdminDashboardProps {
   onClose: () => void;
   onOpenGasModal: () => void;
   currentUser?: { name: string; role: string; allowedTabs?: string[] } | null;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -185,6 +189,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onClose,
   onOpenGasModal,
   currentUser,
+  isDark,
+  onToggleTheme,
 }) => {
   // Navigation Tab
   const [activeTab, setActiveTabState] = useState<
@@ -5316,6 +5322,28 @@ function doPost(e) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Dark / Light Mode Toggle Button */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-amber-400/20 text-slate-800 dark:text-amber-300 hover:bg-slate-200 dark:hover:bg-amber-400/30 transition-all border border-slate-200 dark:border-amber-400/40 text-xs font-bold cursor-pointer shadow-xs"
+              aria-label="Toggle Dark/Light Mode"
+              title={isDark ? 'Ganti ke Mode Terang (Light Mode)' : 'Ganti ke Mode Gelap (Dark Mode)'}
+            >
+              {isDark ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="hidden sm:inline text-[11px] font-bold">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-purple-900 shrink-0" />
+                  <span className="hidden sm:inline text-[11px] font-bold">Dark</span>
+                </>
+              )}
+            </button>
+          )}
+
           <div
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-950/60 dark:bg-purple-900/40 border border-purple-800/60 text-amber-300 font-bold text-xs shadow-xs"
             title="Waktu Real-time Operasional"

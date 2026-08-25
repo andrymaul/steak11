@@ -426,6 +426,8 @@ export default function App() {
               onClose={handleLogout}
               onOpenGasModal={() => setGasModalOpen(true)}
               currentUser={currentUser || getStoredCurrentUser()}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
             />
           </Suspense>
         </ErrorBoundary>
