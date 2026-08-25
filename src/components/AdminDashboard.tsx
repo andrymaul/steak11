@@ -165,7 +165,11 @@ import {
   pullEmployeesFromFirestore,
   saveEmployeeDirectToCloud,
   updateEmployeeInCloud,
-  deleteEmployeeFromCloud
+  deleteEmployeeFromCloud,
+  subscribeToCashierShifts,
+  pullCashierShiftsFromFirestore,
+  subscribeToExpenses,
+  pullExpensesFromFirestore
 } from '../lib/firebaseServices';
 
 interface AdminDashboardProps {
@@ -1101,6 +1105,8 @@ function doPost(e) {
   useEffect(() => {
     let unsubAtt: (() => void) | null = null;
     let unsubEmp: (() => void) | null = null;
+    let unsubShf: (() => void) | null = null;
+    let unsubExp: (() => void) | null = null;
     if (isOpen) {
       loadAllData();
       pullEmployeesFromFirestore().then((records) => {
@@ -1108,6 +1114,12 @@ function doPost(e) {
       }).catch(() => {});
       pullAttendanceFromFirestore().then((records) => {
         if (records && records.length > 0) setAttendance(records);
+      }).catch(() => {});
+      pullCashierShiftsFromFirestore().then((records) => {
+        if (records && Array.isArray(records)) setCashierShifts(records);
+      }).catch(() => {});
+      pullExpensesFromFirestore().then((records) => {
+        if (records && Array.isArray(records)) setExpenses(records);
       }).catch(() => {});
 
       unsubEmp = subscribeToEmployees((liveEmployees) => {
@@ -1119,6 +1131,18 @@ function doPost(e) {
       unsubAtt = subscribeToAttendance((liveRecords) => {
         if (liveRecords && Array.isArray(liveRecords)) {
           setAttendance(liveRecords);
+        }
+      });
+
+      unsubShf = subscribeToCashierShifts((liveShifts) => {
+        if (liveShifts && Array.isArray(liveShifts)) {
+          setCashierShifts(liveShifts);
+        }
+      });
+
+      unsubExp = subscribeToExpenses((liveExpenses) => {
+        if (liveExpenses && Array.isArray(liveExpenses)) {
+          setExpenses(liveExpenses);
         }
       });
       syncFromSheets(true);
@@ -1136,6 +1160,8 @@ function doPost(e) {
     return () => {
       if (unsubEmp) unsubEmp();
       if (unsubAtt) unsubAtt();
+      if (unsubShf) unsubShf();
+      if (unsubExp) unsubExp();
       events.forEach((evt) => window.removeEventListener(evt, handleUpdate));
     };
   }, [isOpen]);
@@ -1149,6 +1175,14 @@ function doPost(e) {
     if (isOpen && activeTab === 'karyawan') {
       pullEmployeesFromFirestore().then((records) => {
         if (records && records.length > 0) setEmployees(records);
+      }).catch(() => {});
+    }
+    if (isOpen && (activeTab === 'shifts' || activeTab === 'expenses')) {
+      pullCashierShiftsFromFirestore().then((records) => {
+        if (records && Array.isArray(records)) setCashierShifts(records);
+      }).catch(() => {});
+      pullExpensesFromFirestore().then((records) => {
+        if (records && Array.isArray(records)) setExpenses(records);
       }).catch(() => {});
     }
   }, [isOpen, activeTab]);

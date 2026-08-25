@@ -10,7 +10,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { getDb, getAuthInstance, isFirebaseConfigured } from './firebase';
-import { MenuItem, OrderItem, AttendanceRecord, Employee } from '../types';
+import { MenuItem, OrderItem, AttendanceRecord, Employee, CashierShiftRecord, PettyCashExpense } from '../types';
 import {
   MENU_ITEMS,
   CHICKEN_OPTIONS,
@@ -449,6 +449,194 @@ export const pullAttendanceFromFirestore = async (): Promise<AttendanceRecord[]>
 };
 
 /**
+ * Subscribe to Realtime Cashier Shifts from Cloud Firestore
+ */
+export const subscribeToCashierShifts = (callback: (shifts: CashierShiftRecord[]) => void): (() => void) => {
+  const db = getDb();
+  if (!isFirebaseConfigured() || !db) return () => {};
+  try {
+    const docRef = doc(db, 'users', 'shared_app_store', 'data', 'cashier_shifts');
+    return onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists() && snapshot.data()?.payload) {
+        const remoteData = snapshot.data().payload;
+        if (Array.isArray(remoteData)) {
+          const cleaned = remoteData
+            .filter((s: CashierShiftRecord) => s && s.id !== 'SHF-20260810-01')
+            .sort((a: any, b: any) => {
+              const dateA = `${a.date} ${a.closedAt || '00:00'}`;
+              const dateB = `${b.date} ${b.closedAt || '00:00'}`;
+              return dateB.localeCompare(dateA);
+            });
+          try {
+            localStorage.setItem('steak11_cashier_shifts', JSON.stringify(cleaned));
+          } catch {}
+          window.dispatchEvent(new Event('cashier_shifts_updated'));
+          callback(cleaned);
+        }
+      }
+    }, (err) => {
+      console.warn('Error on subscribeToCashierShifts:', err);
+    });
+  } catch (error) {
+    console.warn('Error setting subscribeToCashierShifts:', error);
+    return () => {};
+  }
+};
+
+/**
+ * Pull the latest Cashier Shifts directly from Cloud Firestore (with API server fallback)
+ */
+export const pullCashierShiftsFromFirestore = async (): Promise<CashierShiftRecord[]> => {
+  const db = getDb();
+  let remoteShifts: CashierShiftRecord[] | null = null;
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'cashier_shifts');
+      const snap = await getDoc(docRef);
+      if (snap.exists() && snap.data()?.payload && Array.isArray(snap.data()?.payload)) {
+        remoteShifts = snap.data()?.payload;
+      }
+    } catch (e) {
+      console.warn('Direct Firestore fetch error for shifts, falling back to server API:', e);
+    }
+  }
+
+  // Fallback to /api/shifts if Firestore SDK had network/permission hiccups
+  if (!remoteShifts || remoteShifts.length === 0) {
+    try {
+      const res = await fetch('/api/shifts');
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && Array.isArray(json.shifts)) {
+          remoteShifts = json.shifts;
+        }
+      }
+    } catch {}
+  }
+
+  if (remoteShifts && Array.isArray(remoteShifts)) {
+    const cleaned = remoteShifts
+      .filter((s: CashierShiftRecord) => s && s.id !== 'SHF-20260810-01')
+      .sort((a: any, b: any) => {
+        const dateA = `${a.date} ${a.closedAt || '00:00'}`;
+        const dateB = `${b.date} ${b.closedAt || '00:00'}`;
+        return dateB.localeCompare(dateA);
+      });
+    try {
+      localStorage.setItem('steak11_cashier_shifts', JSON.stringify(cleaned));
+    } catch {}
+    window.dispatchEvent(new Event('cashier_shifts_updated'));
+    return cleaned;
+  }
+
+  const raw = localStorage.getItem('steak11_cashier_shifts');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((s: CashierShiftRecord) => s && s.id !== 'SHF-20260810-01');
+      }
+    } catch {}
+  }
+  return [];
+};
+
+/**
+ * Subscribe to Realtime Expenses from Cloud Firestore
+ */
+export const subscribeToExpenses = (callback: (expenses: PettyCashExpense[]) => void): (() => void) => {
+  const db = getDb();
+  if (!isFirebaseConfigured() || !db) return () => {};
+  try {
+    const docRef = doc(db, 'users', 'shared_app_store', 'data', 'expenses');
+    return onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists() && snapshot.data()?.payload) {
+        const remoteData = snapshot.data().payload;
+        if (Array.isArray(remoteData)) {
+          const cleaned = remoteData
+            .filter((e: PettyCashExpense) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01')
+            .sort((a: any, b: any) => {
+              const dateA = `${a.date} ${a.time || '00:00'}`;
+              const dateB = `${b.date} ${b.time || '00:00'}`;
+              return dateB.localeCompare(dateA);
+            });
+          try {
+            localStorage.setItem('steak11_expenses', JSON.stringify(cleaned));
+          } catch {}
+          window.dispatchEvent(new Event('expenses_updated'));
+          callback(cleaned);
+        }
+      }
+    }, (err) => {
+      console.warn('Error on subscribeToExpenses:', err);
+    });
+  } catch (error) {
+    console.warn('Error setting subscribeToExpenses:', error);
+    return () => {};
+  }
+};
+
+/**
+ * Pull the latest Expenses directly from Cloud Firestore (with API server fallback)
+ */
+export const pullExpensesFromFirestore = async (): Promise<PettyCashExpense[]> => {
+  const db = getDb();
+  let remoteExpenses: PettyCashExpense[] | null = null;
+
+  if (db && isFirebaseConfigured()) {
+    try {
+      const docRef = doc(db, 'users', 'shared_app_store', 'data', 'expenses');
+      const snap = await getDoc(docRef);
+      if (snap.exists() && snap.data()?.payload && Array.isArray(snap.data()?.payload)) {
+        remoteExpenses = snap.data()?.payload;
+      }
+    } catch (e) {
+      console.warn('Direct Firestore fetch error for expenses, falling back to server API:', e);
+    }
+  }
+
+  // Fallback to /api/expenses if Firestore SDK had network/permission hiccups
+  if (!remoteExpenses || remoteExpenses.length === 0) {
+    try {
+      const res = await fetch('/api/expenses');
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.success && Array.isArray(json.expenses)) {
+          remoteExpenses = json.expenses;
+        }
+      }
+    } catch {}
+  }
+
+  if (remoteExpenses && Array.isArray(remoteExpenses)) {
+    const cleaned = remoteExpenses
+      .filter((e: PettyCashExpense) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01')
+      .sort((a: any, b: any) => {
+        const dateA = `${a.date} ${a.time || '00:00'}`;
+        const dateB = `${b.date} ${b.time || '00:00'}`;
+        return dateB.localeCompare(dateA);
+      });
+    try {
+      localStorage.setItem('steak11_expenses', JSON.stringify(cleaned));
+    } catch {}
+    window.dispatchEvent(new Event('expenses_updated'));
+    return cleaned;
+  }
+
+  const raw = localStorage.getItem('steak11_expenses');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((e: PettyCashExpense) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
+      }
+    } catch {}
+  }
+  return [];
+};
+
+/**
  * Save new Attendance record directly to Cloud Firestore & Server API
  */
 /**
@@ -798,13 +986,27 @@ export const syncUserDataToFirestore = async (dataKey: string, payload: any) => 
     handleFirestoreError(err, OperationType.WRITE, `users/${targetUid}/data/${dataKey}`);
   }
 
-  // Dual-channel sync: Also post attendance to backend server API
-  if (dataKey === 'attendance' && Array.isArray(payload) && typeof fetch !== 'undefined') {
-    fetch('/api/attendance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attendance: sanitizedPayload })
-    }).catch(() => {});
+  // Dual-channel sync: Also post attendance, cashier_shifts, and expenses to backend server API
+  if (typeof fetch !== 'undefined') {
+    if (dataKey === 'attendance' && Array.isArray(payload)) {
+      fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendance: sanitizedPayload })
+      }).catch(() => {});
+    } else if (dataKey === 'cashier_shifts' && Array.isArray(payload)) {
+      fetch('/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shifts: sanitizedPayload })
+      }).catch(() => {});
+    } else if (dataKey === 'expenses' && Array.isArray(payload)) {
+      fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expenses: sanitizedPayload })
+      }).catch(() => {});
+    }
   }
 };
 
@@ -924,6 +1126,10 @@ export const pullAllFirestoreDataToLocal = async (): Promise<{ success: boolean;
           if (Array.isArray(localArr)) {
             finalData = mergeAttendancePhotos(finalData, localArr);
           }
+        } else if (key === 'cashier_shifts' && Array.isArray(finalData)) {
+          finalData = finalData.filter((s: any) => s && s.id !== 'SHF-20260810-01');
+        } else if (key === 'expenses' && Array.isArray(finalData)) {
+          finalData = finalData.filter((e: any) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
         }
         localStorage.setItem('steak11_' + key, JSON.stringify(finalData));
         window.dispatchEvent(new Event(key + '_updated'));
@@ -1075,6 +1281,10 @@ export const startPerUserFirestoreSync = (_uid?: string): (() => void) => {
           // For attendance, preserve local selfie URLs if remote doesn't have them
           if (key === 'attendance' && Array.isArray(remoteData) && Array.isArray(localData)) {
             finalData = mergeAttendancePhotos(remoteData, localData);
+          } else if (key === 'cashier_shifts' && Array.isArray(remoteData)) {
+            finalData = remoteData.filter((s: any) => s && s.id !== 'SHF-20260810-01');
+          } else if (key === 'expenses' && Array.isArray(remoteData)) {
+            finalData = remoteData.filter((e: any) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
           }
 
           const finalJson = JSON.stringify(finalData);

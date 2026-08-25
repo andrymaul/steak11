@@ -137,6 +137,90 @@ app.post('/api/attendance', async (req, res) => {
   }
 });
 
+// --- CASHIER SHIFTS SERVER API (DUAL-CHANNEL CROSS-BROWSER SYNC) ---
+app.get('/api/shifts', async (req, res) => {
+  try {
+    const targetUid = 'shared_app_store';
+    const shiftsDocRef = doc(fbDb, 'users', targetUid, 'data', 'cashier_shifts');
+    const snap = await getDoc(shiftsDocRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const rawShifts = Array.isArray(data?.payload) ? data.payload : [];
+      const cleaned = rawShifts.filter((s: any) => s && s.id !== 'SHF-20260810-01');
+      return res.json({
+        success: true,
+        shifts: cleaned
+      });
+    }
+    return res.json({ success: true, shifts: [] });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message });
+  }
+});
+
+app.post('/api/shifts', async (req, res) => {
+  try {
+    const { shifts } = req.body || {};
+    if (!Array.isArray(shifts)) {
+      return res.status(400).json({ success: false, message: 'Invalid shifts array' });
+    }
+    const targetUid = 'shared_app_store';
+    const shiftsDocRef = doc(fbDb, 'users', targetUid, 'data', 'cashier_shifts');
+    const cleaned = shifts.filter((s: any) => s && s.id !== 'SHF-20260810-01');
+
+    await setDoc(shiftsDocRef, {
+      payload: cleaned,
+      updatedAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, count: cleaned.length, shifts: cleaned });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message });
+  }
+});
+
+// --- EXPENSES SERVER API (DUAL-CHANNEL CROSS-BROWSER SYNC) ---
+app.get('/api/expenses', async (req, res) => {
+  try {
+    const targetUid = 'shared_app_store';
+    const expDocRef = doc(fbDb, 'users', targetUid, 'data', 'expenses');
+    const snap = await getDoc(expDocRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const rawExp = Array.isArray(data?.payload) ? data.payload : [];
+      const cleaned = rawExp.filter((e: any) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
+      return res.json({
+        success: true,
+        expenses: cleaned
+      });
+    }
+    return res.json({ success: true, expenses: [] });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message });
+  }
+});
+
+app.post('/api/expenses', async (req, res) => {
+  try {
+    const { expenses } = req.body || {};
+    if (!Array.isArray(expenses)) {
+      return res.status(400).json({ success: false, message: 'Invalid expenses array' });
+    }
+    const targetUid = 'shared_app_store';
+    const expDocRef = doc(fbDb, 'users', targetUid, 'data', 'expenses');
+    const cleaned = expenses.filter((e: any) => e && e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
+
+    await setDoc(expDocRef, {
+      payload: cleaned,
+      updatedAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, count: cleaned.length, expenses: cleaned });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message });
+  }
+});
+
 
 // Store for System Updates History
 const systemUpdateHistory: Array<{

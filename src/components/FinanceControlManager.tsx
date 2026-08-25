@@ -30,10 +30,12 @@ import {
   Layers,
   Sparkles,
   Store,
-  ShoppingBag
+  ShoppingBag,
+  RefreshCw
 } from 'lucide-react';
 import { CashierShiftRecord, PettyCashExpense, OrderItem, PayrollSlip, LocationItem, WorkShiftTemplate, MonthlyDeductionItem, Employee, EmployeeLoan } from '../types';
 import { formatRupiah, isRegisteredAdmin, getStoredEmployees, getStoredEmployeeLoans, saveEmployeeLoans } from '../utils';
+import { pullCashierShiftsFromFirestore, pullExpensesFromFirestore } from '../lib/firebaseServices';
 import * as XLSX from 'xlsx';
 
 interface FinanceControlManagerProps {
@@ -91,19 +93,24 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }
   }, [activeParentTab]);
 
-  // Auto-cleanup legacy dummy default shifts and expenses
-  useEffect(() => {
-    if ((shifts || []).some((s) => s.id === 'SHF-20260810-01')) {
-      const cleaned = (shifts || []).filter((s) => s.id !== 'SHF-20260810-01');
-      setShifts(cleaned);
-      saveShiftsData(cleaned);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+
+  const handleSyncCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      const [latestShifts, latestExpenses] = await Promise.all([
+        pullCashierShiftsFromFirestore(),
+        pullExpensesFromFirestore()
+      ]);
+      if (latestShifts && Array.isArray(latestShifts)) setShifts(latestShifts);
+      if (latestExpenses && Array.isArray(latestExpenses)) setExpenses(latestExpenses);
+      showToast(`✅ Data Audit Closing Shift & Kas telah disinkronkan (${(latestShifts || []).length} shift)!`);
+    } catch (e: any) {
+      showToast('⚠️ Gagal sinkronisasi data dari Cloud Firestore.');
+    } finally {
+      setIsSyncingCloud(false);
     }
-    if ((expenses || []).some((e) => e.id === 'EXP-20260810-001' || e.id === 'EXP-20260810-002' || e.shiftId === 'SHF-20260810-01')) {
-      const cleanedExp = (expenses || []).filter((e) => e.id !== 'EXP-20260810-001' && e.id !== 'EXP-20260810-002' && e.shiftId !== 'SHF-20260810-01');
-      setExpenses(cleanedExp);
-      saveExpensesData(cleanedExp);
-    }
-  }, [shifts, expenses]);
+  };
 
   // Active Employees & Loans fallback
   const activeEmployeesList = propEmployees && propEmployees.length > 0 ? propEmployees : getStoredEmployees();
@@ -2213,10 +2220,22 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
           <div className="p-4 rounded-2xl bg-white dark:bg-[#1a0c28] border border-slate-200 dark:border-purple-900 shadow-sm space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-purple-900/40">
-              <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
-                <Banknote className="w-4 h-4 text-emerald-500" />
-                Riwayat Closing Shift & Audit Selisih Kas ({filteredAuditShifts.length} Shift)
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-400 flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-emerald-500" />
+                  Riwayat Closing Shift & Audit Selisih Kas ({filteredAuditShifts.length} Shift)
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleSyncCloud}
+                  disabled={isSyncingCloud}
+                  className="px-2 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-900 dark:text-amber-300 font-extrabold text-[10px] inline-flex items-center gap-1 cursor-pointer transition-all disabled:opacity-50"
+                  title="Sinkronkan ulang data dari Cloud Firestore"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSyncingCloud ? 'animate-spin text-purple-600 dark:text-amber-400' : ''}`} />
+                  {isSyncingCloud ? 'Sinkron...' : 'Sync Cloud'}
+                </button>
+              </div>
 
               {/* Date Filter & Search Bar */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
