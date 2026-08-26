@@ -97,6 +97,7 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     }
   }, [activeParentTab]);
 
+  const isAdmin = isRegisteredAdmin(currentUser);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   const handleSyncCloud = async () => {
@@ -186,6 +187,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   } | null>(null);
 
   const handleDeleteShift = (id: string, shiftDesc: string) => {
+    if (!isAdmin) {
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Hapus data.');
+      return;
+    }
     setDeleteConfirmTarget({ id, desc: shiftDesc, type: 'shift' });
   };
 
@@ -361,6 +366,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   };
 
   const handleDeleteDeduction = (id: string, name: string) => {
+    if (!isAdmin) {
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Hapus data.');
+      return;
+    }
     const updated = monthlyDeductions.filter((d) => d.id !== id);
     saveMonthlyDeductionsData(updated);
     showToast(`🗑️ Biaya pengurang "${name}" berhasil dihapus.`);
@@ -486,7 +495,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   };
 
   const handleOpenEditClosingShift = (shift: CashierShiftRecord) => {
-    if (checkReadOnlyPermission()) return;
+    if (!isAdmin) {
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit data.');
+      return;
+    }
     setEditingShiftId(shift.id);
     setClosingDate(shift.date);
     setOutlet(shift.outlet);
@@ -1803,10 +1815,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
     window.open(waUrl, '_blank');
   };
 
-  const isReadOnlyVisitor = currentUser?.role?.toLowerCase() === 'pengunjung' || currentUser?.role?.toLowerCase().includes('visitor');
+  const isReadOnlyVisitor = !isAdmin;
   const checkReadOnlyPermission = (): boolean => {
-    if (isReadOnlyVisitor) {
-      showToast('🔒 Akses Ditolak: Hanya Pengguna Terdaftar yang memiliki izin untuk Edit & Hapus data.');
+    if (!isAdmin) {
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit & Hapus data.');
       return true;
     }
     return false;
@@ -1814,7 +1826,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
 
   // Handle Save Closing Shift
   const handleSaveClosingShift = () => {
-    if (checkReadOnlyPermission()) return;
+    if (editingShiftId && !isAdmin) {
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Edit data.');
+      return;
+    }
 
     const effectiveDate = closingDate || todayStr;
     const datePrefix = `SHF-${effectiveDate.replace(/-/g, '')}`;
@@ -2027,6 +2042,10 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
   };
 
   const handleDeleteExpense = (id: string, desc: string) => {
+    if (!isAdmin) {
+      showToast('🔒 Akses Ditolak: Hanya Admin Terdaftar yang memiliki izin untuk Hapus data.');
+      return;
+    }
     setDeleteConfirmTarget({ id, desc });
   };
 
@@ -2493,13 +2512,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                             </span>
                           </td>
                           <td className="p-2.5 text-right flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleOpenEditClosingShift(shf)}
-                              className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                              title="Edit Data Audit Closing Shift"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleOpenEditClosingShift(shf)}
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                title="Edit Data Audit Closing Shift"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleSendClosingShiftWhatsApp(shf)}
                               className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
@@ -2514,13 +2535,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                             >
                               <Printer className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => handleDeleteShift(shf.id, `${shf.id} - ${shf.date} (${shf.shiftName})`)}
-                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                              title="Hapus Record Closing Shift Ini"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDeleteShift(shf.id, `${shf.id} - ${shf.date} (${shf.shiftName})`)}
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                title="Hapus Record Closing Shift Ini"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -2603,13 +2626,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                         </td>
                         <td className="p-2.5 font-black text-rose-600 dark:text-rose-400">{formatRupiah(exp.amount)}</td>
                         <td className="p-2.5 text-right">
-                          <button
-                            onClick={() => handleDeleteExpense(exp.id, exp.description)}
-                            className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                            title="Hapus Pengeluaran"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDeleteExpense(exp.id, exp.description)}
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              title="Hapus Pengeluaran"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -3000,13 +3025,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                               -{formatRupiah(exp.amount)}
                             </td>
                             <td className="p-2.5 text-right">
-                              <button
-                                onClick={() => handleDeleteExpense(exp.id, exp.description)}
-                                className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
-                                title="Hapus pengeluaran ini"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={() => handleDeleteExpense(exp.id, exp.description)}
+                                  className="p-1 rounded text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 cursor-pointer"
+                                  title="Hapus pengeluaran ini"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))
@@ -3409,13 +3436,15 @@ export const FinanceControlManager: React.FC<FinanceControlManagerProps> = ({
                             -{formatRupiah(ded.amount)}
                           </td>
                           <td className="p-2.5 text-right">
-                            <button
-                              onClick={() => handleDeleteDeduction(ded.id, ded.name)}
-                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                              title="Hapus pos pengurang ini"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleDeleteDeduction(ded.id, ded.name)}
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                title="Hapus pos pengurang ini"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))

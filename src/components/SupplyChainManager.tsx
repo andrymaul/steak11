@@ -1253,20 +1253,24 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
                             >
                               <ArrowRightLeft className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => handleOpenEditInventory(item)}
-                              title="Edit Bahan Baku"
-                              className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteInventory(item.id, item.name)}
-                              title="Hapus Bahan Baku"
-                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isRegisteredAdmin(currentUser) && (
+                              <button
+                                onClick={() => handleOpenEditInventory(item)}
+                                title="Edit Bahan Baku"
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {isRegisteredAdmin(currentUser) && (
+                              <button
+                                onClick={() => handleDeleteInventory(item.id, item.name)}
+                                title="Hapus Bahan Baku"
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1361,13 +1365,15 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleOpenEditRecipe(menu)}
-                    className="w-full mt-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-950 dark:text-amber-300 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Atur Takaran Resep BOM</span>
-                  </button>
+                  {isRegisteredAdmin(currentUser) && (
+                    <button
+                      onClick={() => handleOpenEditRecipe(menu)}
+                      className="w-full mt-3 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/60 dark:hover:bg-purple-800 text-purple-950 dark:text-amber-300 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Atur Takaran Resep BOM</span>
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1802,20 +1808,24 @@ export const SupplyChainManager: React.FC<SupplyChainManagerProps> = ({
                     >
                       <ShoppingCart className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      onClick={() => handleOpenEditSupplier(sup)}
-                      className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                      title="Edit Data Supplier"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteSupplier(sup.id, sup.name)}
-                      className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                      title="Hapus Supplier"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {isRegisteredAdmin(currentUser) && (
+                      <button
+                        onClick={() => handleOpenEditSupplier(sup)}
+                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Edit Data Supplier"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {isRegisteredAdmin(currentUser) && (
+                      <button
+                        onClick={() => handleDeleteSupplier(sup.id, sup.name)}
+                        className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                        title="Hapus Supplier"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

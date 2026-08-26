@@ -7178,37 +7178,43 @@ function doPost(e) {
                     </div>
 
                     <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-purple-900/40">
-                      <button
-                        onClick={() => handleOpenEditReview(r)}
-                        className="px-2.5 py-1.5 rounded-xl bg-amber-100 text-purple-950 font-extrabold text-xs hover:bg-amber-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                        title="Edit Ulasan & Menu Favorit"
-                      >
-                        <Edit className="w-3.5 h-3.5" /> Edit
-                      </button>
-
-                      {r.status !== 'Disetujui' ? (
+                      {isRegisteredAdmin(currentUser) && (
                         <button
-                          onClick={() => handleApproveReview(r.id)}
-                          className="flex-1 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          onClick={() => handleOpenEditReview(r)}
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-100 text-purple-950 font-extrabold text-xs hover:bg-amber-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          title="Edit Ulasan & Menu Favorit"
                         >
-                          <Check className="w-3.5 h-3.5" /> Setujui
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleRejectReview(r.id)}
-                          className="flex-1 py-1.5 rounded-xl bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-300 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                        >
-                          <XCircle className="w-3.5 h-3.5" /> Sembunyi
+                          <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                       )}
 
-                      <button
-                        onClick={() => handleDeleteReview(r.id)}
-                        className="p-1.5 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer"
-                        title="Hapus Review"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {isRegisteredAdmin(currentUser) && (
+                        r.status !== 'Disetujui' ? (
+                          <button
+                            onClick={() => handleApproveReview(r.id)}
+                            className="flex-1 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Setujui
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleRejectReview(r.id)}
+                            className="flex-1 py-1.5 rounded-xl bg-slate-200 dark:bg-purple-900 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-300 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Sembunyi
+                          </button>
+                        )
+                      )}
+
+                      {isRegisteredAdmin(currentUser) && (
+                        <button
+                          onClick={() => handleDeleteReview(r.id)}
+                          className="p-1.5 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer"
+                          title="Hapus Review"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -7583,22 +7589,26 @@ function doPost(e) {
                               </button>
 
                               {/* Edit Order Button */}
-                              <button
-                                onClick={() => handleOpenEditOrder(o)}
-                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                                title="Edit Rincian Pesanan"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
+                              {isRegisteredAdmin(currentUser) && (
+                                <button
+                                  onClick={() => handleOpenEditOrder(o)}
+                                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                  title="Edit Rincian Pesanan"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
                               {/* Delete Order Button */}
-                              <button
-                                onClick={() => handleDeleteOrder(o.id)}
-                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                                title="Hapus Pesanan Ini"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {isRegisteredAdmin(currentUser) && (
+                                <button
+                                  onClick={() => handleDeleteOrder(o.id)}
+                                  className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                  title="Hapus Pesanan Ini"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -8908,22 +8918,26 @@ function doPost(e) {
                           </td>
                           <td className="p-4 align-top text-center">
                             <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditAttendance(rec)}
-                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                                title="Edit Data Absensi"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteAttendance(rec.id)}
-                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                                title="Hapus Data Absensi"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {isRegisteredAdmin(currentUser) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditAttendance(rec)}
+                                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                  title="Edit Data Absensi"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {isRegisteredAdmin(currentUser) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAttendance(rec.id)}
+                                  className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                  title="Hapus Data Absensi"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -9440,13 +9454,15 @@ function doPost(e) {
                           </td>
                           <td className="p-4 align-top text-center">
                             <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => handleOpenEditPayroll(slip)}
-                                title="Edit Bonus & Potongan Slip Gaji"
-                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
+                              {isRegisteredAdmin(currentUser) && (
+                                <button
+                                  onClick={() => handleOpenEditPayroll(slip)}
+                                  title="Edit Bonus & Potongan Slip Gaji"
+                                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handlePrintPayrollPdf(slip)}
                                 title="Download Slip Gaji PDF"

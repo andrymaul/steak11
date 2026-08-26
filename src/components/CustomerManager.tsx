@@ -163,6 +163,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({ onShowToast, c
   };
 
   const handleOpenEditCustomer = (cust: Customer) => {
+    if (checkReadOnlyPermission()) return;
     setEditingCustId(cust.id);
     setCustName(cust.name);
     setCustPhone(cust.phone);
@@ -237,6 +238,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({ onShowToast, c
   };
 
   const handleDeleteCustomer = (id: string, name: string) => {
+    if (checkReadOnlyPermission()) return;
     setDeleteConfirmTarget({ id, name });
   };
 
@@ -822,20 +824,24 @@ app.listen(PORT, () => console.log(\`🚀 WA Gateway Server running on port \${P
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => handleOpenEditCustomer(c)}
-                              title="Edit Data Pelanggan"
-                              className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCustomer(c.id, c.name)}
-                              title="Hapus Pelanggan"
-                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isRegisteredAdmin(currentUser) && (
+                              <button
+                                onClick={() => handleOpenEditCustomer(c)}
+                                title="Edit Data Pelanggan"
+                                className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {isRegisteredAdmin(currentUser) && (
+                              <button
+                                onClick={() => handleDeleteCustomer(c.id, c.name)}
+                                title="Hapus Pelanggan"
+                                className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 inline-flex items-center justify-center cursor-pointer transition-all shadow-xs"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
