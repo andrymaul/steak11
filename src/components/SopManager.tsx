@@ -568,17 +568,17 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
         [
           'Fase 1: Pre-Opening & Logistik\n30-60 Menit Sebelum Buka',
           '• Cibubur, Kalisari, Jatisampurna: 14.00 – 14.30\n• Cilangkap: 14.30 – 15.00\n• Kuningan: 09.00 – 09.30',
-          '1. Pengisian BBM & Logistik: Bensin motor wajib terisi (min. 1 jam sebelum jam masuk). Ambil stok daging, saus, sayur, es batu & kemasan di Dapur Pusat.\n2. Tiba di outlet min. 30 menit sebelum buka. Buka gembok gerobak.\n3. Clock-In Digital: Presensi masuk di steak11.vercel.app.\n4. Susun porsi ayam & saus di Coolbox berselang-seling es batu.\n5. Cek selang regulator gas. Kenakan apron bersih & buka papan "OPEN".'
+          '1. Pengisian BBM & Logistik: Bensin motor wajib terisi (min. 1 jam sebelum jam masuk). Ambil stok daging, saus, sayur, es batu & kemasan di Dapur Pusat.\n2. Tiba di outlet min. 30 menit sebelum buka. Buka gembok gerobak.\n3. Clock-In Digital: Presensi masuk di steak11.vercel.app.\n4. Susun porsi ayam & saus di Coolbox berselang-seling es batu.\n5. Cek selang regulator gas & kenakan apron bersih.'
         ],
         [
           'Fase 2: Operasional Reguler\nAwal Buka s/d Sebelum Peak Hours',
           '• Cibubur, Kalisari, Jatisampurna: 14.30 – 18.00\n• Cilangkap: 15.00 – 18.30\n• Kuningan: 09.30 – 11.30 & 14.00 – 17.00',
-          '1. Sambut pelanggan dengan ramah. Catat pilihan saus & pembayaran.\n2. Masak ayam marinasi juicy & goreng kentang mengambang keemasan.\n3. Plating presisi: 90g ayam, 5 kentang, 4 wortel, 2 buncis + saus.\n4. Sela sepi: Lap meja kerja/pelanggan dengan cairan TAF, cuci piring.'
+          '1. Sambut pelanggan dengan ramah. Catat pilihan saus & pembayaran.\n2. Masak ayam marinasi juicy & goreng kentang mengambang keemasan.\n3. Plating presisi: 90g ayam, 5 kentang, 4 wortel, 2 buncis + saus.\n4. Sela sepi: Lap meja kerja/pelanggan dengan cairan TAF.'
         ],
         [
           'Fase 3: Peak Hours (Jam Sibuk)\nPeriode Antrean Padat',
           '• Cibubur, Kalisari, Jatisampurna: 18.00 – 21.30\n• Cilangkap: 18.30 – 22.00\n• Kuningan: 11.30 – 14.00 (Siang) & 17.00 – 20.00 (Malam)',
-          'Hierarki Prioritas Kerja Eksekusi Cepat:\n1. Utama: Jaga wajan masakan ayam & kentang agar matang sempurna tanpa gosong.\n2. Kedua: Melayani antrean transaksi kasir.\n3. Ketiga: Plating cepat & serahkan masakan selagi hangat.\n4. Keempat: Bersihkan meja makan hanya saat wajan panggangan kosong.'
+          'Hierarki Prioritas Kerja Eksekusi Cepat:\n1. Utama: Jaga wajan masakan ayam & kentang agar matang sempurna tanpa gosong.\n2. Kedua: Melayani antrean transaksi kasir.\n3. Ketiga: Plating cepat & serahkan masakan selagi hangat.\n4. Keempat: Bersihkan meja dan area sekitar hanya saat wajan kosong.'
         ],
         [
           'Fase 4: Closing, Sanitasi & Reporting\n30-45 Menit Penutupan Shift',
@@ -1429,7 +1429,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
                 <li>Tiba di outlet min. 30 menit sebelum buka. Buka gembok gerobak.</li>
                 <li><strong>Clock-In Digital:</strong> Presensi masuk di steak11.vercel.app.</li>
                 <li>Susun porsi ayam & saus di Coolbox berselang-seling es batu.</li>
-                <li>Cek selang regulator gas. Kenakan apron bersih & buka papan <strong>'OPEN'</strong>.</li>
+                <li>Cek selang regulator gas & kenakan apron bersih.</li>
               </ol>
 
               {onNavigateTab && (
@@ -1466,7 +1466,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
                 <li>Sambut pelanggan dengan ramah. Catat pilihan saus & pembayaran.</li>
                 <li>Masak ayam marinasi juicy & goreng kentang mengambang keemasan.</li>
                 <li><strong>Plating presisi:</strong> 90g ayam, 5 kentang, 4 wortel, 2 buncis + saus.</li>
-                <li>Sela sepi: Lap meja kerja/pelanggan dengan <strong>cairan TAF</strong>, cuci piring.</li>
+                <li>Sela sepi: Lap meja kerja/pelanggan dengan <strong>cairan TAF</strong>.</li>
               </ol>
 
               {onNavigateTab && (
@@ -1507,7 +1507,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
                   <div><strong>1. Utama:</strong> Jaga wajan masakan ayam & kentang agar matang sempurna tanpa gosong.</div>
                   <div><strong>2. Kedua:</strong> Melayani antrean transaksi kasir.</div>
                   <div><strong>3. Ketiga:</strong> Plating cepat & serahkan masakan selagi hangat.</div>
-                  <div><strong>4. Keempat:</strong> Bersihkan meja makan hanya saat wajan panggangan kosong.</div>
+                  <div><strong>4. Keempat:</strong> Bersihkan meja dan area sekitar hanya saat wajan kosong.</div>
                 </div>
               </div>
             </div>
