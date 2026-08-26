@@ -37,10 +37,17 @@ import {
   Calendar,
   PhoneCall,
   Zap,
-  MapPin
+  MapPin,
+  ArrowRight,
+  Camera,
+  ShoppingBag,
+  DollarSign,
+  Check
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getStoredEmployees } from '../utils';
+import { Employee } from '../types';
 
 interface SopManagerProps {
   onShowToast?: (msg: string) => void;
@@ -78,12 +85,28 @@ export const SopManager: React.FC<SopManagerProps> = ({ onShowToast, onNavigateT
   // Sunlight dispenser calculator
   const [dispenserVolumeMl, setDispenserVolumeMl] = useState<number>(500);
 
-  // Digital Report Generator state
-  const [reportCashOnHand, setReportCashOnHand] = useState<number>(1500000);
-  const [reportPortionsSold, setReportPortionsSold] = useState<number>(42);
-  const [reportNonCashNominal, setReportNonCashNominal] = useState<number>(650000);
-  const [reportRemainingChicken, setReportRemainingChicken] = useState<number>(8);
-  const [reportTomorrowRequest, setReportTomorrowRequest] = useState<string>('50 porsi ayam, 1 pail BBQ, 5 pack kentang');
+  // Digital SOP Commitment & Acknowledgement state
+  const [employeeList] = useState<Employee[]>(() => {
+    const list = getStoredEmployees() || [];
+    return list.filter(e => e.status === 'Aktif');
+  });
+
+  const [ackRecord, setAckRecord] = useState<{ name: string; branch: string; time: string; agreed: boolean } | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('steak11_sop_ack_record');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+  const [ackName, setAckName] = useState('');
+  const [ackBranch, setAckBranch] = useState('Steak 11, Cibubur');
+  const [ackAgree, setAckAgree] = useState(false);
 
   // Interactive Checklist State
   const initialChecklist: SopChecklistItem[] = [
@@ -101,7 +124,7 @@ export const SopManager: React.FC<SopManagerProps> = ({ onShowToast, onNavigateT
       parameter: 'BBQ, Black Pepper, Mushroom dalam kondisi higienis & terlabel tanggal produksi.',
       standardStatus: 'Sesuai & Lengkap',
       isChecked: true,
-      notes: 'Suhu saus normal & tidak dipanaskan'
+      notes: 'Suhu normal (siap saji)'
     },
     {
       no: 3,
@@ -221,45 +244,53 @@ export const SopManager: React.FC<SopManagerProps> = ({ onShowToast, onNavigateT
     showToast('Semua 7 poin checklist berhasil diverifikasi [Sesuai & Lengkap]!');
   };
 
-  // Copy Digital Report Text for WA Group
-  const handleCopyWaReport = () => {
-    const template = 
-`*LAPORAN HARIAN SHIFT STEAK 11 (SOP V8.3)*
-📅 Tanggal: ${checklistDate}
-🏬 Cabang: ${selectedBranch}
-👤 Kru Operator: ${checklistOfficer}
+  // Save Digital SOP Acknowledgement & Send to WA 081223233299
+  const handleSaveAcknowledgement = () => {
+    if (!ackName.trim() || !ackAgree) {
+      showToast('Mohon pilih nama karyawan dan centang persetujuan komitmen.');
+      return;
+    }
+    const record = {
+      name: ackName.trim(),
+      branch: ackBranch,
+      time: new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) + ' WIB',
+      agreed: true
+    };
+    setAckRecord(record);
+    localStorage.setItem('steak11_sop_ack_record', JSON.stringify(record));
 
-1️⃣ *Uang Tunai (Cash on Hand):* Rp ${reportCashOnHand.toLocaleString('id-ID')}
-2️⃣ *Total Penjualan:* ${reportPortionsSold} Porsi Terjual
-3️⃣ *Pembayaran Non-Tunai (QRIS/Transfer/Ojek):* Rp ${reportNonCashNominal.toLocaleString('id-ID')}
-4️⃣ *Sisa Stok Daging Ayam di Coolbox:* ${reportRemainingChicken} Porsi
-5️⃣ *Permintaan Stok Esok Hari:* ${reportTomorrowRequest}
-6️⃣ *Status Checklist Serah Terima:* ${checklist.filter(c => c.isChecked).length}/7 Poin Terverifikasi ✅
+    // WhatsApp Confirmation Template to 0812-2323-3299
+    const waText = 
+`*KONFIRMASI KOMITMEN & KEPATUHAN SOP STEAK 11 (V8.3)*
 
-_Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
+Kepada: Manajemen Steak 11 (0812-2323-3299)
+Dengan ini saya telah membaca, memahami, dan siap menjalankan seluruh Standar Operasional Prosedur (SOP) dengan rincian:
 
-    navigator.clipboard.writeText(template);
-    showToast('Format Laporan WA berhasil disalin ke Clipboard!');
+👤 *Nama Kru:* ${record.name}
+🏬 *Cabang Penempatan:* ${record.branch}
+📅 *Waktu Konfirmasi:* ${record.time}
+
+*Pernyataan Komitmen:*
+"Saya berkomitmen penuh menjalankan seluruh SOP Steak 11 secara disiplin, menjaga gramasi presisi porsi ayam 90g, kualitas masakan juicy, gorengan golden-yellow, efisiensi bahan pembersih & gas, serta pelaporan dual-channel yang tertib pada setiap shift kerja saya."
+
+_Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
+
+    window.open(`https://wa.me/6281223233299?text=${encodeURIComponent(waText)}`, '_blank');
+    showToast(`Komitmen SOP berhasil dikonfirmasi oleh ${record.name} (${record.branch}) dan pesan WhatsApp ke 081223233299 telah dibuka!`);
   };
 
-  // Open Direct WhatsApp with Pre-filled Report
-  const handleSendWaDirect = () => {
-    const template = 
-`*LAPORAN HARIAN SHIFT STEAK 11 (SOP V8.3)*
-📅 Tanggal: ${checklistDate}
-🏬 Cabang: ${selectedBranch}
-👤 Kru Operator: ${checklistOfficer}
-
-1️⃣ *Uang Tunai (Cash on Hand):* Rp ${reportCashOnHand.toLocaleString('id-ID')}
-2️⃣ *Total Penjualan:* ${reportPortionsSold} Porsi Terjual
-3️⃣ *Pembayaran Non-Tunai (QRIS/Transfer/Ojek):* Rp ${reportNonCashNominal.toLocaleString('id-ID')}
-4️⃣ *Sisa Stok Daging Ayam di Coolbox:* ${reportRemainingChicken} Porsi
-5️⃣ *Permintaan Stok Esok Hari:* ${reportTomorrowRequest}
-6️⃣ *Status Checklist Serah Terima:* ${checklist.filter(c => c.isChecked).length}/7 Poin Terverifikasi ✅
-
-_Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
-
-    window.open(`https://wa.me/?text=${encodeURIComponent(template)}`, '_blank');
+  // Reset / Re-confirm Digital SOP Acknowledgement
+  const handleResetAcknowledgement = () => {
+    setAckRecord(null);
+    setAckAgree(false);
+    localStorage.removeItem('steak11_sop_ack_record');
+    showToast('Status komitmen SOP di-reset.');
   };
 
   // Generate Official PDF Document of SOP V8.3 in Brand Colors
@@ -1101,7 +1132,8 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-purple-900/50">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200 dark:border-purple-900/50">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#3D1259] text-white uppercase text-[10px] font-black tracking-wider">
                   <tr>
@@ -1191,6 +1223,61 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View */}
+            <div className="block md:hidden space-y-3">
+              {[
+                {
+                  title: '🥩 Steak Ayam Fillet Paha',
+                  std: 'Ditimbang tepat 90 Gram',
+                  total: (portionCount * 90) >= 1000 ? `${(portionCount * 90 / 1000).toFixed(2)} Kg (${portionCount * 90}g)` : `${portionCount * 90} Gram`,
+                  guide: 'Masak/goreng fillet paha ayam marinasi hingga matang merata (suhu internal >75°C, bagian luar renyah/juicy).'
+                },
+                {
+                  title: '🍟 Kentang Goreng',
+                  std: 'Tepat 5 Potong',
+                  total: `${portionCount * 5} Potong`,
+                  guide: 'Digoreng keemasan (*golden-yellow*), ditiriskan minyaknya, disajikan renyah.'
+                },
+                {
+                  title: '🥕 Wortel Rebus',
+                  std: 'Tepat 4 Potong',
+                  total: `${portionCount * 4} Potong`,
+                  guide: 'Dipotong rapi, matang pas, segar dan tidak lembek/hancur.'
+                },
+                {
+                  title: '🥬 Buncis Rebus',
+                  std: 'Tepat 2 Potong',
+                  total: `${portionCount * 2} Potong`,
+                  guide: 'Warna hijau segar, dipotong seragam, disajikan sejajar.'
+                },
+                {
+                  title: '🥣 Saus Resmi (BBQ / Black Pepper / Mushroom)',
+                  std: '1 Porsi Saus (±40-50 ml)',
+                  total: `${portionCount} Cup / ±${(portionCount * 45 / 1000).toFixed(2)} Liter`,
+                  guide: 'Disiramkan di atas porsi atau disajikan dalam cup terpisah.'
+                }
+              ].map((comp, idx) => (
+                <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800 space-y-2 text-xs">
+                  <div className="font-extrabold text-[#3D1259] dark:text-amber-300">
+                    {comp.title}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2 rounded-lg bg-white dark:bg-purple-900/40 border border-slate-200 dark:border-purple-800">
+                      <span className="text-slate-500 dark:text-slate-400 block font-semibold text-[10px]">Standar 1 Porsi:</span>
+                      <strong className="text-purple-950 dark:text-slate-100">{comp.std}</strong>
+                    </div>
+                    <div className="p-2 rounded-lg bg-amber-400/20 border border-amber-400/30">
+                      <span className="text-purple-950 dark:text-amber-300 block font-semibold text-[10px]">Kebutuhan ({portionCount} Porsi):</span>
+                      <strong className="text-amber-600 dark:text-amber-400">{comp.total}</strong>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 bg-white/60 dark:bg-black/20 p-2 rounded-lg border border-slate-100 dark:border-white/5">
+                    <strong>Petunjuk:</strong> {comp.guide}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -1239,6 +1326,18 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
                 <li>Susun porsi ayam & saus di Coolbox berselang-seling es batu.</li>
                 <li>Cek selang regulator gas. Kenakan apron bersih & buka papan <strong>'OPEN'</strong>.</li>
               </ol>
+
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('presensi_kamera')}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-purple-900 hover:bg-purple-800 text-amber-300 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                >
+                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Buka Presensi Kamera Selfie</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                </button>
+              )}
             </div>
 
             {/* FASE 2 */}
@@ -1264,6 +1363,18 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
                 <li><strong>Plating presisi:</strong> 90g ayam, 5 kentang, 4 wortel, 2 buncis + saus.</li>
                 <li>Sela sepi: Lap meja kerja/pelanggan dengan <strong>cairan TAF</strong>, cuci piring.</li>
               </ol>
+
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('pesanan')}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-purple-950 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 text-purple-950" />
+                  <span>Buka Kasir POS / Pesanan</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                </button>
+              )}
             </div>
 
             {/* FASE 3 */}
@@ -1321,6 +1432,18 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
                 <li><strong>Manual Report:</strong> Catat stok bawaan, sisa ayam coolbox & restock besok.</li>
                 <li><strong>Clock-Out Digital</strong>, buang sampah, kunci & gembok gerobak.</li>
               </ol>
+
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('shifts')}
+                  className="w-full mt-2 py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                >
+                  <FileText className="w-3.5 h-3.5 text-white" />
+                  <span>Buka Menu Audit Closing Shift</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1497,6 +1620,38 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
                   Kirimkan ringkasan laporan closing ke Grup WhatsApp, lalu lakukan <strong>Clock-Out Presensi Pulang</strong> di sistem website sebelum meninggalkan outlet.
                 </div>
               </div>
+
+              {onNavigateTab && (
+                <div className="pt-2 border-t border-purple-200/60 dark:border-purple-800/60 space-y-1.5">
+                  <span className="text-[10px] uppercase font-black tracking-wider text-purple-800 dark:text-amber-400 block">
+                    Pintas Menu Operasional:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('shifts')}
+                      className="p-2.5 rounded-xl bg-white dark:bg-purple-900/60 hover:bg-purple-100 dark:hover:bg-purple-900 text-[#3D1259] dark:text-amber-300 font-extrabold text-[11px] border border-purple-200 dark:border-purple-800 flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <FileCheck className="w-3.5 h-3.5 text-emerald-500" />
+                        Input Closing Shift
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('presensi_kamera')}
+                      className="p-2.5 rounded-xl bg-white dark:bg-purple-900/60 hover:bg-purple-100 dark:hover:bg-purple-900 text-[#3D1259] dark:text-amber-300 font-extrabold text-[11px] border border-purple-200 dark:border-purple-800 flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-purple-500" />
+                        Presensi Pulang (Clock-Out)
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 2. Alur Pelaporan Manual (Buku Manual) */}
@@ -1669,6 +1824,129 @@ _Laporan dibuat melalui Portal steak11.vercel.app & Buku Manual Cabang_`;
           </div>
         </div>
       )}
+
+      {/* --- DIGITAL SOP ACKNOWLEDGEMENT & COMMITMENT SIGNATURE --- */}
+      <div className="bg-linear-to-r from-purple-900 via-[#3D1259] to-[#250838] p-6 sm:p-8 rounded-3xl text-white shadow-xl border border-purple-800/80 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-800/60 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-purple-950 flex items-center justify-center font-black shadow-md">
+              <BadgeCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base sm:text-lg text-white font-baloo">
+                Lembar Komitmen & Konfirmasi Kepatuhan SOP
+              </h3>
+              <p className="text-xs text-purple-200">
+                Pernyataan resmi kru pelaksana operasional Solo Operator Steak 11.
+              </p>
+            </div>
+          </div>
+          {ackRecord && (
+            <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-xs font-black flex items-center gap-1.5 self-start sm:self-auto">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> SOP Terkonfirmasi Aktif
+            </span>
+          )}
+        </div>
+
+        {ackRecord ? (
+          <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-1">
+              <p className="font-bold text-emerald-300">
+                ✓ Telah ditandatangani secara digital oleh: <strong className="text-white underline">{ackRecord.name}</strong> ({ackRecord.branch})
+              </p>
+              <p className="text-emerald-400/80 text-[11px]">
+                Waktu Konfirmasi: {ackRecord.time}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleResetAcknowledgement}
+              className="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-200 text-xs font-bold border border-purple-800 cursor-pointer transition-all"
+            >
+              Ubah / Konfirmasi Ulang
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-purple-100 leading-relaxed">
+              Saya yang bertanda tangan di bawah ini menyatakan telah membaca, memahami, dan berkomitmen penuh untuk menjalankan seluruh Prosedur Operasional Standar (SOP) Steak 11 ini secara disiplin, bertanggung jawab, dan higienis.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-purple-200 font-bold mb-1">Nama Lengkap Kru Operator (Data Karyawan):</label>
+                <select
+                  value={ackName}
+                  onChange={(e) => {
+                    const chosen = e.target.value;
+                    setAckName(chosen);
+                    const matchedEmp = employeeList.find(emp => emp.name === chosen);
+                    if (matchedEmp && matchedEmp.outlet) {
+                      const outLower = matchedEmp.outlet.toLowerCase();
+                      if (outLower.includes('cibubur')) setAckBranch('Steak 11, Cibubur');
+                      else if (outLower.includes('kalisari')) setAckBranch('Steak 11, Kalisari');
+                      else if (outLower.includes('cilangkap')) setAckBranch('Steak 11, Cilangkap');
+                      else if (outLower.includes('kuningan')) setAckBranch('Steak 11, Kuningan');
+                      else if (outLower.includes('jatisampurna')) setAckBranch('Steak 11, Jatisampurna');
+                      else if (outLower.includes('pusat')) setAckBranch('Dapur Pusat (Central Kitchen)');
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/90 border border-purple-700 text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="">-- Pilih Nama Karyawan --</option>
+                  {employeeList.map((emp) => (
+                    <option key={emp.id} value={emp.name}>
+                      {emp.name} ({emp.role} • {emp.outlet || 'Semua Cabang'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-purple-200 font-bold mb-1">Cabang Penempatan:</label>
+                <select
+                  value={ackBranch}
+                  onChange={(e) => setAckBranch(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/90 border border-purple-700 text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="Steak 11, Cibubur">Steak 11, Cibubur</option>
+                  <option value="Steak 11, Kalisari">Steak 11, Kalisari</option>
+                  <option value="Steak 11, Cilangkap">Steak 11, Cilangkap</option>
+                  <option value="Steak 11, Kuningan">Steak 11, Kuningan</option>
+                  <option value="Steak 11, Jatisampurna">Steak 11, Jatisampurna</option>
+                  <option value="Dapur Pusat (Central Kitchen)">Dapur Pusat (Central Kitchen)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="ackCheck"
+                checked={ackAgree}
+                onChange={(e) => setAckAgree(e.target.checked)}
+                className="w-4 h-4 rounded-md accent-amber-400 cursor-pointer"
+              />
+              <label htmlFor="ackCheck" className="text-xs text-purple-200 font-medium cursor-pointer">
+                Saya menyetujui dan siap menjalankan standar SOP ini pada setiap shift kerja saya.
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveAcknowledgement}
+              disabled={!ackAgree || !ackName.trim()}
+              className={`px-5 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
+                ackAgree && ackName.trim()
+                  ? 'bg-amber-400 hover:bg-amber-300 text-purple-950 shadow-lg active:scale-95'
+                  : 'bg-purple-950/50 text-purple-400 border border-purple-800/60 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4 text-emerald-600" />
+              <span>Konfirmasi Pemahaman SOP & Kirim ke WA (0812-2323-3299)</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
