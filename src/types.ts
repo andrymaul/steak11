@@ -65,15 +65,12 @@ export interface LocationItem {
   city: string;
   address: string;
   hours: string;
-  operationalHours?: string; // Compatibility alias for hours
   phone: string;
   mapUrl: string;
   startWorkTime: string; // HH:mm - Batas jam masuk tepat waktu (e.g. "15:00")
   endWorkTime: string;   // HH:mm - Batas jam pulang shift (e.g. "22:00")
   onlineDeliveryPartners?: OnlineDeliveryPartners;
-  onlineDeliveries?: any; // Compatibility alias
   supportedServiceTypes?: SupportedServiceTypes;
-  serviceOptions?: any; // Compatibility alias
 }
 
 export interface ReviewItem {
@@ -123,7 +120,6 @@ export interface OrderItem {
   cashierName?: string;
   cogsTotal?: number;
   netProfit?: number;
-  notes?: string;
   items?: any[];
   status: 'Pending' | 'Terkirim/Diproses' | 'Selesai' | string;
 }
@@ -172,17 +168,6 @@ export interface AttendanceRecord {
   overtimeRatePerHour?: number; // Rate upah lembur per jam
   overtimePay?: number; // Total estimasi upah lembur
   overtimeReason?: string; // Alasan/deskripsi tugas lembur
-  workHours?: number; // Alias for hoursWorked
-  checkInTime?: string; // Alias for clockInTime
-  checkOutTime?: string; // Alias for clockOutTime
-  checkInPhoto?: string; // Alias for selfieUrl
-  checkOutPhoto?: string; // Alias for clockOutSelfieUrl
-  selfiePhotoUrl?: string;
-  checkInPhotoUrl?: string;
-  attendanceType?: string;
-  employeeRole?: string;
-  shiftName?: string;
-  overtimeApproved?: boolean;
   latitude?: number;
   longitude?: number;
   createdAt?: string;
@@ -220,12 +205,6 @@ export interface PayrollSlip {
   latePenalty?: number; // Rincian potongan keterlambatan
   loanDeduction?: number; // Rincian potongan kasbon
   netSalary: number; // (baseSalary + totalAllowance + punctualityAllowance + overtimePay + outletBonus + bonus) - deductions
-  month?: string; // Alias for periodMonth
-  allowance?: number; // Alias for totalAllowance
-  otherDeductions?: number;
-  notes?: string; // Alias for note
-  monthlyDeduction?: number;
-  daysPresent?: number; // Alias for totalDaysPresent
   paymentStatus: 'Draft' | 'Disetujui' | 'Lunas / Terbayar';
   paymentDate?: string;
   note?: string;
@@ -234,18 +213,15 @@ export interface PayrollSlip {
 export interface AdminUser {
   id: string;
   username: string;
-  fullName?: string;
-  name?: string; // Compatibility alias for fullName
+  fullName: string;
   role: string;
-  phone?: string;
-  email?: string;
-  status?: 'Aktif' | 'Non-Aktif' | string;
-  password?: string; // Compatibility alias for passwordPin
-  passwordPin?: string;
-  createdAt?: string;
+  phone: string;
+  email: string;
+  status: 'Aktif' | 'Non-Aktif' | string;
+  passwordPin: string;
+  createdAt: string;
   lastLogin?: string;
   allowedTabs?: string[]; // Hak akses khusus
-  outlet?: string;
 }
 
 export interface RoleSetting {
@@ -303,7 +279,6 @@ export interface PromoVoucher {
   discountType: 'nominal' | 'percentage';
   discountValue: number;
   minOrderAmount: number;
-  minOrder?: number; // Compatibility alias
   maxDiscountAmount?: number;
   expiryDate: string;
   usageCount: number;
@@ -646,7 +621,6 @@ export interface EmployeeLoan {
   monthlyInstallment: number;
   remainingAmount: number;
   status: 'ACTIVE' | 'PAID_OFF';
-  monthlyDeduction?: number; // Compatibility alias for monthlyInstallment
   notes?: string;
   history: EmployeeLoanPayment[];
 }
@@ -664,18 +638,5 @@ export interface WaGatewayConfig {
   templatePromoNotif: string;
 }
 
-// Backward compatibility type aliases
-export type Location = LocationItem;
-export type Review = ReviewItem;
-export type WorkSchedule = EmployeeSchedule;
-export type ShiftTemplate = WorkShiftTemplate;
-export type WASettings = WaNotificationSettings;
-export type BrandingSettings = StoreBrandingSettings;
-export type PromoCode = PromoVoucher;
-export type AuditLog = AuditLogItem;
-export interface MenuCategoryItem {
-  id: string;
-  name: string;
-  description?: string;
-}
-export type MenuCategory = MenuCategoryItem;
+
+
