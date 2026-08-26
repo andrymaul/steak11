@@ -2774,7 +2774,6 @@ function doPost(e) {
   };
 
   const handleSaveOvertimeAttendance = async () => {
-    if (checkReadOnlyPermission()) return;
     const cleanUser = (currentUser?.name || '').trim().toLowerCase();
     const loggedInEmp = employees.find(
       (e) =>
@@ -2787,6 +2786,12 @@ function doPost(e) {
         )
     );
     const isLockedEmp = Boolean(!isRegisteredAdmin(currentUser) && loggedInEmp);
+
+    // Buka akses untuk Data Karyawan; hanya blokir jika bukan admin DAN bukan karyawan terdaftar
+    if (!isRegisteredAdmin(currentUser) && !loggedInEmp) {
+      if (checkReadOnlyPermission()) return;
+    }
+
     const targetEmpId = isLockedEmp && loggedInEmp ? loggedInEmp.id : otEmployeeId;
 
     if (!targetEmpId) {
