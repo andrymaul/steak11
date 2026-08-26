@@ -647,6 +647,12 @@ export function saveLatePenaltyThreshold(minutes: number): void {
   syncUserDataToFirestore('late_penalty_threshold', minutes);
 }
 
+export const getMonthlyLatePenaltyThreshold = getStoredLatePenaltyThreshold;
+
+export function calculateLateDeduction(lateMinutes: number, penaltyPerDay: number = 15000, thresholdMinutes: number = 15): number {
+  return lateMinutes > thresholdMinutes ? penaltyPerDay : 0;
+}
+
 // --- OVERTIME RATE SETTINGS STORAGE ---
 export function getStoredOvertimeRate(): number {
   const stored = localStorage.getItem('steak11_default_overtime_rate');
