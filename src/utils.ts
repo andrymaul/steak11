@@ -82,6 +82,7 @@ export const SYSTEM_ALL_TABS = [
   { id: 'audit_logs', name: 'Audit Log Aktivitas' },
   { id: 'customers', name: 'Data Pelanggan & WA' },
   { id: 'pengunjung', name: 'Data Pengunjung' },
+  { id: 'sop', name: 'SOP' },
   { id: 'user_guide', name: 'Panduan Penggunaan' },
 ];
 

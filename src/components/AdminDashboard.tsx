@@ -7,9 +7,10 @@ import {
   RefreshCw,
   CloudDownload,
   FileSpreadsheet,
+  FileText,
+  FileCheck,
   Sun,
   Moon,
-  FileText,
   Send,
   Users,
   User,
@@ -158,6 +159,7 @@ import { PresensiKameraManager } from './PresensiKameraManager';
 import { CustomerManager } from './CustomerManager';
 import { FirebaseSettingsPanel } from './FirebaseSettingsPanel';
 import { UserGuideManager } from './UserGuideManager';
+import { SopManager } from './SopManager';
 import {
   refreshEmployeesFromFirebase,
   pullAllFirestoreDataToLocal,
@@ -223,6 +225,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     | 'firebase'
     | 'jadwal'
     | 'pengunjung'
+    | 'sop'
     | 'user_guide'
   >(() => {
     if (typeof window !== 'undefined') {
@@ -6110,6 +6113,21 @@ function doPost(e) {
 
                 <button
                   type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('sop' as any); setIsMobileDrawerOpen(false); }}
+                  className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
+                    (activeTab as string) === 'sop'
+                      ? 'bg-[#3D1259] dark:bg-amber-400 text-white dark:text-purple-950 shadow-md'
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-900/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <FileCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>SOP</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('user_guide' as any); setIsMobileDrawerOpen(false); }}
                   className={`w-full px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-between transition-all cursor-pointer ${
                     (activeTab as string) === 'user_guide'
@@ -11655,7 +11673,12 @@ function doPost(e) {
           <CustomerManager onShowToast={showToast} currentUser={currentUser} />
         )}
 
-        {/* TAB 23: PANDUAN & TUTORIAL PEMAKAIAN */}
+        {/* TAB 23: STANDAR OPERASIONAL PROSEDUR (SOP) RESMI V8.3 */}
+        {(activeTab as string) === 'sop' && (
+          <SopManager onShowToast={showToast} onNavigateTab={(tab) => setActiveTab(tab as any)} />
+        )}
+
+        {/* TAB 24: PANDUAN & TUTORIAL PEMAKAIAN */}
         {(activeTab as string) === 'user_guide' && (
           <UserGuideManager onNavigateTab={(tab) => setActiveTab(tab as any)} />
         )}

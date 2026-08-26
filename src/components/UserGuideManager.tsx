@@ -44,7 +44,7 @@ interface UserGuideManagerProps {
 
 interface GuideItem {
   id: string;
-  category: 'pos' | 'absensi' | 'payroll' | 'inventory' | 'finance' | 'crm' | 'receipt' | 'system' | 'users';
+  category: 'sop' | 'pos' | 'absensi' | 'payroll' | 'inventory' | 'finance' | 'crm' | 'receipt' | 'system' | 'users';
   categoryLabel: string;
   categoryIcon: any;
   title: string;
@@ -65,10 +65,35 @@ interface FaqItem {
 export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTab }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [expandedId, setExpandedId] = useState<string | null>('guide-pos-1');
+  const [expandedId, setExpandedId] = useState<string | null>('guide-sop-1');
   const [expandedFaqId, setExpandedFaqId] = useState<number | null>(null);
 
   const guides: GuideItem[] = [
+    // 0. SOP RESMI STEAK 11 (V8.3)
+    {
+      id: 'guide-sop-1',
+      category: 'sop',
+      categoryLabel: 'SOP Resmi Steak 11 (V8.3)',
+      categoryIcon: FileText,
+      title: 'Dokumen Standar Operasional Prosedur (SOP V8.3 - Brand Edition)',
+      summary: 'Pedoman resmi Hub-and-Spoke Dapur Pusat & Solo Operator 5 Cabang, standar bumbu marinasi, goreng kentang golden-yellow, efisiensi TAF/Sunlight 80:20, dan checklist serah terima.',
+      badge: 'SOP V8.3 Resmi',
+      targetTab: 'sop',
+      steps: [
+        'Klik tombol "Buka Modul SOP Steak 11" di bawah atau pilih menu "SOP" pada sidebar.',
+        'Pelajari 6 Bagian SOP: (1) Dapur Pusat & Logistik Hub, (2) Spesifikasi Alat & Plating Presisi, (3) Timeline 4 Fase Operasional Solo Operator, (4) Panduan Efisiensi & Hemat, (5) Dual-Channel Reporting, dan (6) Checklist Harian Serah Terima.',
+        'Gunakan Simulasi Gramasi Porsi untuk menghitung kebutuhan harian paha fillet ayam (90g), kentang (5 pcs), wortel (4 pcs), buncis (2 pcs), dan saus (40-50ml).',
+        'Pelajari panduan Alur Pelaporan Lengkap (Dual-Channel): Pelaporan Digital (Website & WA Group) serta Pelaporan Manual (Buku Laporan Fisik Cabang).',
+        'Klik tombol "Cetak / Download PDF Resmi" untuk mengunduh dokumen SOP V8.3 lengkap dengan format brand color resmi.'
+      ],
+      tips: [
+        'Gunakan checklist interaktif 7 poin setiap awal dan akhir shift untuk memastikan kelengkapan stok sebelum operasional dimulai.'
+      ],
+      warnings: [
+        'Dilarang keras memotong ulang fillet paha ayam marinasi di Dapur Pusat!',
+        'Cairan TAF hanya boleh digunakan untuk meja dan kompor grill, dilarang untuk lantai.'
+      ]
+    },
     // 1. KASIR POS & TRANSAKSI
     {
       id: 'guide-pos-1',
