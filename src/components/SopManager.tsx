@@ -42,7 +42,8 @@ import {
   Camera,
   ShoppingBag,
   DollarSign,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -541,7 +542,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
         [
           'Fase 1: Pre-Opening & Logistik\n30-60 Menit Sebelum Buka',
           '• Cibubur, Kalisari, Jatisampurna: 14.00 – 14.30\n• Cilangkap: 14.30 – 15.00\n• Kuningan: 09.00 – 09.30',
-          '1. Ambil stok daging, saus, sayur, es batu & kemasan di Dapur Pusat.\n2. Tiba di outlet min. 30 menit sebelum buka. Buka gembok gerobak.\n3. Clock-In Digital: Presensi masuk di steak11.vercel.app.\n4. Susun porsi ayam & saus di Coolbox berselang-seling es batu.\n5. Cek selang regulator gas. Kenakan apron bersih & buka papan "OPEN".'
+          '1. Pengisian BBM & Logistik: Bensin motor wajib terisi (min. 1 jam sebelum jam masuk). Ambil stok daging, saus, sayur, es batu & kemasan di Dapur Pusat.\n2. Tiba di outlet min. 30 menit sebelum buka. Buka gembok gerobak.\n3. Clock-In Digital: Presensi masuk di steak11.vercel.app.\n4. Susun porsi ayam & saus di Coolbox berselang-seling es batu.\n5. Cek selang regulator gas. Kenakan apron bersih & buka papan "OPEN".'
         ],
         [
           'Fase 2: Operasional Reguler\nAwal Buka s/d Sebelum Peak Hours',
@@ -577,7 +578,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text('BAGIAN 4: PANDUAN EFISIENSI & PENGHEMATAN OPERASIONAL OUTLET', 18, currentY + 4.8);
+    doc.text('BAGIAN 4: PANDUAN EFISIENSI, PEMELIHARAAN ASET & LOGISTIK OUTLET', 18, currentY + 4.8);
 
     // Page 2 Footer
     doc.setFontSize(7);
@@ -591,16 +592,19 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Area Penghematan', 'Standar Aturan / Rasio', 'Instruksi Prosedur Standar (SOP Efisiensi)']],
+      head: [['Area Penghematan / Aset', 'Standar Aturan / Rasio', 'Instruksi Prosedur Standar (SOP Efisiensi & Logistik)']],
       body: [
         ['Cairan Pembersih TAF', 'ATURAN KHUSUS', 'Penggunaan Terbatas: Cairan pembersih TAF HANYA Boleh Digunakan khusus untuk meja pelanggan/meja kerja, kompor grill, dan alat-alat penyajian. Dilarang keras menggunakan TAF untuk lantai, gerobak umum, atau tempat cuci piring.'],
         ['Minyak Goreng Wajan', 'Penggantian Berkala (1 Bulan Sekali)', 'Minyak goreng pada wajan kompor wajib dijaga kebersihannya dari sisa remah dan diganti total 1 bulan sekali. Saring remah gorengan setiap hari setelah operasional.'],
         ['Sabun Cuci Piring (Sunlight)', 'Rasio 80% Sabun : 20% Air', 'Campurkan cairan pencuci piring dengan air bersih menggunakan rasio 80% sabun: 20% air di dalam botol dispenser. Dilarang mengucurkan sabun murni dari refill.'],
         ['Penggunaan Tisu vs Kain Lap', 'Tisu HANYA untuk Konsumen', 'Gunakan kain lap khusus untuk pembersihan umum (meja/kompor/gerobak). Hemat penggunaan tisu kertas (tisu HANYA disajikan untuk konsumen). Kain lap wajib dicuci bersih tiap shift.'],
         ['Gas Elpiji & Energi', 'Manajemen Api & Regulator', 'Kecilkan api kompor saat tidak ada antrean pesanan. Wajib melepas regulator gas dari tabung saat penutupan outlet ("closing"). Matikan lampu dekorasi pada siang hari.'],
-        ['Kantong Plastik / Packaging', 'Sistem Rapih Harian / Mingguan', 'Gunakan kantong plastik sesuai kapasitas porsi pesanan. Bawa pulang/rapikan sisa stok plastik berlebih setiap hari Minggu (Khusus cabang Kuningan: Hari Jumat). Apron dibawa pulang dan dicuci.']
+        ['Kantong Plastik / Kemasan', 'Sistem Rapih Mingguan', 'Gunakan kantong plastik sesuai kapasitas porsi pesanan. Bawa pulang/rapikan sisa stok plastik berlebih setiap hari Minggu (Khusus cabang Kuningan: Hari Jumat).'],
+        ['Motor Operasional & BBM', 'BBM 1 Jam Sebelum Masuk & Cuci 1x/Bulan', 'Pengisian BBM motor wajib dilakukan min. 1 jam sebelum jam masuk kerja / sebelum ambil stok di Dapur Pusat agar pengiriman tidak tertunda. Fisik motor wajib dicuci/dibersihkan minimal 1 bulan sekali demi higienitas bahan makanan.'],
+        ['Pembersihan Gerobak Total', 'Sebelum Jadwal Libur', 'Lakukan pembersihan menyeluruh (deep cleaning) pada seluruh fisik gerobak, etalase, dan area kerja sebelum jadwal hari libur karyawan. Bawa pulang apron untuk dicuci bersih sesuai jadwal cabang (Minggu / Khusus Kuningan: Hari Jumat).'],
+        ['Pengelolaan Sampah Harian', 'Wajib Harian (Piket)', 'Ikat rapi seluruh sampah operasional dijadikan satu di dalam kantong plastik hitam sampah. Buang sampah harian ke tempat pembuangan sampah (TPS) resmi sesuai jadwal piket harian yang telah ditunjuk per orang.']
       ],
-      styles: { fontSize: 7, cellPadding: 2.2 },
+      styles: { fontSize: 6.8, cellPadding: 2 },
       headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 245, 250] },
       columnStyles: {
@@ -1320,7 +1324,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
               </div>
 
               <ol className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 list-decimal list-inside pl-1">
-                <li>Ambil stok daging, saus, sayur, es batu & kemasan di Dapur Pusat.</li>
+                <li><strong>Pengisian BBM & Logistik:</strong> Bensin motor wajib terisi penuh sebelum jam masuk (min. 1 jam sebelum jadwal). Ambil stok daging, saus, sayur, es batu & kemasan di Dapur Pusat.</li>
                 <li>Tiba di outlet min. 30 menit sebelum buka. Buka gembok gerobak.</li>
                 <li><strong>Clock-In Digital:</strong> Presensi masuk di steak11.vercel.app.</li>
                 <li>Susun porsi ayam & saus di Coolbox berselang-seling es batu.</li>
@@ -1449,7 +1453,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
         </div>
       )}
 
-      {/* --- CONTENT SECTION 4: PANDUAN EFISIENSI & PENGHEMATAN OPERASIONAL OUTLET --- */}
+      {/* --- CONTENT SECTION 4: PANDUAN EFISIENSI, PEMELIHARAAN ASET & LOGISTIK OUTLET --- */}
       {(activeMainTab === 'all' || activeMainTab === 'efficiency') && (
         <div className="bg-white dark:bg-[#1f0e30] p-6 rounded-2xl border border-slate-200 dark:border-purple-900/50 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-purple-900/40 pb-3">
@@ -1459,16 +1463,16 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
               </div>
               <div>
                 <h3 className="font-extrabold text-lg text-[#3D1259] dark:text-amber-400 font-baloo">
-                  BAGIAN 4: PANDUAN EFISIENSI & PENGHEMATAN OPERASIONAL OUTLET
+                  BAGIAN 4: PANDUAN EFISIENSI, PEMELIHARAAN ASET & LOGISTIK OUTLET
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Rasio pencampuran bahan pembersih, penghematan gas, pemeliharaan minyak wajan, dan manajemen kemasan.
+                  Rasio pencampuran bahan pembersih, penghematan gas, pemeliharaan minyak wajan, perawatan motor operasional, pembersihan gerobak menyeluruh, dan pengelolaan sampah harian.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* TAF */}
             <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 space-y-2">
               <div className="flex items-center justify-between">
@@ -1544,18 +1548,63 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
               </p>
             </div>
 
-            {/* Kantong Plastik & Apron */}
+            {/* Kantong Plastik / Kemasan */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-purple-950/40 border border-slate-200 dark:border-purple-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
-                  🛍️ Kantong Plastik & Apron
+                  🛍️ Kantong Plastik / Kemasan
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-900 dark:text-amber-300 font-black text-[9px] uppercase">
                   Rapih Mingguan
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300">
-                Gunakan plastik sesuai porsi. Bawa pulang/rapikan plastik berlebih <strong>setiap hari Minggu</strong> (<em>Khusus Kuningan: Hari Jumat</em>). Apron dibawa pulang dan dicuci.
+                Gunakan kantong plastik sesuai kapasitas porsi pesanan. Bawa pulang/rapikan sisa stok plastik berlebih <strong>setiap hari Minggu</strong> (<em>Khusus Kuningan: Hari Jumat</em>).
+              </p>
+            </div>
+
+            {/* Motor Operasional & BBM */}
+            <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-xs text-[#3D1259] dark:text-amber-300">
+                  🛵 Motor Operasional & BBM
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9px] uppercase">
+                  Logistik & Armada
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Pengisian BBM motor wajib dilakukan <strong>minimal 1 jam sebelum jam masuk</strong> (sebelum mengambil stok di Dapur Pusat) agar distribusi bahan tidak tertunda. Fisik motor wajib <strong>dicuci/dibersihkan minimal 1 bulan sekali</strong> demi higienitas dan citra outlet.
+              </p>
+            </div>
+
+            {/* Pembersihan Gerobak Total */}
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-xs text-amber-900 dark:text-amber-300">
+                  🧹 Pembersihan Gerobak Total
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-purple-950 font-black text-[9px] uppercase">
+                  Sebelum Libur
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Lakukan pembersihan menyeluruh (<em>deep cleaning</em>) pada seluruh gerobak, etalase, dan area kerja <strong>sebelum jadwal hari libur karyawan</strong>. Bawa pulang apron untuk dicuci bersih sesuai jadwal cabang (Setiap hari Minggu / <em>Khusus Kuningan: Hari Jumat</em>).
+              </p>
+            </div>
+
+            {/* Pengelolaan Sampah Wajib Harian */}
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-xs text-rose-900 dark:text-rose-300">
+                  🗑️ Pengelolaan Sampah
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-black text-[9px] uppercase">
+                  Wajib Harian
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Ikat rapi seluruh sampah operasional dijadikan satu di dalam <strong>kantong plastik hitam sampah</strong>. Buang sampah harian ke Tempat Pembuangan Sampah (TPS) resmi sesuai jadwal piket harian yang telah ditunjuk per kru/petugas.
               </p>
             </div>
           </div>
@@ -1942,7 +1991,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
               }`}
             >
               <MessageCircle className="w-4 h-4 text-emerald-600" />
-              <span>Konfirmasi Pemahaman SOP & Kirim ke WA (0812-2323-3299)</span>
+              <span>Konfirmasi Pemahaman SOP & Kirim ke WA</span>
             </button>
           </div>
         )}
