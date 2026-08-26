@@ -5267,8 +5267,25 @@ function doPost(e) {
   };
 
   // --- POS Kasir Handlers ---
+  const isPosActionAllowed = () => {
+    if (isRegisteredAdmin(currentUser)) return true;
+    if (canAccessTab('kasir')) return true;
+    const cleanUser = (currentUser?.name || '').trim().toLowerCase();
+    const isEmp = (employees || []).some(
+      (e) =>
+        cleanUser &&
+        (e.name.toLowerCase() === cleanUser ||
+          (e.username && e.username.toLowerCase() === cleanUser) ||
+          e.id.toLowerCase() === cleanUser)
+    );
+    return isEmp;
+  };
+
   const handleAddPosToCart = (item: MenuItem) => {
-    if (checkReadOnlyPermission()) return;
+    if (!isPosActionAllowed()) {
+      showToast('🔒 Akses Ditolak: Anda tidak memiliki izin untuk mengoperasikan Kasir POS.');
+      return;
+    }
     const existingIdx = posCart.findIndex((c) => c.item.id === item.id);
     const cogs = item.cogs || Math.round(item.price * 0.45);
     if (existingIdx >= 0) {
@@ -5293,7 +5310,10 @@ function doPost(e) {
   };
 
   const handleConfirmCustomizePosItem = () => {
-    if (checkReadOnlyPermission()) return;
+    if (!isPosActionAllowed()) {
+      showToast('🔒 Akses Ditolak: Anda tidak memiliki izin untuk mengoperasikan Kasir POS.');
+      return;
+    }
     if (!customizingItem) return;
     const chickenObj = chickenOptions.find((c) => c.name === posSelectedChicken);
     const sauceObj = sauceOptions.find((s) => s.name === posSelectedSauce);
@@ -5330,7 +5350,10 @@ function doPost(e) {
   };
 
   const handlePosCheckout = () => {
-    if (checkReadOnlyPermission()) return;
+    if (!isPosActionAllowed()) {
+      showToast('🔒 Akses Ditolak: Anda tidak memiliki izin untuk mengoperasikan Kasir POS.');
+      return;
+    }
     if (posCart.length === 0) {
       showToast('Keranjang kasir masih kosong! Silakan pilih menu terlebih dahulu.');
       return;
