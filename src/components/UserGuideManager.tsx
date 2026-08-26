@@ -35,7 +35,18 @@ import {
   FileText,
   CreditCard,
   ChefHat,
-  MapPin
+  MapPin,
+  Utensils,
+  Boxes,
+  Calculator,
+  Receipt,
+  Banknote,
+  Percent,
+  FileCheck,
+  UserCheck,
+  Star,
+  Activity,
+  Layers
 } from 'lucide-react';
 
 interface UserGuideManagerProps {
@@ -74,34 +85,35 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       id: 'guide-sop-1',
       category: 'sop',
       categoryLabel: 'SOP Resmi Steak 11 (V8.3)',
-      categoryIcon: FileText,
+      categoryIcon: FileCheck,
       title: 'Dokumen Standar Operasional Prosedur (SOP V8.3 - Brand Edition)',
-      summary: 'Pedoman resmi Hub-and-Spoke Dapur Pusat & Solo Operator 5 Cabang, standar bumbu marinasi, goreng kentang golden-yellow, efisiensi TAF/Sunlight 80:20, dan checklist serah terima.',
+      summary: 'Pedoman Hub-and-Spoke Dapur Pusat, 5 Cabang Solo Operator, Peringatan 4 Alat Mutlak, Goreng Kentang Golden-Yellow, Plating Presisi, BBM 1 Jam Sebelum Masuk, Deep-Cleaning Gerobak, Hospitality (3S), & Konfirmasi WA.',
       badge: 'SOP V8.3 Resmi',
       targetTab: 'sop',
       steps: [
-        'Klik tombol "Buka Modul SOP Steak 11" di bawah atau pilih menu "SOP" pada sidebar.',
-        'Pelajari 6 Bagian SOP: (1) Dapur Pusat & Logistik Hub, (2) Spesifikasi Alat & Plating Presisi, (3) Timeline 4 Fase Operasional Solo Operator, (4) Panduan Efisiensi & Hemat, (5) Dual-Channel Reporting, dan (6) Checklist Harian Serah Terima.',
-        'Gunakan Simulasi Gramasi Porsi untuk menghitung kebutuhan harian paha fillet ayam (90g), kentang (5 pcs), wortel (4 pcs), buncis (2 pcs), dan saus (40-50ml).',
-        'Pelajari panduan Alur Pelaporan Lengkap (Dual-Channel): Pelaporan Digital (Website & WA Group) serta Pelaporan Manual (Buku Laporan Fisik Cabang).',
-        'Klik tombol "Cetak / Download PDF Resmi" untuk mengunduh dokumen SOP V8.3 lengkap dengan format brand color resmi.'
+        'Buka menu "SOP" pada sidebar navigasi left.',
+        'Pelajari 6 Bagian SOP: (1) Dapur Pusat & Logistik Hub, (2) Spesifikasi Alat & Plating Presisi (Coolbox, Kompor Gas/Wajan, Saus Resmi, Timbangan Digital 90g, Kentang Golden-Yellow 170°C-180°C, Hospitality 3S & Cuci Tangan Sebelum/Sesudah Bekerja), (3) Timeline 4 Fase Operasional, (4) Panduan Efisiensi & Pemeliharaan Aset (BBM Motor 1 Jam Sebelum Masuk, Cuci Motor 1x/Bulan, Deep-Cleaning Gerobak Sebelum Libur, Sampah Harian, Cairan TAF, Sunlight 80:20), (5) Dual-Channel Reporting, dan (6) Checklist Harian Serah Terima.',
+        'Gunakan Simulasi Gramasi Porsi interaktif untuk menghitung total bahan baku paha fillet ayam (90g), kentang (5 pcs), wortel (4 pcs), buncis (2 pcs), dan saus (40-50ml).',
+        'Lakukan Konfirmasi Pemahaman SOP & Komitmen Digital: Pilih nama karyawan dari data karyawan dan kirimkan pernyataan komitmen otomatis ke WhatsApp Manajemen (0812-2323-3299).',
+        'Klik tombol "Cetak / Download PDF Resmi" untuk mengunduh dokumen SOP V8.3 resmi dengan format warna brand.'
       ],
       tips: [
-        'Gunakan checklist interaktif 7 poin setiap awal dan akhir shift untuk memastikan kelengkapan stok sebelum operasional dimulai.'
+        'Gunakan checklist interaktif 7 poin setiap awal shift untuk memverifikasi kesesuaian fisik stok dari Dapur Pusat.'
       ],
       warnings: [
         'Dilarang keras memotong ulang fillet paha ayam marinasi di Dapur Pusat!',
-        'Cairan TAF hanya boleh digunakan untuk meja dan kompor grill, dilarang untuk lantai.'
+        'Cairan TAF hanya boleh digunakan untuk meja kerja/pelanggan dan kompor grill, dilarang untuk lantai.'
       ]
     },
-    // 1. KASIR POS & TRANSAKSI
+
+    // 1. KASIR POS, TRANSAKSI & PESANAN
     {
       id: 'guide-pos-1',
       category: 'pos',
       categoryLabel: 'Kasir POS & Transaksi',
       categoryIcon: ShoppingCart,
-      title: '1. Membuat Pesanan Baru & Pemilihan Varian Steak',
-      summary: 'Panduan melayani pelanggan di Kasir POS, memilih opsi Dine In / Takeaway, racikan saus, dan add-on.',
+      title: '1. Membuat Pesanan Baru & Pemilihan Varian Steak di Kasir POS',
+      summary: 'Panduan melayani pelanggan di Kasir POS, memilih opsi Dine In / Takeaway, racikan saus, add-on, dan hitung kembalian.',
       badge: 'Utama POS',
       targetTab: 'kasir',
       steps: [
@@ -120,7 +132,7 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       id: 'guide-pos-2',
       category: 'pos',
       categoryLabel: 'Kasir POS & Transaksi',
-      categoryIcon: Tag,
+      categoryIcon: Percent,
       title: '2. Penerapan Kode Promo & Voucher Diskon',
       summary: 'Cara menginput atau memilih chip voucher diskon (nominal / persen) untuk memotong total bayar pelanggan.',
       badge: 'Promo & Voucher',
@@ -138,19 +150,19 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
     },
     {
       id: 'guide-pos-3',
-      category: 'pos',
-      categoryLabel: 'Kasir POS & Transaksi',
+      category: 'receipt',
+      categoryLabel: 'Struk & Printer Thermal',
       categoryIcon: DollarSign,
-      title: '3. Metode Pembayaran (QRIS, Tunai, Transfer, EDC) & Struk',
-      summary: 'Proses penyelesaian pembayaran via QRIS, Uang Tunai, Bank Transfer, dan cetak struk kasir.',
+      title: '3. Metode Pembayaran (QRIS, Tunai, Transfer Bank, EDC) & Struk Thermal',
+      summary: 'Proses penyelesaian transaksi via Uang Tunai, scan QRIS Statis/Dinamis, Bank Transfer, dan cetak struk kasir.',
       badge: 'Pembayaran',
-      targetTab: 'kasir',
+      targetTab: 'payment_receipt_settings',
       steps: [
-        'Pada modal Pembayaran, pilih metode bayar: Tunai, QRIS, Transfer Bank, atau Kartu Debit (EDC).',
+        'Pada modal Pembayaran Kasir, pilih metode bayar: Tunai, QRIS, Transfer Bank, atau Kartu Debit (EDC).',
         'Jika Pembayaran Tunai: Input nominal uang yang diterima. Sistem akan menghitung uang kembalian secara otomatis.',
-        'Jika QRIS / Transfer: Tampilkan kode QRIS di layar kepada pelanggan untuk di-scan.',
+        'Jika QRIS / Transfer: Tampilkan kode QRIS di layar kepada pelanggan untuk di-scan secara instan.',
         'Klik "Selesaikan Transaksi & Cetak Struk".',
-        'Struk transaksi akan otomatis muncul dalam modal cetak thermal untuk siap diprint ke printer Bluetooth/USB.'
+        'Struk transaksi akan otomatis muncul dalam modal cetak thermal 58mm/80mm untuk siap diprint ke printer Bluetooth/USB.'
       ]
     },
     {
@@ -158,54 +170,164 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       category: 'pos',
       categoryLabel: 'Kasir POS & Transaksi',
       categoryIcon: Wifi,
-      title: '4. Mode Offline Transaksi Kasir & Auto-Sync Online',
-      summary: 'Penjelasan cara kerja Kasir POS saat koneksi internet terputus (offline mode).',
+      title: '4. Mode Offline PWA Kasir & Auto-Sync ke Cloud Firestore',
+      summary: 'Cara kerja transaksi saat internet terputus (offline mode) dan sinkronisasi otomatis saat online.',
       badge: 'Offline Mode',
       targetTab: 'kasir',
       steps: [
-        'Saat internet terputus, banner merah "Mode Offline (Internet Terputus)" akan otomatis muncul di bagian atas.',
-        'Kasir dapat tetap memproses transaksi seperti biasa. Data pesanan & presensi akan tersimpan secara aman di memori lokal.',
-        'Ketika internet terhubung kembali, banner hijau "Internet Terhubung Kembali" akan aktif dan sistem otomatis menyinkronkan seluruh data ke Cloud Firestore.'
+        'Saat internet terputus, banner "Mode Offline (Internet Terputus)" akan otomatis muncul di bagian atas.',
+        'Kasir dapat tetap memproses pesanan dan mencetak struk seperti biasa. Data tersimpan aman di IndexedDB/Local Storage.',
+        'Ketika internet terhubung kembali, sistem secara otomatis menyinkronkan seluruh transaksi dan presensi ke Cloud Firestore tanpa ada data yang terlewat.'
       ],
       warnings: [
-        'Jangan menghapus cache browser saat dalam kondisi offline agar transaksi yang belum di-sync tidak hilang.'
+        'Jangan menghapus cache/data browser saat dalam kondisi offline sebelum koneksi internet terhubung kembali.'
+      ]
+    },
+    {
+      id: 'guide-pos-5',
+      category: 'pos',
+      categoryLabel: 'Kasir POS & Transaksi',
+      categoryIcon: Receipt,
+      title: '5. Manajemen Riwayat Pesanan & Cetak Ulang Struk',
+      summary: 'Memantau pesanan masuk, mengubah status pesanan (Proses, Selesai, Dibatalkan), dan cetak ulang struk thermal.',
+      badge: 'Daftar Pesanan',
+      targetTab: 'pesanan',
+      steps: [
+        'Buka menu "Daftar Pesanan" di sidebar navigasi.',
+        'Filter pesanan berdasarkan tanggal, outlet cabang, atau status pembayaran.',
+        'Klik tombol "Cetak Struk" pada baris transaksi untuk mencetak ulang struk thermal.',
+        'Klik tombol "Kirim WA" untuk mengirimkan rincian struk digital langsung ke nomor WhatsApp pelanggan.'
       ]
     },
 
-    // 2. ABSENSI KAMERA WATERMARK & SHIFT
+    // 2. PRODUK, MENU & INVENTORY
+    {
+      id: 'guide-menu-1',
+      category: 'inventory',
+      categoryLabel: 'Produk & Persediaan',
+      categoryIcon: Utensils,
+      title: '6. Pengelolaan Daftar Menu Makanan, Minuman & Status Stok Habis',
+      summary: 'Menambah produk menu baru, mengubah harga, mengunggah foto makanan, dan mengatur toggle Sold Out.',
+      badge: 'Daftar Menu',
+      targetTab: 'menu',
+      steps: [
+        'Buka menu "Daftar Menu" di sidebar.',
+        'Klik tombol "Tambah Menu Baru". Masukkan Nama Menu, Kategori (Steak, Sides, Minuman), Harga Jual (Rp), dan Deskripsi Singkat.',
+        'Unggah foto menu makanan yang menarik untuk ditampilkan di Landing Page dan POS.',
+        'Gunakan tombol sakelar (toggle) "Tersedia / Habis" untuk menonaktifkan menu sementara jika bahan baku di outlet habis.'
+      ]
+    },
+    {
+      id: 'guide-menu-2',
+      category: 'inventory',
+      categoryLabel: 'Produk & Persediaan',
+      categoryIcon: ChefHat,
+      title: '7. Racikan Varian Steak, Saus Resmi & Add-On Tambahan',
+      summary: 'Mengatur pilihan tingkat kepedasan, varian porsi (Original/Crispy), aneka saus (BBQ, Blackpepper, Mushroom), dan add-on.',
+      badge: 'Racikan Menu',
+      targetTab: 'racik',
+      steps: [
+        'Buka menu "Racikan" di bawah kelompok Produk & Persediaan.',
+        'Atur daftar opsi Ayam (Original, Crispy Paha Fillet), Saus Pilihan Resmi, dan Add-on Pendamping (Extra Sauce, Potato Wedges).',
+        'Tentukan harga tambahan per item add-on jika ada.',
+        'Klik "Simpan Opsi Racikan" agar langsung teraplikasi pada Kasir POS.'
+      ]
+    },
+    {
+      id: 'guide-inventory-1',
+      category: 'inventory',
+      categoryLabel: 'Produk & Persediaan',
+      categoryIcon: Boxes,
+      title: '8. Kontrol Stok Bahan Baku, Ambang Minimum & Opname Stok',
+      summary: 'Memantau persediaan daging ayam fillet, kentang, wortel, buncis, saus, bumbu, dan pencocokan opname fisik.',
+      badge: 'Manajemen Stok',
+      targetTab: 'inventory',
+      steps: [
+        'Buka menu "Manajemen Stok" di Dashboard Admin.',
+        'Periksa stok bahan baku: status Aman (Hijau), Menipis (Kuning), atau Habis (Merah).',
+        'Untuk Menambah Bahan Baru: Klik "Tambah Item Bahan Baku", tentukan nama bahan, satuan (kg, gram, pcs), harga beli, dan batas minimal stok.',
+        'Gunakan sub-tab "Opname Stok" untuk mencocokkan stok fisik aktual dengan stok catatan sistem.'
+      ]
+    },
+    {
+      id: 'guide-inventory-2',
+      category: 'inventory',
+      categoryLabel: 'Produk & Persediaan',
+      categoryIcon: Package,
+      title: '9. Pemasok (Supplier) & Pembuatan Purchase Order (PO)',
+      summary: 'Mengelola daftar supplier bahan baku dan alur pembuatan PO hingga verifikasi barang masuk (Received).',
+      badge: 'Supply Chain PO',
+      targetTab: 'inventory',
+      steps: [
+        'Buka sub-tab "Pemasok & Supplier" untuk mencatat kontak rekanan distributor bahan baku.',
+        'Buka sub-tab "Purchase Order (PO)", klik "Buat PO Baru". Pilih Supplier, tanggal estimasi kirim, dan daftar bahan yang dipesan.',
+        'Setelah barang fisik tiba di Dapur Pusat / Toko, ubah status PO menjadi "Diterima (Received)". Stok bahan baku akan bertambah otomatis.'
+      ]
+    },
+    {
+      id: 'guide-crm-reviews',
+      category: 'crm',
+      categoryLabel: 'CRM & Pelanggan WA',
+      categoryIcon: Star,
+      title: '10. Ulasan & Feedback Pelanggan (QR Rating di Struk)',
+      summary: 'Melihat review bintang 1-5 dan saran kepuasan pelanggan yang masuk dari scan barcode QR pada struk belanja.',
+      badge: 'Customer Reviews',
+      targetTab: 'reviews',
+      steps: [
+        'Buka menu "Ulasan Pelanggan" di sidebar.',
+        'Pantau skor rata-rata kepuasan pelanggan (Rating Bintang) dari seluruh outlet cabang.',
+        'Tinjau kritik dan saran pelanggan untuk peningkatan mutu makanan dan pelayanan di outlet.'
+      ]
+    },
+
+    // 3. PRESENSI, SHIFT & KARYAWAN
     {
       id: 'guide-absensi-1',
       category: 'absensi',
-      categoryLabel: 'Absensi Kamera Watermark',
+      categoryLabel: 'Presensi & Shift',
       categoryIcon: Camera,
-      title: '5. Presensi Kamera Selfie & Watermark Lokasi Staff',
-      summary: 'Proses presensi masuk & pulang karyawan dengan verifikasi foto selfie, GPS lokasi outlet, dan jam WIB.',
+      title: '11. Presensi Kamera Selfie & Watermark Lokasi Staff',
+      summary: 'Proses presensi masuk & pulang karyawan dengan verifikasi foto selfie live, GPS outlet, jam WIB, dan kirim bukti ke WA.',
       badge: 'Presensi Kamera',
       targetTab: 'presensi_kamera',
       steps: [
-        'Buka menu "Presensi Kamera Selfie" (atau klik tombol Modal Presensi di Kasir).',
+        'Buka menu "Presensi Kamera Selfie" (atau klik tombol Presensi di Kasir).',
         'Pilih Nama Karyawan dari daftar dropdown.',
         'Masukkan PIN Presensi 4-Digit milik karyawan.',
         'Pilih Lokasi Outlet tempat bertugas.',
-        'Klik "Buka Kamera" dan berikan izin (*allow*) akses kamera & lokasi pada browser.',
+        'Klik "Buka Kamera" dan berikan izin (*allow*) akses kamera & lokasi GPS pada browser.',
         'Posisikan wajah dengan jelas, lalu klik "Presensi MASUK" atau "Presensi PULANG".',
         'Foto selfie akan otomatis dibubuhi Watermark Logo Steak 11, Nama Karyawan, Jam WIB, dan Alamat Outlet.'
       ],
       tips: [
-        'Hasil presensi dapat langsung dikirimkan sebagai bukti pesan WhatsApp ke Supervisor / Group Manager.'
-      ],
-      warnings: [
-        'Pastikan izin Kamera dan Lokasi (GPS) browser dalam status aktif agar watermark lokasi akurat.'
+        'Hasil presensi dapat langsung dikirimkan sebagai bukti pesan WhatsApp ke Supervisor / Group WA Manager.'
+      ]
+    },
+    {
+      id: 'guide-absensi-lembur',
+      category: 'absensi',
+      categoryLabel: 'Presensi & Shift',
+      categoryIcon: Clock,
+      title: '12. Pencatatan Presensi Lembur (Akses Mandiri Akun Karyawan)',
+      summary: 'Panduan karyawan mencatat lembur mandiri tanpa foto terintegrasi otomatis dengan perhitungan payroll.',
+      badge: 'Presensi Lembur',
+      targetTab: 'absensi',
+      steps: [
+        'Buka menu "Rekap Presensi Digital" (atau tombol + Catat Lembur di toolbar).',
+        'Bagi akun staf login yang terdaftar di Data Karyawan, kolom Nama dan Outlet akan terkunci secara aman ke profil akun.',
+        'Tentukan Tanggal Lembur, Jam Mulai, Jam Selesai, dan Total Jam Lembur (contoh: 1 jam).',
+        'Tuliskan Alasan / Keterangan Tugas Lembur (contoh: Persiapan Event / Bumbu Marinasi / Stok Opname).',
+        'Klik tombol "Simpan Presensi Lembur". Data lembur akan langsung tercatat dan masuk ke rekapitulasi penggajian.'
       ]
     },
     {
       id: 'guide-absensi-2',
       category: 'absensi',
-      categoryLabel: 'Absensi Kamera Watermark',
+      categoryLabel: 'Presensi & Shift',
       categoryIcon: Calendar,
-      title: '6. Pengaturan Jadwal Shift Kerja Roster Karyawan',
-      summary: 'Cara mengatur jadwal shift (Pagi, Siang, Malam, Libur) per karyawan dan outlet cabang.',
-      badge: 'Jadwal Shift',
+      title: '13. Pengaturan Jadwal Shift Kerja Roster Karyawan',
+      summary: 'Cara mengatur jadwal shift (Pagi, Siang, Malam, Off/Libur) per karyawan dan outlet cabang.',
+      badge: 'Jadwal Roster',
       targetTab: 'jadwal',
       steps: [
         'Buka menu "Jadwal Shift Kerja" di Dashboard Admin.',
@@ -216,38 +338,51 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       ]
     },
 
-    // 3. PENGGAJIAN & PAYROLL
+    // 4. PENGGAJIAN & KEUANGAN
     {
       id: 'guide-payroll-1',
       category: 'payroll',
       categoryLabel: 'Penggajian & Payroll',
-      categoryIcon: FileSpreadsheet,
-      title: '7. Siklus Cut-Off 25 & Kalkulasi Gaji Otomatis Terintegrasi Presensi Digital',
-      summary: 'Perhitungan gaji pokok, lembur, tunjangan tepat waktu, denda keterlambatan, kasbon dengan siklus cut-off 25 ketemu 25, dan cetak slip gaji PDF / WA.',
+      categoryIcon: Calculator,
+      title: '14. Siklus Cut-Off 25 & Kalkulasi Gaji Otomatis Terintegrasi Presensi Digital',
+      summary: 'Perhitungan gaji pokok, lembur, tunjangan tepat waktu, denda keterlambatan, kasbon dengan siklus cut-off 25, serta slip gaji PDF / WA.',
       badge: 'Siklus Cut-Off 25',
       targetTab: 'penggajian',
       steps: [
         'Buka menu "Penggajian / Payroll" di Dashboard Admin.',
         'Pilih Mode Siklus: "⭐ Siklus Cut-Off 25" (tgl 25 bulan lalu s/d 24 bulan berjalan) atau "🗓️ Bulan Kalender (1–Akhir)".',
-        'Pilih Bulan Gaji (contoh: September 2026). Tanggal Cut-off (25/08 s/d 24/09) dan Tanggal Bayar (25/09) akan terisi otomatis.',
+        'Pilih Bulan Gaji (contoh: September 2026). Tanggal Cut-off (25/08 s/d 24/09) dan Tanggal Bayar (25/09) terisi otomatis.',
         'Klik tombol "Hitung Otomatis Cut-Off" (Berikon Bintang Sparkles).',
         'Sistem akan otomatis menghitung: Total Hari Hadir, Presensi Tepat Waktu (Rp 15.000/hari), Upah Lembur, Potongan Denda Terlambat, dan Potongan Cicilan Kasbon Pinjaman dalam rentang tgl 25 s/d 24.',
         'Klik ikon "PDF" untuk mencetak Slip Gaji resmi, atau klik "WA" untuk mengirim rincian slip langsung ke nomor WhatsApp karyawan.',
         'Gunakan tombol "Ekspor Excel" untuk mengunduh rekapitulasi penggajian lengkap dengan rincian periode cut-off.'
-      ],
-      tips: [
-        'Pilih mode "⚙️ Kustom Rentang" jika ingin menghitung gaji dengan rentang tanggal khusus di luar tanggal 25.'
+      ]
+    },
+    {
+      id: 'guide-finance-1',
+      category: 'finance',
+      categoryLabel: 'Keuangan & Audit Kasir',
+      categoryIcon: TrendingUp,
+      title: '15. Shift Pembukaan/Penutupan Kasir & Kas Kecil (Petty Cash)',
+      summary: 'Pencatatan kas awal modal kasir, penutupan shift kasir, pencatatan pengeluaran harian, dan analisis omzet.',
+      badge: 'Audit Shift Kasir',
+      targetTab: 'shifts',
+      steps: [
+        'Saat Kasir Membuka Shift: Buka menu "Audit Closing Shift", catat modal saldo awal kas (misal: Rp 200.000).',
+        'Mencatat Pengeluaran Toko: Buka menu "Laporan Keuangan", klik "Tambah Pengeluaran Kas Kecil", masukkan nominal dan foto nota pembelanjaan (misal: beli es batu/gas elpiji).',
+        'Saat Penutupan Shift Kasir: Klik "Tutup Shift Kasir", hitung fisik uang tunai di laci kasir. Sistem akan membandingkan otomatis saldo sistem vs saldo fisik.',
+        'Buka menu "Analisis Keuangan" untuk melihat grafik omzet bulanan, total margin profit, dan metode bayar terpopuler.'
       ]
     },
 
-    // 4. STRUK & PRINTER THERMAL
+    // 5. STRUK & PEMBAYARAN
     {
       id: 'guide-receipt-1',
       category: 'receipt',
-      categoryLabel: 'Struk & Printer Thermal',
+      categoryLabel: 'Struk & Pembayaran',
       categoryIcon: Printer,
-      title: '8. Pengaturan Format Struk Per Outlet & Logo Brand',
-      summary: 'Mengatur header kustom per cabang, mengunggah foto logo brand, dan menyesuaikan ukuran logo.',
+      title: '16. Pengaturan Format Struk Per Outlet, Logo Brand & Info Wi-Fi',
+      summary: 'Mengatur header kustom per cabang, upload foto logo brand (40-112px), reset nomor struk dari 0, dan password Wi-Fi toko.',
       badge: 'Custom Struk',
       targetTab: 'payment_receipt_settings',
       steps: [
@@ -256,74 +391,21 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
         'Unggah foto logo brand dengan mengklik tombol "Upload Logo" atau masukkan URL gambar logo.',
         'Pilih Ukuran Tampilan Logo (Kecil - 40px, Sedang - 56px, Besar - 80px, atau Jumbo - 112px).',
         'Isi Teks Header Cabang, Slogan Toko, Alamat Outlet, No. Telepon, dan Catatan Kaki Struk.',
+        'Atur Prefix No. Struk (misal: ORD-) atau klik "Reset No. Struk dari 1 (0)" untuk mengembalikan nomor urut pesanan ke awal.',
+        'Aktifkan opsi "Tampilkan Informasi Wi-Fi Pelanggan di Struk" dan isi SSID serta Password Wi-Fi toko.',
         'Klik tombol "Simpan Pengaturan Struk".'
       ]
     },
-    {
-      id: 'guide-receipt-2',
-      category: 'receipt',
-      categoryLabel: 'Struk & Printer Thermal',
-      categoryIcon: Wifi,
-      title: '9. Reset Nomor Struk dari 0 & Info Wi-Fi Pelanggan',
-      summary: 'Mengubah prefix nomor struk (ORD-), mereset nomor urut dari 0, serta menampilkan password Wi-Fi toko.',
-      badge: 'Format Struk',
-      targetTab: 'payment_receipt_settings',
-      steps: [
-        'Pada menu Pengaturan Struk, gulir ke seksi "Format & Reset Nomor Struk".',
-        'Atur Prefix No. Struk (misal: ORD-, INV-, STR-).',
-        'Klik tombol "Reset No. Struk dari 1 (0)" untuk mengembalikan nomor urut pesanan ke awal.',
-        'Aktifkan opsi "Tampilkan Informasi Wi-Fi Pelanggan di Struk".',
-        'Isi SSID Nama Wi-Fi dan Password Wi-Fi toko.',
-        'Klik "Simpan Pengaturan Struk". Informasi Wi-Fi akan otomatis dicetak pada bagian bawah struk.'
-      ]
-    },
 
-    // 5. STOK & SUPPLY CHAIN
-    {
-      id: 'guide-inventory-1',
-      category: 'inventory',
-      categoryLabel: 'Stok & Supply Chain',
-      categoryIcon: Package,
-      title: '10. Manajemen Stok Bahan Baku, Supplier & PO',
-      summary: 'Mengelola persediaan daging ayam, saus, bumbu, membuat Purchase Order ke supplier, dan opname stok.',
-      badge: 'Inventory Control',
-      targetTab: 'inventory',
-      steps: [
-        'Buka menu "Manajemen Stok / Inventory".',
-        'Untuk Tambah Bahan Baku Baru: Klik "Tambah Item Bahan Baku", tentukan nama bahan, satuan (kg, gram, pcs), harga satuan, dan batas minimal stok.',
-        'Untuk Pesanan ke Supplier (PO): Buka sub-tab "Purchase Orders (PO)", klik "Buat PO Baru", pilih Supplier dan rincian barang.',
-        'Setelah barang fisik dikirim supplier dan tiba di toko, ubah status PO menjadi "Diterima (Received)" agar stok otomatis bertambah.',
-        'Gunakan sub-tab "Opname Stok" untuk mencocokkan stok fisik aktual dengan stok catatan sistem.'
-      ]
-    },
-
-    // 6. KEUANGAN & AUDIT KASIR
-    {
-      id: 'guide-finance-1',
-      category: 'finance',
-      categoryLabel: 'Keuangan & Audit Kasir',
-      categoryIcon: TrendingUp,
-      title: '11. Shift Pembukaan/Penutupan Kasir & Kas Kecil (Petty Cash)',
-      summary: 'Pencatatan kas awal modal kasir, penutupan shift kasir, pencatatan pengeluaran harian, dan analisis omzet.',
-      badge: 'Keuangan POS',
-      targetTab: 'shifts',
-      steps: [
-        'Saat Kasir Membuka Shift: Buka menu "Laporan Keuangan", catat modal saldo awal kas (misal: Rp 200.000).',
-        'Mencatat Pengeluaran Toko: Buka sub-tab "Pengeluaran Kas Kecil", klik "Tambah Pengeluaran", masukkan nominal dan foto nota pembelanjaan (misal: beli es batu/gas).',
-        'Saat Penutupan Shift Kasir: Klik "Tutup Shift Kasir", hitung fisik uang tunai di laci kasir. Sistem akan membandingkan otomatis saldo sistem vs saldo fisik.',
-        'Buka menu "Analisis Keuangan" untuk melihat grafik omzet bulanan, total margin profit, dan metode bayar terpopuler.'
-      ]
-    },
-
-    // 7. CRM & PELANGGAN
+    // 6. CRM & WHATSAPP GATEWAY
     {
       id: 'guide-crm-1',
       category: 'crm',
       categoryLabel: 'CRM & Pelanggan WA',
       categoryIcon: PhoneCall,
-      title: '12. Data Pelanggan CRM & Broadcast WhatsApp',
+      title: '17. Data Pelanggan CRM, Poin Loyalitas & Broadcast WhatsApp',
       summary: 'Pencatatan riwayat belanja pelanggan, poin loyalitas, dan integrasi notifikasi gateway WhatsApp.',
-      badge: 'CRM & WA',
+      badge: 'CRM & WA Broadcast',
       targetTab: 'customers',
       steps: [
         'Setiap kali transaksi dibuat di kasir dengan mencantumkan No. HP pelanggan, data pelanggan otomatis tersimpan di database CRM.',
@@ -333,14 +415,82 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       ]
     },
 
-    // 8. PEMBARUAN SYSTEM & FIREBASE
+    // 7. HAK AKSES, ADMIN & AUDIT LOG
+    {
+      id: 'guide-users-1',
+      category: 'users',
+      categoryLabel: 'Hak Akses & Branding',
+      categoryIcon: Users,
+      title: '18. Data Karyawan, Role Jabatan, PIN Presensi & Hak Akses (RBAC)',
+      summary: 'Menambah staf, mengatur PIN presensi 4-digit, dan membatasi centang menu yang boleh diakses.',
+      badge: 'RBAC Access',
+      targetTab: 'karyawan',
+      steps: [
+        'Buka menu "Data Karyawan" di Dashboard Admin.',
+        'Klik "Tambah Karyawan Baru". Isi Nama Lengkap, Jabatan (Kasir, Manager, Chef/Cook), Outlet Tugas, Gaji Harian, Rate Lembur, dan PIN Presensi 4-Digit.',
+        'Untuk Pengaturan Akun Login Admin: Buka menu "Admin System". Tambahkan Username & Password login.',
+        'Tentukan Centang Hak Akses Menu yang diizinkan untuk akun tersebut. Menu yang tidak dicentang akan otomatis disembunyikan dari sidebar pengguna.'
+      ]
+    },
+    {
+      id: 'guide-audit-logs',
+      category: 'users',
+      categoryLabel: 'Hak Akses & Branding',
+      categoryIcon: ShieldCheck,
+      title: '19. Audit Log Aktivitas & Jejak Keamanan Sistem',
+      summary: 'Memantau rekam aktivitas login/logout, perubahan data karyawan, harga, stok, dan ekspor log ke Excel.',
+      badge: 'Security Audit Log',
+      targetTab: 'audit_logs',
+      steps: [
+        'Buka menu "Audit Log Aktivitas" di sidebar navigasi.',
+        'Tinjau seluruh riwayat aktivitas sistem yang dicatat secara kronologis lengkap dengan Nama User, Role, Aksi, Modul, dan Timestamp WIB.',
+        'Gunakan filter pencarian untuk mencari aktivitas user tertentu atau aksi spesifik.',
+        'Klik tombol "Ekspor Excel (.xlsx)" untuk mengunduh laporan log audit keamanan sistem.'
+      ]
+    },
+
+    // 8. OUTLET, SYSTEM & INTEGRASI
+    {
+      id: 'guide-outlets',
+      category: 'system',
+      categoryLabel: 'System & Firebase',
+      categoryIcon: MapPin,
+      title: '20. Pengaturan Outlet Cabang, Radius GPS & Jam Shift Operasional',
+      summary: 'Mengelola 5 cabang (Cibubur, Kalisari, Jatisampurna, Cilangkap, Kuningan), koordinat GPS presensi, dan shift rules.',
+      badge: 'Outlet Rules',
+      targetTab: 'outlets',
+      steps: [
+        'Buka menu "Outlet & Shift Rules" di Dashboard Admin.',
+        'Pilih Cabang yang ingin diatur (Cibubur, Kalisari, Jatisampurna, Cilangkap, Kuningan).',
+        'Atur Koordinat Latitude/Longitude lokasi outlet dan Radius Maksimal Presensi (misal: 100 meter).',
+        'Tentukan jam buka, jam tutup, dan batas toleransi keterlambatan shift.',
+        'Klik "Simpan Pengaturan Outlet".'
+      ]
+    },
+    {
+      id: 'guide-users-branding',
+      category: 'users',
+      categoryLabel: 'Hak Akses & Branding',
+      categoryIcon: Sparkles,
+      title: '21. Identitas Brand, Banner Hero & Running Text Footer Web',
+      summary: 'Mengubah nama brand STEAK 11, logo toko, banner hero beranda, dan running text pengumuman footer.',
+      badge: 'Branding Store',
+      targetTab: 'branding',
+      steps: [
+        'Buka menu "Identitas & Branding" di sidebar navigasi.',
+        'Ubah Nama Brand / Toko (contoh: STEAK 11), Slogan Utama, dan Sub-tagline Hero.',
+        'Unggah Foto Logo Brand Utama dan Foto Hero Banner Steak.',
+        'Atur Teks Pengumuman Header Top (Announcement Bar) dan Teks Berjalan Footer (Running Text Banner).',
+        'Klik tombol "Simpan & Terapkan Branding Toko". Tampilan Landing Page akan langsung ter-update otomatis.'
+      ]
+    },
     {
       id: 'guide-system-1',
       category: 'system',
       categoryLabel: 'System & Firebase',
       categoryIcon: HardDrive,
-      title: '13. Pembaruan Software Aplikasi via Berkas ZIP',
-      summary: 'Mengunggah file paket update .zip versi terbaru tanpa mengganggu atau menghapus data di Firestore.',
+      title: '22. Pembaruan Software Aplikasi via Berkas ZIP',
+      summary: 'Mengunggah file paket update .zip versi terbaru tanpa mengganggu atau menghapus data di Cloud Firestore.',
       badge: 'System Update',
       targetTab: 'system',
       steps: [
@@ -348,10 +498,10 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
         'Gulir ke seksi "Pembaruan Aplikasi via File ZIP (System Software Update)".',
         'Klik tombol "Pilih File Update ZIP...".',
         'Pilih berkas bundle update berformat .zip.',
-        'Sistem akan memproses ekstraksi kode software dan menampilkan ukuran file (MB), total berkas, dan status keamanan database (🛡️ Safe Untouched).'
+        'Sistem akan memproses ekstraksi kode software dan menampilkan status keamanan database (🛡️ Safe Untouched).'
       ],
       tips: [
-        'Seluruh database transaksi, outlet, karyawan, dan settings tersimpan aman terpisah di Cloud Firestore, sehingga proses update software 100% aman.'
+        'Seluruh database transaksi, stok, karyawan, dan settings tersimpan aman terpisah di Cloud Firestore, sehingga proses update software 100% aman.'
       ]
     },
     {
@@ -359,8 +509,8 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       category: 'system',
       categoryLabel: 'System & Firebase',
       categoryIcon: Database,
-      title: '14. Integrasi Real-Time Firebase Cloud Firestore & Google Sheets (GAS)',
-      summary: 'Konfigurasi koneksi database Firebase Cloud Firestore dan backup sekunder ke Google Sheets Apps Script.',
+      title: '23. Integrasi Cloud Firestore & Backup Google Sheets (GAS)',
+      summary: 'Pemeriksaan status sinkronisasi real-time Firebase Cloud Firestore dan backup sekunder ke Google Sheets Apps Script.',
       badge: 'Database Cloud',
       targetTab: 'firebase',
       steps: [
@@ -368,55 +518,21 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
         'Seluruh transaksi, stok, dan absensi tersinkronkan secara otomatis antar perangkat kasir & admin.',
         'Jika ingin mengaktifkan backup otomatis ke Google Spreadsheet: Buka menu "Integrasi & System", masukkan URL Web App Google Apps Script (GAS), lalu klik "Uji Koneksi" & "Simpan URL".'
       ]
-    },
-
-    // 9. HAK AKSES & PENGATURAN BRAND
-    {
-      id: 'guide-users-1',
-      category: 'users',
-      categoryLabel: 'Hak Akses & Branding',
-      categoryIcon: Users,
-      title: '15. Pengaturan Role Karyawan, User Admin & Hak Akses (RBAC)',
-      summary: 'Menambah staf, mengatur PIN presensi 4-digit, dan membatasi centang menu yang boleh diakses.',
-      badge: 'RBAC Access',
-      targetTab: 'karyawan',
-      steps: [
-        'Buka menu "Data Karyawan" di Dashboard Admin.',
-        'Klik "Tambah Karyawan Baru". Isi Nama Lengkap, Jabatan (Kasir, Manager, Chef), Outlet Tugas, Gaji Harian, dan PIN Presensi 4-Digit.',
-        'Untuk Pengaturan Akun Login Admin: Buka menu "Admin System". Tambahkan Username & Password login.',
-        'Tentukan Centang Hak Akses Menu yang diizinkan untuk akun tersebut. Menu yang tidak dicentang akan otomatis disembunyikan dari sidebar pengguna.'
-      ]
-    },
-    {
-      id: 'guide-users-2',
-      category: 'users',
-      categoryLabel: 'Hak Akses & Branding',
-      categoryIcon: Sparkles,
-      title: '16. Identitas Toko, Banner Hero & Running Text Footer Web',
-      summary: 'Mengubah nama brand, tagline, logo toko, banner hero beranda, dan running text di Landing Page.',
-      badge: 'Branding Store',
-      targetTab: 'branding',
-      steps: [
-        'Buka menu "Identitas & Branding" (atau seksi 2 pada menu "Integrasi & System").',
-        'Ubah Nama Brand / Toko (contoh: STEAK 11), Slogan Utama, dan Sub-tagline Hero.',
-        'Unggah Foto Logo Brand Utama dan Foto Hero Banner Steak.',
-        'Atur Teks Pengumuman Header Top (Announcement Bar) dan Teks Berjalan Footer (Running Text Banner).',
-        'Klik tombol "Simpan & Terapkan Branding Toko". Tampilan Landing Page akan langsung ter-update otomatis.'
-      ]
     }
   ];
 
   const categories = [
     { id: 'all', label: 'Semua Tutorial', icon: BookOpen },
-    { id: 'pos', label: 'Kasir POS & Transaksi', icon: ShoppingCart },
-    { id: 'absensi', label: 'Absensi Kamera Watermark', icon: Camera },
+    { id: 'sop', label: 'SOP Resmi (V8.3)', icon: FileCheck },
+    { id: 'pos', label: 'Kasir POS & Pesanan', icon: ShoppingCart },
+    { id: 'inventory', label: 'Produk, Menu & Stok', icon: Package },
+    { id: 'absensi', label: 'Presensi & Shift', icon: Camera },
     { id: 'payroll', label: 'Penggajian & Payroll', icon: FileSpreadsheet },
-    { id: 'receipt', label: 'Struk & Printer Thermal', icon: Printer },
-    { id: 'inventory', label: 'Stok & Supply Chain', icon: Package },
     { id: 'finance', label: 'Keuangan & Audit Kasir', icon: TrendingUp },
-    { id: 'crm', label: 'CRM & Pelanggan WA', icon: PhoneCall },
-    { id: 'system', label: 'System & Firebase', icon: HardDrive },
-    { id: 'users', label: 'Hak Akses & Branding', icon: Users }
+    { id: 'receipt', label: 'Struk & Pembayaran', icon: Printer },
+    { id: 'crm', label: 'CRM & WhatsApp', icon: PhoneCall },
+    { id: 'users', label: 'Hak Akses, RBAC & Audit Log', icon: Users },
+    { id: 'system', label: 'System & Firebase', icon: HardDrive }
   ];
 
   const faqs: FaqItem[] = [
@@ -426,24 +542,39 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       category: 'pos'
     },
     {
+      q: 'Bagaimana cara karyawan mencatat presensi lembur mandiri?',
+      a: 'Buka menu "Rekap Presensi Digital" lalu klik tombol "+ Catat Lembur". Bagi akun staf/karyawan yang login, nama dan cabang outlet otomatis terkunci sesuai profil akun karyawan. Cukup masukkan jam lembur, alasan tugas, dan klik "Simpan Presensi Lembur".',
+      category: 'absensi'
+    },
+    {
+      q: 'Bagaimana alur siklus cut-off penggajian 25 di Steak 11?',
+      a: 'Siklus Cut-Off 25 menghitung presensi dan lembur mulai dari tanggal 25 bulan lalu hingga tanggal 24 bulan berjalan, dengan tanggal bayar pada tanggal 25. Sistem otomatis mengakumulasi hari hadir, tunjangan tepat waktu Rp 15.000/hari, upah lembur, dan potongan denda telat/kasbon.',
+      category: 'payroll'
+    },
+    {
       q: 'Apakah pembaruan software via file ZIP akan menghapus data penjualan & transaksi?',
       a: 'Sama sekali TIDAK. Seluruh database transaksi, stok, karyawan, dan outlet tersimpan terpisah di Cloud Firestore. Proses update via berkas ZIP hanya memperbarui berkas kode aplikasi tanpa menyentuh database.',
       category: 'system'
     },
     {
-      q: 'Bagaimana cara menambahkan lokasi cabang outlet baru?',
-      a: 'Buka menu "Outlet & Shift Rules" di Dashboard Admin. Klik tombol "Tambah Outlet Baru", masukkan Nama Cabang, Alamat Lengkap, No. HP/WA Outlet, Jam Operasional, dan Aturan Shift. Outlet baru akan langsung aktif di kasir.',
+      q: 'Bagaimana cara menambahkan lokasi cabang outlet baru atau mengatur jam shift?',
+      a: 'Buka menu "Outlet & Shift Rules" di Dashboard Admin. Klik tombol "Tambah Outlet Baru", masukkan Nama Cabang, Alamat Lengkap, No. HP/WA Outlet, Koordinat GPS, dan Jam Operasional Shift. Outlet baru akan langsung aktif di kasir dan presensi.',
       category: 'system'
     },
     {
       q: 'Mengapa menu tertentu tidak muncul di sidebar karyawan?',
-      a: 'Hal ini karena sistem pembatasan Hak Akses (RBAC). Admin dapat mengatur menu yang diizinkan melalui menu "Admin System" atau "Data Karyawan" dengan mencentang daftar modul yang boleh diakses.',
+      a: 'Hal ini karena sistem pembatasan Hak Akses (RBAC). Admin dapat mengatur menu yang diizinkan melalui menu "Admin System" atau "Data Karyawan" dengan mencentang daftar modul yang boleh diakses oleh karyawan tersebut.',
       category: 'users'
     },
     {
-      q: 'Bagaimana cara mencetak slip gaji karyawan?',
-      a: 'Buka menu "Penggajian / Payroll", hitung ulang gaji periode bulan terkait. Pada tabel rekapitulasi gaji, klik ikon Printer di sebelah kanan baris nama karyawan untuk mencetak Slip Gaji PDF resmi.',
+      q: 'Bagaimana cara mencetak slip gaji karyawan dan mengirimkannya ke WhatsApp?',
+      a: 'Buka menu "Penggajian / Payroll", hitung otomatis cut-off periode bulan terkait. Pada tabel rekapitulasi gaji, klik ikon "PDF" untuk mencetak Slip Gaji resmi atau klik ikon "WA" untuk mengirim rincian slip langsung ke nomor WhatsApp karyawan.',
       category: 'payroll'
+    },
+    {
+      q: 'Bagaimana cara melakukan konfirmasi pemahaman SOP V8.3 ke Manajemen?',
+      a: 'Buka menu "SOP", gulir ke bagian paling bawah (Digital SOP Acknowledgement). Pilih nama karyawan dari daftar data karyawan, centang persetujuan, lalu klik tombol "Konfirmasi Pemahaman SOP & Kirim ke WA" untuk otomatis mengirim pesan verifikasi ke WhatsApp Manajemen 0812-2323-3299.',
+      category: 'sop'
     }
   ];
 
