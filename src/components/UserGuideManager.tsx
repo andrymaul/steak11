@@ -80,22 +80,22 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
   const [expandedFaqId, setExpandedFaqId] = useState<number | null>(null);
 
   const guides: GuideItem[] = [
-    // 0. SOP RESMI STEAK 11 (V8.3)
+    // 0. SOP STEAK 11
     {
       id: 'guide-sop-1',
       category: 'sop',
-      categoryLabel: 'SOP Resmi Steak 11 (V8.3)',
+      categoryLabel: 'SOP Steak 11',
       categoryIcon: FileCheck,
-      title: 'Dokumen Standar Operasional Prosedur (SOP V8.3 - Brand Edition)',
+      title: 'Dokumen Standar Operasional Prosedur (SOP Steak 11)',
       summary: 'Pedoman Hub-and-Spoke Dapur Pusat, 5 Cabang Solo Operator, Peringatan 4 Alat Mutlak, Goreng Kentang Golden-Yellow, Plating Presisi, BBM 1 Jam Sebelum Masuk, Deep-Cleaning Gerobak, Hospitality (3S), & Konfirmasi WA.',
-      badge: 'SOP V8.3 Resmi',
+      badge: 'SOP Steak 11',
       targetTab: 'sop',
       steps: [
         'Buka menu "SOP" pada sidebar navigasi left.',
         'Pelajari 6 Bagian SOP: (1) Dapur Pusat & Logistik Hub, (2) Spesifikasi Alat & Plating Presisi (Coolbox, Kompor Gas/Wajan, Saus Resmi, Timbangan Digital 90g, Kentang Golden-Yellow 170°C-180°C, Hospitality 3S & Cuci Tangan Sebelum/Sesudah Bekerja), (3) Timeline 4 Fase Operasional, (4) Panduan Efisiensi & Pemeliharaan Aset (BBM Motor 1 Jam Sebelum Masuk, Cuci Motor 1x/Bulan, Deep-Cleaning Gerobak Sebelum Libur, Sampah Harian, Cairan TAF, Sunlight 80:20), (5) Dual-Channel Reporting, dan (6) Checklist Harian Serah Terima.',
         'Gunakan Simulasi Gramasi Porsi interaktif untuk menghitung total bahan baku paha fillet ayam (90g), kentang (5 pcs), wortel (4 pcs), buncis (2 pcs), dan saus (40-50ml).',
         'Lakukan Konfirmasi Pemahaman SOP & Komitmen Digital: Pilih nama karyawan dari data karyawan dan kirimkan pernyataan komitmen otomatis ke WhatsApp Manajemen (0812-2323-3299).',
-        'Klik tombol "Cetak / Download PDF Resmi" untuk mengunduh dokumen SOP V8.3 resmi dengan format warna brand.'
+        'Klik tombol "Cetak / Download PDF Resmi" untuk mengunduh dokumen SOP resmi dengan format warna brand.'
       ],
       tips: [
         'Gunakan checklist interaktif 7 poin setiap awal shift untuk memverifikasi kesesuaian fisik stok dari Dapur Pusat.'
@@ -523,7 +523,7 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
 
   const categories = [
     { id: 'all', label: 'Semua Tutorial', icon: BookOpen },
-    { id: 'sop', label: 'SOP Resmi (V8.3)', icon: FileCheck },
+    { id: 'sop', label: 'SOP Steak 11', icon: FileCheck },
     { id: 'pos', label: 'Kasir POS & Pesanan', icon: ShoppingCart },
     { id: 'inventory', label: 'Produk, Menu & Stok', icon: Package },
     { id: 'absensi', label: 'Presensi & Shift', icon: Camera },
@@ -572,7 +572,7 @@ export const UserGuideManager: React.FC<UserGuideManagerProps> = ({ onNavigateTa
       category: 'payroll'
     },
     {
-      q: 'Bagaimana cara melakukan konfirmasi pemahaman SOP V8.3 ke Manajemen?',
+      q: 'Bagaimana cara melakukan konfirmasi pemahaman SOP ke Manajemen?',
       a: 'Buka menu "SOP", gulir ke bagian paling bawah (Digital SOP Acknowledgement). Pilih nama karyawan dari daftar data karyawan, centang persetujuan, lalu klik tombol "Konfirmasi Pemahaman SOP & Kirim ke WA" untuk otomatis mengirim pesan verifikasi ke WhatsApp Manajemen 0812-2323-3299.',
       category: 'sop'
     }

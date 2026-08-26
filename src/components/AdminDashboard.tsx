@@ -11678,7 +11678,7 @@ function doPost(e) {
           <CustomerManager onShowToast={showToast} currentUser={currentUser} />
         )}
 
-        {/* TAB 23: STANDAR OPERASIONAL PROSEDUR (SOP) RESMI V8.3 */}
+        {/* TAB 23: STANDAR OPERASIONAL PROSEDUR (SOP) */}
         {(activeTab as string) === 'sop' && (
           <SopManager onShowToast={showToast} onNavigateTab={(tab) => setActiveTab(tab as any)} />
         )}

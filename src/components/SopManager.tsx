@@ -268,7 +268,7 @@ export const SopManager: React.FC<SopManagerProps> = ({ onShowToast, onNavigateT
 
     // WhatsApp Confirmation Template to 0812-2323-3299
     const waText = 
-`*KONFIRMASI KOMITMEN & KEPATUHAN SOP STEAK 11 (V8.3)*
+`*KONFIRMASI KOMITMEN & KEPATUHAN SOP STEAK 11*
 
 Kepada: Manajemen Steak 11 (0812-2323-3299)
 Dengan ini saya telah membaca, memahami, dan siap menjalankan seluruh Standar Operasional Prosedur (SOP) dengan rincian:
@@ -294,7 +294,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     showToast('Status komitmen SOP di-reset.');
   };
 
-  // Generate Official PDF Document of SOP V8.3 in Brand Colors
+  // Generate Official PDF Document of SOP in Brand Colors
   const handleExportPdfOfficial = () => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const primaryColor: [number, number, number] = [61, 18, 89]; // #3D1259
@@ -331,7 +331,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     doc.roundedRect(132, 6, 68, 24, 2, 2, 'F');
     doc.setFontSize(7.5);
     doc.setTextColor(...goldColor);
-    doc.text('Dokumen Versi: SOP V8.3 (Brand Colors)', 136, 12);
+    doc.text('Dokumen Versi: SOP Standar Steak 11', 136, 12);
     doc.setTextColor(255, 255, 255);
     doc.text('Sistem Kerja: Solo Operator (1 Kru/Cabang)', 136, 18);
     doc.text('Portal Digital: steak11.vercel.app', 136, 24);
@@ -468,7 +468,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     // Page 1 Footer
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('STEAK 11 • Standard Operating Procedure (SOP V8.3 - Brand Edition)', 14, 290);
+    doc.text('STEAK 11 • Standard Operating Procedure (SOP)', 14, 290);
     doc.text('Halaman 1 dari 3', 175, 290);
 
     // --- PAGE 2 ---
@@ -609,7 +609,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     // Page 2 Footer
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('STEAK 11 • Standard Operating Procedure (SOP V8.3 - Brand Edition)', 14, 290);
+    doc.text('STEAK 11 • Standard Operating Procedure (SOP)', 14, 290);
     doc.text('Halaman 2 dari 3', 175, 290);
 
     // --- PAGE 3 ---
@@ -719,11 +719,11 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     // Page 3 Footer
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('STEAK 11 • Standard Operating Procedure (SOP V8.3 - Brand Edition)', 14, 290);
+    doc.text('STEAK 11 • Standard Operating Procedure (SOP)', 14, 290);
     doc.text('Halaman 3 dari 3', 175, 290);
 
-    doc.save(`SOP_Resmi_Steak11_V8.3_Brand_Edition_${checklistDate}.pdf`);
-    showToast('Dokumen PDF SOP Resmi V8.3 berhasil diunduh!');
+    doc.save(`SOP_Steak11_Brand_Edition_${checklistDate}.pdf`);
+    showToast('Dokumen PDF SOP berhasil diunduh!');
   };
 
   return (
@@ -767,7 +767,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
             <button
               onClick={handleExportPdfOfficial}
               className="px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-              title="Unduh Dokumen PDF Resmi Standar V8.3"
+              title="Unduh Dokumen PDF Resmi SOP"
             >
               <Download className="w-4 h-4 text-purple-950" />
               <span>Cetak / Download PDF Resmi</span>
