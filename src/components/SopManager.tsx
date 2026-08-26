@@ -453,16 +453,17 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
     currentY += 10;
     doc.setFillColor(254, 243, 199);
     doc.setDrawColor(245, 158, 11);
-    doc.roundedRect(14, currentY, 182, 22, 2, 2, 'FD');
+    doc.roundedRect(14, currentY, 182, 26, 2, 2, 'FD');
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(180, 83, 9);
-    doc.text('PERINGATAN STANDAR ALAT OUTLET CABANG:', 17, currentY + 4.5);
+    doc.text('PERINGATAN STANDAR ALAT OUTLET CABANG (MUTLAK):', 17, currentY + 4.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(40, 40, 40);
     doc.text('1. Penyimpanan Coolbox: Menggunakan Coolbox + Es Batu. Susun porsi ayam dan saus berselang-seling es batu.', 17, currentY + 9, { maxWidth: 176 });
-    doc.text('2. Peralatan Masak Kompor Gas: Menggunakan Kompor Gas & Wajan.', 17, currentY + 14, { maxWidth: 176 });
-    doc.text('3. Penyajian Saus: Saus (BBQ / Black Pepper / Mushroom) disiramkan di atas porsi atau disajikan dalam cup terpisah.', 17, currentY + 19, { maxWidth: 176 });
+    doc.text('2. Kompor Gas & Wajan: Menggunakan Kompor Gas & Wajan. Gunakan api sedang untuk ayam & api 170°C–180°C untuk kentang.', 17, currentY + 14, { maxWidth: 176 });
+    doc.text('3. Penyajian Saus: Saus resmi (BBQ / Black Pepper / Mushroom) disiramkan di atas porsi atau disajikan dalam cup terpisah.', 17, currentY + 19, { maxWidth: 176 });
+    doc.text('4. Timbangan Digital (90g): Wajib menggunakan timbangan digital dapur untuk memastikan berat fillet ayam tepat 90 Gram.', 17, currentY + 24, { maxWidth: 176 });
 
     // Page 1 Footer
     doc.setFontSize(7);
@@ -509,7 +510,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
         ['Buncis Rebus', 'Tepat 2 Potong', 'Warna hijau segar, dipotong seragam, disajikan sejajar.'],
         ['Saus Resmi (BBQ/Black Pepper/Mushroom)', '1 Porsi Saus (±40-50 ml)', 'Disiramkan di atas porsi atau disajikan dalam cup terpisah.']
       ],
-      styles: { fontSize: 7.2, cellPadding: 2.2 },
+      styles: { fontSize: 7, cellPadding: 2 },
       headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 245, 250] },
       columnStyles: {
@@ -519,7 +520,32 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
       }
     });
 
-    currentY = (doc as any).lastAutoTable.finalY + 8;
+    currentY = (doc as any).lastAutoTable.finalY + 5;
+
+    // 2.3 Hospitality
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...primaryColor);
+    doc.text('2.3 Standar Pelayanan Konsumen, Hospitality (3S) & Higienitas Kru', 14, currentY);
+
+    autoTable(doc, {
+      startY: currentY + 2.5,
+      head: [['Pilar Standar Pelayanan', 'Pedoman & Kalimat Baku Solo Operator Steak 11']],
+      body: [
+        ['Greeting Baku 3S (Senyum, Salam, Sapa)', '• Menyambut: "Selamat datang di Steak 11! Mau pesan steak dengan saus apa Kak? Ada BBQ, Black Pepper, dan Mushroom."\n• Konfirmasi: "Sausnya mau langsung disiram di atas steak atau dipisah dalam cup Kak?"\n• Serah Terima: "Terima kasih banyak Kak, selamat menikmati Steak 11!"'],
+        ['Penanganan Komplain (Customer First)', 'Dengarkan keluhan dengan tenang tanpa berdebat. Jika kematangan ayam/kentang kurang pas/salah saus, segera ganti baru dengan ramah dan prioritaskan pengerjaannya.'],
+        ['Higienitas Personal & Grooming', 'Wajib mengenakan apron bersih & pakaian rapi. Selalu cuci tangan dengan sabun sebelum dan sesudah bekerja. Dilarang merokok/bermain HP saat memasak & melayani pembeli.']
+      ],
+      styles: { fontSize: 6.8, cellPadding: 2 },
+      headStyles: { fillColor: [74, 22, 107], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 245, 250] },
+      columnStyles: {
+        0: { cellWidth: 55, fontStyle: 'bold' },
+        1: { cellWidth: 127 }
+      }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 6;
 
     // BAGIAN 3: TIMELINE OPERASIONAL HARIAN
     doc.setFillColor(...primaryColor);
@@ -1040,12 +1066,12 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
             </div>
           </div>
 
-          {/* 3 WARNING BOXES PERALATAN */}
+          {/* 4 WARNING BOXES PERALATAN */}
           <div className="p-4 rounded-2xl bg-amber-400/10 border-2 border-amber-400/40 space-y-2.5">
             <h4 className="font-black text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4" /> PERINGATAN STANDAR ALAT OUTLET CABANG (MUTLAK):
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               <div className="p-3 rounded-xl bg-white dark:bg-purple-950/80 border border-amber-300 dark:border-purple-800 space-y-1">
                 <span className="font-extrabold text-[#3D1259] dark:text-amber-300 block">
                   1. Penyimpanan Coolbox + Es Batu
@@ -1060,7 +1086,7 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
                   2. Kompor Gas & Wajan Masak
                 </span>
                 <p className="text-slate-600 dark:text-slate-300 text-[11px]">
-                  Menggunakan Kompor Gas & Wajan.
+                  Menggunakan Kompor Gas & Wajan. Gunakan api sedang untuk ayam & api 170°C–180°C untuk kentang. Jaga wajan selalu bersih dari sisa bumbu.
                 </p>
               </div>
 
@@ -1069,7 +1095,16 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
                   3. Penyajian Saus
                 </span>
                 <p className="text-slate-600 dark:text-slate-300 text-[11px]">
-                  Saus resmi (BBQ / Black Pepper / Mushroom) disiramkan di atas porsi atau di cup terpisah.
+                  Saus resmi (BBQ / Black Pepper / Mushroom) disiramkan di atas porsi atau disajikan dalam cup terpisah.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white dark:bg-purple-950/80 border border-amber-300 dark:border-purple-800 space-y-1">
+                <span className="font-extrabold text-[#3D1259] dark:text-amber-300 block">
+                  4. Timbangan Digital (90g)
+                </span>
+                <p className="text-slate-600 dark:text-slate-300 text-[11px]">
+                  Wajib menggunakan timbangan digital dapur untuk memastikan berat fillet paha ayam marinasi tepat 90 Gram per porsi sebelum dimasak.
                 </p>
               </div>
             </div>
@@ -1281,6 +1316,72 @@ _Status: Terkonfirmasi Digital melalui Sistem Portal Steak 11_`;
                   </p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* 2.3 STANDAR PELAYANAN KONSUMEN, HOSPITALITY (3S) & HIGIENITAS KRU */}
+          <div className="space-y-3 pt-2">
+            <div>
+              <h4 className="font-extrabold text-sm text-[#3D1259] dark:text-amber-300 font-baloo flex items-center gap-2">
+                <ChefHat className="w-4 h-4 text-purple-600 dark:text-amber-400" />
+                2.3 Standar Pelayanan Konsumen, Hospitality (3S) & Higienitas Kru
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Sapaan baku konsumen, etika pelayanan cepat, penanganan keluhan, dan standar kebersihan personal.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              {/* Card 1: Greeting Baku 3S */}
+              <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[#3D1259] dark:text-amber-300">
+                    👋 1. Greeting Baku 3S
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-amber-300 font-black text-[9px] uppercase">
+                    Hospitality
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+                  <p>• <strong>Menyambut:</strong> <em>"Selamat datang di Steak 11! Mau pesan steak dengan saus apa Kak? Ada BBQ, Black Pepper, dan Mushroom."</em></p>
+                  <p>• <strong>Konfirmasi Saus:</strong> <em>"Sausnya mau langsung disiram di atas steak atau dipisah dalam cup Kak?"</em></p>
+                  <p>• <strong>Serah Terima:</strong> <em>"Terima kasih banyak Kak, selamat menikmati Steak 11!"</em></p>
+                </div>
+              </div>
+
+              {/* Card 2: Penanganan Komplain */}
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-amber-900 dark:text-amber-300">
+                    🤝 2. Penanganan Komplain
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-400 text-purple-950 font-black text-[9px] uppercase">
+                    Customer First
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+                  <p>• <strong>Sikap Tenang:</strong> Dengarkan keluhan pelanggan dengan sopan dan ramah tanpa berdebat.</p>
+                  <p>• <strong>Solusi Cepat:</strong> Jika kematangan ayam kurang pas / kentang kurang renyah / salah saus, segera buatkan porsi pengganti baru dan prioritaskan.</p>
+                  <p>• <strong>Permohonan Maaf:</strong> Sampaikan permohonan maaf dengan tulus atas ketidaknyamanan.</p>
+                </div>
+              </div>
+
+              {/* Card 3: Higienitas & Grooming */}
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-emerald-900 dark:text-emerald-300">
+                    🧼 3. Higienitas & Grooming
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black text-[9px] uppercase">
+                    Kebersihan Kru
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+                  <p>• <strong>Apron & Pakaian:</strong> Wajib mengenakan apron bersih & pakaian rapi selama bertugas di outlet.</p>
+                  <p>• <strong>Cuci Tangan:</strong> Selalu mencuci tangan dengan sabun sebelum dan sesudah bekerja.</p>
+                  <p>• <strong>Larangan Mutlak:</strong> Dilarang keras merokok atau bermain ponsel saat proses memasak & melayani pelanggan.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
